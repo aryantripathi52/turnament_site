@@ -21,11 +21,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { useAuth, useUser } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useUser } from '@/firebase';
 import {
   Select,
   SelectContent,
@@ -34,6 +32,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -53,6 +53,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { user, isUserLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,17 +65,34 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      // We will handle role-based redirection later
       const redirectTo = searchParams.get('redirectTo') || '/';
       router.push(redirectTo);
     }
   }, [user, isUserLoading, router, searchParams]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    initiateEmailSignIn(auth, values.email, values.password);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      // Let the useEffect handle redirection
+    } catch (error: any) {
+      console.error(error);
+      if (error.code === 'auth/invalid-credential') {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'The email or password you entered is incorrect.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'An unexpected error occurred.',
+          description: 'Please try again later.',
+        });
+      }
+    }
   }
 
-  if (isUserLoading || user) {
+  if (isUserLoading || (!isUserLoading && user)) {
     return <div>Loading...</div>;
   }
 
@@ -163,8 +181,12 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              Login
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Form>
