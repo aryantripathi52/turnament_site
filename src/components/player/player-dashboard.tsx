@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 
 export function PlayerDashboard() {
-  const { user } = useUser();
+  const { user, profile } = useUser();
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -17,7 +17,7 @@ export function PlayerDashboard() {
     <div className="container mx-auto py-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Welcome, {user?.displayName || user?.email || 'Player'}!</CardTitle>
+          <CardTitle>{profile?.username || user?.email || 'Player'}</CardTitle>
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </CardHeader>
         <CardContent>

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 
 export function AdminDashboard() {
-  const { user } = useUser();
+  const { user, profile } = useUser();
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -21,7 +21,7 @@ export function AdminDashboard() {
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </CardHeader>
         <CardContent>
-          <p>Welcome, {user?.displayName || user?.email || 'Admin'}! Manage your platform from here.</p>
+          <p>Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
