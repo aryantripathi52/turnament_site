@@ -4,9 +4,12 @@ import { useUser } from '@/firebase/auth/use-user';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
+import { useState } from 'react';
+import { EditProfileForm } from './edit-profile-form';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -53,7 +56,14 @@ export function AdminDashboard() {
                   <p className="text-sm font-medium text-muted-foreground">Profile Created</p>
                   <p>{creationDate}</p>
                 </div>
-                <Button className="mt-4" disabled>Edit Profile</Button>
+                <EditProfileForm 
+                  user={user} 
+                  profile={profile} 
+                  isOpen={isEditDialogOpen} 
+                  setIsOpen={setIsEditDialogOpen}
+                >
+                  <Button className="mt-4" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
+                </EditProfileForm>
               </CardContent>
             </Card>
           </div>
