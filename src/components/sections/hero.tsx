@@ -7,7 +7,7 @@ export function Hero() {
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-background');
 
   return (
-    <section className="relative h-[60vh] md:h-[70vh] w-full flex items-center justify-center text-center">
+    <section className="relative h-[80vh] w-full flex items-center justify-center text-center">
       {heroImage && (
         <Image
           src={heroImage.imageUrl}
@@ -27,8 +27,8 @@ export function Hero() {
           The ultimate battlefield for aspiring eSports champions. Join tournaments, prove your skill, and rise to the top.
         </p>
         <div className="mt-8 flex justify-center gap-4">
-          <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold">
-            <Link href="#tournaments">View Tournaments</Link>
+          <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
+            <Link href="#tournaments">Get Started</Link>
           </Button>
         </div>
       </div>
