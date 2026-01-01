@@ -53,17 +53,19 @@ export function AdminDashboard() {
                 <CardTitle>Profile</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Username</p>
-                  <p>{profile?.username || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Email</p>
-                  <p>{user?.email || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Profile Created</p>
-                  <p>{creationDate}</p>
+                <div className="space-y-2">
+                    <p className="flex justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">Username</span>
+                        <span>{profile?.username || 'N/A'}</span>
+                    </p>
+                    <p className="flex justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">Email</span>
+                        <span>{user?.email || 'N/A'}</span>
+                    </p>
+                    <p className="flex justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">Joined</span>
+                        <span>{creationDate}</span>
+                    </p>
                 </div>
                 <EditProfileForm
                   user={user}
@@ -71,7 +73,7 @@ export function AdminDashboard() {
                   isOpen={isEditDialogOpen}
                   setIsOpen={setIsEditDialogOpen}
                 >
-                  <Button className="mt-4" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
+                  <Button className="mt-4 w-full" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
                 </EditProfileForm>
               </CardContent>
             </Card>
