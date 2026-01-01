@@ -210,12 +210,7 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user.",
-          "enum": [
-            "admin",
-            "staff",
-            "player"
-          ]
+          "description": "The role of the user."
         }
       },
       "required": [
@@ -298,6 +293,22 @@
             {
               "name": "highlightId",
               "description": "Unique identifier for the highlight."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles.  Root level collection for global access.  Includes denormalized 'members' map for authorization independence (if later required).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
             }
           ]
         }

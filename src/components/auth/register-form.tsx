@@ -12,13 +12,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
   Card,
@@ -32,7 +25,7 @@ import { useAuth } from '@/firebase';
 import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -47,16 +40,32 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
-  role: z.enum(['admin', 'staff', 'player'], {
-    required_error: 'You need to select a role.',
+  roleKey: z.string().min(1, {
+    message: 'Please enter a role key.',
   }),
 });
+
+// This is a simplified, client-side mapping.
+// In a real application, this logic should be securely handled on the backend.
+const getRoleFromKey = (key: string): 'admin' | 'staff' | 'player' => {
+  switch (key.toLowerCase()) {
+    case 'superadmin':
+      return 'admin';
+    case 'eventstaff':
+      return 'staff';
+    default:
+      return 'player';
+  }
+};
 
 export function RegisterForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
   const { user, isUserLoading } = useUser();
+  const [formData, setFormData] = useState<z.infer<typeof formSchema> | null>(
+    null
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,25 +73,27 @@ export function RegisterForm() {
       username: '',
       email: '',
       password: '',
+      roleKey: '',
     },
   });
 
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (!isUserLoading && user && formData) {
       const newUser = {
         id: user.uid,
         email: user.email,
-        username: form.getValues('username'), // get username from form
-        role: form.getValues('role'), // get role from form
+        username: formData.username,
+        role: getRoleFromKey(formData.roleKey),
         registrationIds: [],
       };
       const userDocRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userDocRef, newUser, { merge: true });
       router.push('/');
     }
-  }, [user, isUserLoading, router, firestore, form]);
+  }, [user, isUserLoading, router, firestore, formData]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    setFormData(values);
     initiateEmailSignUp(auth, values.email, values.password);
   }
 
@@ -142,25 +153,13 @@ export function RegisterForm() {
             />
             <FormField
               control={form.control}
-              name="role"
+              name="roleKey"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="player">Player</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Role Key</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your role key" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
