@@ -7,7 +7,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
 import { HireStaffForm } from './hire-staff-form';
-import { Gem, LayoutDashboard, User as UserIcon, UserPlus } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, UserPlus, Stamp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function AdminDashboard() {
@@ -48,6 +48,10 @@ export function AdminDashboard() {
                     <UserPlus className="h-5 w-5" />
                     Hire Staff
                 </TabsTrigger>
+                <TabsTrigger value="approval" className="w-full justify-start gap-2">
+                    <Stamp className="h-5 w-5" />
+                    Coin Approval
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -79,6 +83,17 @@ export function AdminDashboard() {
                         </HireStaffForm>
                     </CardContent>
                     </Card>
+            </TabsContent>
+            <TabsContent value="approval" className="mt-0 flex-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Coin Approval Requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Approve or deny player requests for coin purchases.</p>
+                        <Button className="mt-4" disabled>Coming Soon</Button>
+                    </CardContent>
+                </Card>
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
