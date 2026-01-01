@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useFirebase } from '@/firebase/provider';
+import { useFirebase, useMemoFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, collection, query, where } from 'firebase/firestore';
@@ -41,7 +41,7 @@ export const useUser = (): UserHookResult => {
   } = useFirebase();
 
   // Memoize the document reference to prevent re-renders
-  const userProfileRef = useMemo(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
@@ -53,7 +53,7 @@ export const useUser = (): UserHookResult => {
   } = useDoc<UserProfile>(userProfileRef);
 
   // Create a memoized query for the user's coin requests
-  const coinRequestsQuery = useMemo(() => {
+  const coinRequestsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(collection(firestore, 'coinRequests'), where('userId', '==', user.uid));
   }, [user, firestore]);
