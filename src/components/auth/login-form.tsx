@@ -26,6 +26,13 @@ import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { useUser } from '@/firebase';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -33,6 +40,9 @@ const formSchema = z.object({
   }),
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
+  }),
+  role: z.enum(['admin', 'staff', 'player'], {
+    required_error: 'You need to select a role.',
   }),
 });
 
@@ -52,6 +62,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
+      // We will handle role-based redirection later
       const redirectTo = searchParams.get('redirectTo') || '/';
       router.push(redirectTo);
     }
@@ -98,6 +109,31 @@ export function LoginForm() {
                   <FormControl>
                     <Input type="password" placeholder="••••••••" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="player">Player</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
