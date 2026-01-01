@@ -13,6 +13,10 @@ export function AdminDashboard() {
     signOut(auth);
   };
 
+  const creationDate = user?.metadata.creationTime 
+    ? new Date(user.metadata.creationTime).toLocaleDateString() 
+    : 'N/A';
+
   return (
     <div className="container mx-auto py-8">
       <Card>
@@ -36,9 +40,20 @@ export function AdminDashboard() {
               <CardHeader>
                 <CardTitle>Profile</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p>View and manage your admin profile.</p>
-                 <Button className="mt-4" disabled>Coming Soon</Button>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Username</p>
+                  <p>{profile?.username || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
+                  <p>{user?.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Profile Created</p>
+                  <p>{creationDate}</p>
+                </div>
+                <Button className="mt-4" disabled>Edit Profile</Button>
               </CardContent>
             </Card>
           </div>
