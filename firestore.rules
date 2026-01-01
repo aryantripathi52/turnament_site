@@ -30,7 +30,7 @@
  * - Strict User Ownership: The /users/{userId} path is strictly locked down. A user can only
  *   access their own document, and user listing is disabled to protect user privacy.
  * - Shared Access for Registrations: Access to a registration document is granted if the
- *   requesting user's UID is present in the `playerIds` array within that document. This
+ *   requesting user's UID is in the `playerIds` array within that document. This
  *   allows team members to view and manage their shared registration.
  * - Default Deny: If a rule is not explicitly defined, access is denied. All write
  *   operations require authentication.
