@@ -207,12 +207,22 @@
           "items": {
             "type": "string"
           }
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user.",
+          "enum": [
+            "admin",
+            "staff",
+            "player"
+          ]
         }
       },
       "required": [
         "id",
         "username",
-        "email"
+        "email",
+        "role"
       ]
     }
   },
