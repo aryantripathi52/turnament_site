@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { Gem } from 'lucide-react';
+import { Wallet } from './wallet';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -30,15 +31,7 @@ export function PlayerDashboard() {
         <CardContent>
           <p>This is your player dashboard. From here, you will be able to manage your profile, view your teams, and see upcoming matches.</p>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Profile</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>View and edit your player profile.</p>
-                <Button className="mt-4" disabled>Coming Soon</Button>
-              </CardContent>
-            </Card>
+            <Wallet />
             <Card>
               <CardHeader>
                 <CardTitle>My Teams</CardTitle>
