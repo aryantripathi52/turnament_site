@@ -1,3 +1,5 @@
+import { Timestamp } from 'firebase/firestore';
+
 export type Tournament = {
   id: string;
   name: string;
@@ -16,4 +18,17 @@ export type Announcement = {
   title: string;
   content: string;
   date: string;
+};
+
+export type CoinRequest = {
+  id: string;
+  userId: string;
+  username: string;
+  type: 'add' | 'withdraw';
+  amountCoins: number;
+  amountPaid: number;
+  transactionId: string;
+  status: 'pending' | 'approved' | 'denied';
+  requestDate: Timestamp;
+  decisionDate?: Timestamp;
 };
