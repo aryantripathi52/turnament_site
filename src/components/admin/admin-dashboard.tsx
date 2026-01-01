@@ -6,18 +6,20 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
+import { HireStaffForm } from './hire-staff-form';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isHireDialogOpen, setIsHireDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
     signOut(auth);
   };
 
-  const creationDate = user?.metadata.creationTime 
-    ? new Date(user.metadata.creationTime).toLocaleDateString() 
+  const creationDate = user?.metadata.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString()
     : 'N/A';
 
   return (
@@ -29,7 +31,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <p>Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle>Create Tournament</CardTitle>
@@ -56,14 +58,25 @@ export function AdminDashboard() {
                   <p className="text-sm font-medium text-muted-foreground">Profile Created</p>
                   <p>{creationDate}</p>
                 </div>
-                <EditProfileForm 
-                  user={user} 
-                  profile={profile} 
-                  isOpen={isEditDialogOpen} 
+                <EditProfileForm
+                  user={user}
+                  profile={profile}
+                  isOpen={isEditDialogOpen}
                   setIsOpen={setIsEditDialogOpen}
                 >
                   <Button className="mt-4" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
                 </EditProfileForm>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Hire Staff</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p>Register a new staff member for the platform.</p>
+                 <HireStaffForm isOpen={isHireDialogOpen} setIsOpen={setIsHireDialogOpen}>
+                    <Button className="mt-4" onClick={() => setIsHireDialogOpen(true)}>Hire Staff</Button>
+                </HireStaffForm>
               </CardContent>
             </Card>
           </div>
