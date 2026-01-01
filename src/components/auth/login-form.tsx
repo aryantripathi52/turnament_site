@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -32,8 +32,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/firebase/auth/use-user';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -49,6 +51,7 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isUserLoading } = useUser();
@@ -72,8 +75,37 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Let the useEffect handle redirection
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const loggedInUser = userCredential.user;
+
+      // After successful sign-in, fetch user's profile to verify role
+      const userDocRef = doc(firestore, 'users', loggedInUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userProfile = userDocSnap.data() as UserProfile;
+        // Check if the selected role matches the stored role
+        if (userProfile.role === values.role) {
+          // Role matches, let the useEffect handle redirection
+        } else {
+          // Role mismatch, sign out and show error
+          await signOut(auth);
+          toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: 'The role you selected does not match your account.',
+          });
+        }
+      } else {
+        // This case should ideally not happen if registration is done correctly
+        await signOut(auth);
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'User profile not found.',
+        });
+      }
+
     } catch (error: any) {
       console.error(error);
       if (error.code === 'auth/invalid-credential') {
