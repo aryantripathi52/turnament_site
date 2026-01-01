@@ -3,8 +3,10 @@
 import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { doc, collection, query, where } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
+import type { CoinRequest } from '@/lib/types';
 
 // Define the shape of the user profile document in Firestore
 export interface UserProfile {
@@ -19,6 +21,7 @@ export interface UserProfile {
 export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
+  coinRequests: WithId<CoinRequest>[] | null;
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
@@ -49,11 +52,24 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
+  // Create a memoized query for the user's coin requests
+  const coinRequestsQuery = useMemo(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'coinRequests'), where('userId', '==', user.uid));
+  }, [user, firestore]);
+
+  const {
+    data: coinRequests,
+    isLoading: areCoinRequestsLoading,
+    error: coinRequestsError,
+  } = useCollection<CoinRequest>(coinRequestsQuery);
+
   return {
     user,
     profile,
+    coinRequests,
     isUserLoading,
-    isProfileLoading: isUserLoading || isProfileLoading, // Profile is loading if user is loading
-    userError: userError || profileError,
+    isProfileLoading: isUserLoading || isProfileLoading || areCoinRequestsLoading,
+    userError: userError || profileError || coinRequestsError,
   };
 };
