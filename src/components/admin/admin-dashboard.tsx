@@ -85,15 +85,27 @@ export function AdminDashboard() {
                     </Card>
             </TabsContent>
             <TabsContent value="approval" className="mt-0 flex-1">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Coin Approval Requests</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Approve or deny player requests for coin purchases.</p>
-                        <Button className="mt-4" disabled>Coming Soon</Button>
-                    </CardContent>
-                </Card>
+                 <p className="mb-6 text-muted-foreground">Approve or deny player requests for coin purchases and withdrawals.</p>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Add Coin Requests</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Approve or deny player requests to add coins.</p>
+                            <Button className="mt-4" disabled>Coming Soon</Button>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Withdraw Coin Requests</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Approve or deny player requests to withdraw coins.</p>
+                            <Button className="mt-4" disabled>Coming Soon</Button>
+                        </CardContent>
+                    </Card>
+                </div>
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
