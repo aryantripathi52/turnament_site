@@ -22,7 +22,7 @@ import { AddFundsForm } from './add-funds-form';
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { CoinRequest as CoinRequestType } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -36,7 +36,7 @@ export function Wallet() {
 
   useEffect(() => {
     async function fetchCoinRequests() {
-      if (!user) {
+      if (!user || !firestore) {
         setIsLoading(false);
         return;
       }
@@ -44,11 +44,18 @@ export function Wallet() {
       try {
         const q = query(
           collection(firestore, 'coinRequests'),
-          where('userId', '==', user.uid),
-          orderBy('requestDate', 'desc')
+          where('userId', '==', user.uid)
         );
         const querySnapshot = await getDocs(q);
         const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CoinRequestType));
+        
+        // Sort requests on the client-side
+        requests.sort((a, b) => {
+            const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
+            const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
+            return dateB - dateA;
+        });
+
         setCoinRequests(requests);
       } catch (error) {
         console.error("Error fetching coin requests:", error);
@@ -74,7 +81,7 @@ export function Wallet() {
   };
   
   // Helper to format Firestore Timestamp
-  const formatDate = (timestamp: Timestamp | Date) => {
+  const formatDate = (timestamp: Timestamp | Date | undefined) => {
     if (!timestamp) return 'N/A';
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
     return format(date, 'MMM d, yyyy');
