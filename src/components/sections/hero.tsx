@@ -7,7 +7,7 @@ export function Hero() {
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-background');
 
   return (
-    <section className="relative h-[80vh] w-full flex items-center justify-center text-center">
+    <section className="relative h-screen w-full flex items-center justify-center text-center">
       {heroImage && (
         <Image
           src={heroImage.imageUrl}
@@ -28,7 +28,7 @@ export function Hero() {
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
-            <Link href="#tournaments">Get Started</Link>
+            <Link href="/login">Get Started</Link>
           </Button>
         </div>
       </div>
