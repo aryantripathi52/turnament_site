@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
@@ -37,13 +37,19 @@ export function PlayerDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-           <Tabs defaultValue="dashboard">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="profile">Profile</TabsTrigger>
+           <Tabs defaultValue="dashboard" orientation="vertical" className="flex gap-8">
+            <TabsList className="flex flex-col h-full space-y-2">
+                <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="w-full justify-start gap-2">
+                    <UserIcon className="h-5 w-5" />
+                    Profile
+                </TabsTrigger>
             </TabsList>
-            <TabsContent value="dashboard" className="mt-6">
-                <p className="mb-6">This is your player dashboard. From here, you can manage your wallet, view your teams, and see upcoming matches.</p>
+            <TabsContent value="dashboard" className="mt-0 flex-1">
+                <p className="mb-6 text-muted-foreground">This is your player dashboard. From here, you can manage your wallet, view your teams, and see upcoming matches.</p>
                 <div className="grid gap-6 md:grid-cols-2">
                     <Wallet />
                     <Card>
@@ -57,7 +63,7 @@ export function PlayerDashboard() {
                     </Card>
                 </div>
             </TabsContent>
-            <TabsContent value="profile" className="mt-6">
+            <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
                     <CardHeader>
                         <CardTitle>My Profile</CardTitle>
