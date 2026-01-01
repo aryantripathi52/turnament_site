@@ -7,7 +7,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
 import { HireStaffForm } from './hire-staff-form';
-import { Gem, LayoutDashboard, User as UserIcon } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, UserPlus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function AdminDashboard() {
@@ -44,6 +44,10 @@ export function AdminDashboard() {
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
                 </TabsTrigger>
+                <TabsTrigger value="hire" className="w-full justify-start gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    Hire Staff
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -61,7 +65,10 @@ export function AdminDashboard() {
                         <Button className="mt-4" disabled>Coming Soon</Button>
                     </CardContent>
                     </Card>
-                    <Card>
+                </div>
+            </TabsContent>
+            <TabsContent value="hire" className="mt-0 flex-1">
+                 <Card>
                     <CardHeader>
                         <CardTitle>Hire Staff</CardTitle>
                     </CardHeader>
@@ -72,7 +79,6 @@ export function AdminDashboard() {
                         </HireStaffForm>
                     </CardContent>
                     </Card>
-                </div>
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
