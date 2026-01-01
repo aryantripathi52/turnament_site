@@ -13,6 +13,7 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'staff' | 'player';
   registrationIds: string[];
+  coins: number;
 }
 
 export interface UserHookResult {

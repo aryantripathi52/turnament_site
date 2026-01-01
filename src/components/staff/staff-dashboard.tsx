@@ -4,6 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
+import { Gem } from 'lucide-react';
 
 export function StaffDashboard() {
   const { user, profile } = useUser();
@@ -18,7 +19,13 @@ export function StaffDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Welcome, {profile?.username || user?.email || 'Staff'}</CardTitle>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-primary" />
+              <span className="font-semibold">{profile?.coins ?? 0}</span>
+            </div>
+            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          </div>
         </CardHeader>
         <CardContent>
           <p>This is your staff dashboard. You can manage tournaments and player registrations from here.</p>

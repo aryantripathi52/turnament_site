@@ -211,13 +211,18 @@
         "role": {
           "type": "string",
           "description": "The role of the user."
+        },
+        "coins": {
+          "type": "number",
+          "description": "The number of coins the user has."
         }
       },
       "required": [
         "id",
         "username",
         "email",
-        "role"
+        "role",
+        "coins"
       ]
     }
   },

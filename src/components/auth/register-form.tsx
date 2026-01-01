@@ -87,6 +87,7 @@ export function RegisterForm() {
           username: formData.username,
           role: role,
           registrationIds: [],
+          coins: 100, // Starting coins
         };
         const userDocRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(userDocRef, newUser, { merge: true });

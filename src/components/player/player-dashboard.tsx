@@ -4,6 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
+import { Gem } from 'lucide-react';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -18,7 +19,13 @@ export function PlayerDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{profile?.username || user?.email || 'Player'}</CardTitle>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-primary" />
+              <span className="font-semibold">{profile?.coins ?? 0}</span>
+            </div>
+            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          </div>
         </CardHeader>
         <CardContent>
           <p>This is your player dashboard. From here, you will be able to manage your profile, view your teams, and see upcoming matches.</p>

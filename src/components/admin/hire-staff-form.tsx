@@ -76,6 +76,7 @@ export function HireStaffForm({ children, isOpen, setIsOpen }: HireStaffFormProp
         email: values.email,
         role: 'staff' as const,
         registrationIds: [],
+        coins: 0, // Staff starts with 0 coins
       };
 
       await setDoc(doc(firestore, 'users', newUser.uid), userProfile);

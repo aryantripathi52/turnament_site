@@ -7,6 +7,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
 import { HireStaffForm } from './hire-staff-form';
+import { Gem } from 'lucide-react';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -27,7 +28,13 @@ export function AdminDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Admin Dashboard</CardTitle>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2">
+              <Gem className="h-5 w-5 text-primary" />
+              <span className="font-semibold">{profile?.coins ?? 0}</span>
+            </div>
+            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          </div>
         </CardHeader>
         <CardContent>
           <p>Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
