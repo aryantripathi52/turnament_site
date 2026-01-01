@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "tournament-1",
+      "description": "A dynamic shot of a Free Fire character in action.",
+      "imageUrl": "https://images.unsplash.com/photo-1553492206-f609eddc33dd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxlc3BvcnRzJTIwZ2FtaW5nfGVufDB8fHx8MTc2NzI5MDc5MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "esports gaming"
+    },
+    {
+      "id": "tournament-2",
+      "description": "A team of gamers celebrating a victory.",
+      "imageUrl": "https://images.unsplash.com/photo-1690192123455-6337e6db4179?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx0ZWFtJTIwY2VsZWJyYXRpb258ZW58MHx8fHwxNzY3MjA2OTM5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "team celebration"
+    },
+    {
+      "id": "tournament-3",
+      "description": "An intense moment from a Free Fire match.",
+      "imageUrl": "https://images.unsplash.com/photo-1726935043403-29a87cfe895c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBiYXR0bGV8ZW58MHx8fHwxNzY3MTc0OTY5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gaming battle"
+    },
+    {
+      "id": "hero-background",
+      "description": "An epic, wide-angle view of a Free Fire battleground.",
+      "imageUrl": "https://images.unsplash.com/photo-1721072201218-38a7839432f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlcGljJTIwYmF0dGxlZ3JvdW5kfGVufDB8fHx8MTc2NzI5MDc5MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "epic battleground"
+    }
+  ]
 }
