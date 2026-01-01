@@ -224,6 +224,68 @@
         "role",
         "coins"
       ]
+    },
+    "CoinRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CoinRequest",
+      "type": "object",
+      "description": "Represents a user's request to add or withdraw coins.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the coin request."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user making the request."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username of the user making the request (denormalized)."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of request.",
+          "enum": ["add", "withdraw"]
+        },
+        "amountCoins": {
+          "type": "number",
+          "description": "The amount of coins to add or withdraw."
+        },
+        "amountPaid": {
+          "type": "number",
+          "description": "The amount of real money paid (for 'add' requests)."
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "The transaction ID from the payment provider."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the request.",
+          "enum": ["pending", "approved", "denied"]
+        },
+        "requestDate": {
+          "type": "string",
+          "description": "The date the request was submitted.",
+          "format": "date-time"
+        },
+        "decisionDate": {
+          "type": "string",
+          "description": "The date the request was approved or denied.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "username",
+        "type",
+        "amountCoins",
+        "transactionId",
+        "status",
+        "requestDate"
+      ]
     }
   },
   "auth": {
@@ -317,8 +379,25 @@
             }
           ]
         }
+      },
+      {
+        "path": "/coinRequests/{coinRequestId}",
+        "definition": {
+          "entityName": "CoinRequest",
+          "schema": {
+            "$ref": "#/backend/entities/CoinRequest"
+          },
+          "description": "Stores user requests to add or withdraw coins, pending admin approval.",
+          "params": [
+            {
+              "name": "coinRequestId",
+              "description": "Unique identifier for the coin request."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "Given the requirement of a Free Fire tournament hosting platform without user login initially, the Firestore structure is designed for simplicity and ease of access, with a focus on displaying tournament information and handling registrations. As the application evolves to include user accounts, the structure will be extended to include user-specific data and authorization mechanisms.\n\nTournaments are stored in a root-level `tournaments` collection. Registrations are stored in a subcollection under each tournament document (`tournaments/{tournamentId}/registrations`). This allows easy querying of registrations for a specific tournament. Announcements and Highlights are stored in root-level collections as they are globally accessible and not directly tied to user accounts or tournaments.\n\n**Authorization Independence and QAPs:**\n\n*   Since there's no initial user login system, authorization is minimal. If security rules are later needed (e.g., to restrict who can create/modify tournaments), ownership or membership models can be introduced.  For example, if certain users should be able to moderate/edit tournaments, an `editors` map could be added to the tournament document with the user ids that can edit the tournament. This map would be duplicated in each `registration` document for Authorization Independence.\n*   QAPs are supported by the segregation of data into collections based on their purpose. `List` operations are inherently secure in this setup, as there are no complex authorization rules to evaluate.\n\nAs the application evolves to include user accounts the following changes will be needed:\n\n*   Introduce a `users` collection to store user profiles and account information.\n*   Update security rules to enforce access control based on user roles and ownership.\n*   Consider using a membership map in the tournament documents to manage collaborators or administrators.\n*   Add indexing for common queries, such as retrieving tournaments by region or date."
   }
 }
+    

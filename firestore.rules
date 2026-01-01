@@ -16,6 +16,7 @@
  * - /tournaments/{tournamentId}: Public tournament information.
  * - /announcements/{announcementId}: Public platform announcements.
  * - /highlights/{highlightId}: Public match highlights.
+ * - /coinRequests/{coinRequestId}: Requests for adding/withdrawing coins.
  *
  * A key subcollection exists for managing participation:
  * - /tournaments/{tournamentId}/registrations/{registrationId}: Stores team registrations,
@@ -58,6 +59,16 @@ service cloud.firestore {
     function isExistingDoc() {
       return resource != null;
     }
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isAdmin() {
+        return isSignedIn() && getRole() == 'admin';
+    }
+    function isStaff() {
+        return isSignedIn() && (getRole() == 'staff' || isAdmin());
+    }
+
 
     /**
      * @description Manages user profiles. A user can create their own profile,
@@ -69,8 +80,8 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
       allow delete: if isOwner(userId) && isExistingDoc();
@@ -86,9 +97,7 @@ service cloud.firestore {
     match /tournaments/{tournamentId} {
       allow get: if true;
       allow list: if true;
-      // CRITICAL: Cannot implement secure owner-only writes. The 'Tournament' entity is missing an 'ownerId' or 'adminId' field.
-      // Awaiting implementation of an admin verification function.
-      allow create, update, delete: if false; // TODO: Replace 'if false' with admin-only logic (e.g., 'if isAdmin();').
+      allow create, update, delete: if isStaff();
     }
 
     /**
@@ -108,11 +117,11 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
 
-      allow get: if isExistingTeamMember();
-      allow list: if false;
+      allow get: if isExistingTeamMember() || isStaff();
+      allow list: if isStaff();
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
-      allow delete: if isExistingTeamMember();
+      allow delete: if isExistingTeamMember() || isStaff();
     }
 
     /**
@@ -125,9 +134,7 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow get: if true;
       allow list: if true;
-      // CRITICAL: Cannot implement secure owner-only writes. The 'Announcement' entity is missing an 'ownerId' or 'authorId' field.
-      // Awaiting implementation of an admin verification function.
-      allow create, update, delete: if false; // TODO: Replace 'if false' with admin-only logic (e.g., 'if isAdmin();').
+      allow create, update, delete: if isStaff();
     }
 
     /**
@@ -140,9 +147,23 @@ service cloud.firestore {
     match /highlights/{highlightId} {
       allow get: if true;
       allow list: if true;
-      // CRITICAL: Cannot implement secure owner-only writes. The 'Highlight' entity is missing an 'ownerId' or 'uploaderId' field.
-      // Awaiting implementation of an admin verification function.
-      allow create, update, delete: if false; // TODO: Replace 'if false' with admin-only logic (e.g., 'if isAdmin();').
+      allow create, update, delete: if isStaff();
+    }
+
+    /**
+     * @description Manages coin purchase and withdrawal requests.
+     * @path /coinRequests/{coinRequestId}
+     * @allow (create) An authenticated user can create their own coin request.
+     * @deny (get) A user tries to read a coin request that is not their own, unless they are an admin.
+     * @principle User can manage their own requests; admins can manage all requests.
+     */
+    match /coinRequests/{coinRequestId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isAdmin();
+      allow update: if isAdmin(); // Admins can approve/deny requests
+      allow delete: if isAdmin();
     }
   }
 }
+    
