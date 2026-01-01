@@ -11,20 +11,6 @@ export function Header() {
             <span className="font-bold font-headline text-lg">Free Fire Frenzy</span>
           </Link>
         </div>
-        <nav className="flex items-center gap-4 text-sm lg:gap-6 ml-auto">
-            <Link
-              href="/#tournaments"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Tournaments
-            </Link>
-            <Link
-              href="/#announcements"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Announcements
-            </Link>
-          </nav>
       </div>
     </header>
   );
