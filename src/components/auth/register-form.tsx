@@ -40,22 +40,19 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
-  roleKey: z.string().min(1, {
-    message: 'Please enter a role key.',
-  }),
+  roleKey: z.string().optional(),
 });
 
 // This is a simplified, client-side mapping.
 // In a real application, this logic should be securely handled on the backend.
-const getRoleFromKey = (key: string): 'admin' | 'staff' | 'player' => {
-  switch (key.toLowerCase()) {
-    case 'superadmin':
-      return 'admin';
-    case 'eventstaff':
-      return 'staff';
-    default:
-      return 'player';
+const getRoleFromKey = (key: string): 'admin' | 'player' | null => {
+  if (key === 'ADMIN_DPS#1') {
+    return 'admin';
   }
+  if (key === '') {
+    return 'player';
+  }
+  return null; // Invalid key
 };
 
 export function RegisterForm() {
@@ -79,20 +76,31 @@ export function RegisterForm() {
 
   useEffect(() => {
     if (!isUserLoading && user && formData) {
-      const newUser = {
-        id: user.uid,
-        email: user.email,
-        username: formData.username,
-        role: getRoleFromKey(formData.roleKey),
-        registrationIds: [],
-      };
-      const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, newUser, { merge: true });
-      router.push('/');
+      const role = getRoleFromKey(formData.roleKey || '');
+      if (role) {
+        const newUser = {
+          id: user.uid,
+          email: user.email,
+          username: formData.username,
+          role: role,
+          registrationIds: [],
+        };
+        const userDocRef = doc(firestore, 'users', user.uid);
+        setDocumentNonBlocking(userDocRef, newUser, { merge: true });
+        router.push('/');
+      }
     }
   }, [user, isUserLoading, router, firestore, formData]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const role = getRoleFromKey(values.roleKey || '');
+    if (!role) {
+      form.setError('roleKey', {
+        type: 'manual',
+        message: 'Invalid Role Key. Please leave blank or enter a valid key.',
+      });
+      return;
+    }
     setFormData(values);
     initiateEmailSignUp(auth, values.email, values.password);
   }
@@ -156,9 +164,12 @@ export function RegisterForm() {
               name="roleKey"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role Key</FormLabel>
+                  <FormLabel>Role Key (optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your role key" {...field} />
+                    <Input
+                      placeholder="Enter admin key if you have one"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
