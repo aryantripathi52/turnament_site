@@ -6,20 +6,28 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { Gem } from 'lucide-react';
 import { Wallet } from './wallet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from 'react';
+import { EditProfileForm } from '../admin/edit-profile-form';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
     signOut(auth);
   };
 
+    const creationDate = user?.metadata.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString()
+    : 'N/A';
+
   return (
     <div className="container mx-auto py-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{profile?.username || user?.email || 'Player'}</CardTitle>
+          <CardTitle>Welcome, {profile?.username || user?.email || 'Player'}</CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Gem className="h-5 w-5 text-primary" />
@@ -29,19 +37,58 @@ export function PlayerDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <p>This is your player dashboard. From here, you will be able to manage your profile, view your teams, and see upcoming matches.</p>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <Wallet />
-            <Card>
-              <CardHeader>
-                <CardTitle>My Teams</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>Manage your team rosters and view team stats.</p>
-                 <Button className="mt-4" disabled>Coming Soon</Button>
-              </CardContent>
-            </Card>
-          </div>
+           <Tabs defaultValue="dashboard">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+            </TabsList>
+            <TabsContent value="dashboard" className="mt-6">
+                <p className="mb-6">This is your player dashboard. From here, you can manage your wallet, view your teams, and see upcoming matches.</p>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Wallet />
+                    <Card>
+                    <CardHeader>
+                        <CardTitle>My Teams</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Manage your team rosters and view team stats.</p>
+                        <Button className="mt-4" disabled>Coming Soon</Button>
+                    </CardContent>
+                    </Card>
+                </div>
+            </TabsContent>
+            <TabsContent value="profile" className="mt-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Profile</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <p className="flex justify-between">
+                                <span className="text-sm font-medium text-muted-foreground">Username</span>
+                                <span>{profile?.username || 'N/A'}</span>
+                            </p>
+                            <p className="flex justify-between">
+                                <span className="text-sm font-medium text-muted-foreground">Email</span>
+                                <span>{user?.email || 'N/A'}</span>
+                            </p>
+                            <p className="flex justify-between">
+                                <span className="text-sm font-medium text-muted-foreground">Joined</span>
+                                <span>{creationDate}</span>
+                            </p>
+                        </div>
+                        <EditProfileForm
+                        user={user}
+                        profile={profile}
+                        isOpen={isEditDialogOpen}
+                        setIsOpen={setIsEditDialogOpen}
+                        >
+                        <Button className="mt-4 w-full" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
+                        </EditProfileForm>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
