@@ -246,7 +246,10 @@
         "type": {
           "type": "string",
           "description": "The type of request.",
-          "enum": ["add", "withdraw"]
+          "enum": [
+            "add",
+            "withdraw"
+          ]
         },
         "amountCoins": {
           "type": "number",
@@ -263,7 +266,11 @@
         "status": {
           "type": "string",
           "description": "The current status of the request.",
-          "enum": ["pending", "approved", "denied"]
+          "enum": [
+            "pending",
+            "approved",
+            "denied"
+          ]
         },
         "requestDate": {
           "type": "string",
@@ -277,7 +284,6 @@
         }
       },
       "required": [
-        "id",
         "userId",
         "username",
         "type",
