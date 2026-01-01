@@ -5,6 +5,7 @@ import { PlayerDashboard } from '@/components/player/player-dashboard';
 import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
+import { StaffDashboard } from '@/components/staff/staff-dashboard';
 
 export default function Home() {
   const { user, profile, isUserLoading, isProfileLoading } = useUser();
@@ -23,6 +24,10 @@ export default function Home() {
 
   if (profile?.role === 'admin') {
     return <AdminDashboard />;
+  }
+
+  if (profile?.role === 'staff') {
+    return <StaffDashboard />;
   }
 
   return <PlayerDashboard />;
