@@ -19,10 +19,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Gem } from 'lucide-react';
 import { AddFundsForm } from './add-funds-form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import type { CoinRequest as CoinRequestType } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -30,17 +30,35 @@ export function Wallet() {
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
+  
+  const [coinRequests, setCoinRequests] = useState<CoinRequestType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const coinRequestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(
-      collection(firestore, 'coinRequests'),
-      where('userId', '==', user.uid),
-      orderBy('requestDate', 'desc')
-    );
-  }, [firestore, user]);
+  useEffect(() => {
+    async function fetchCoinRequests() {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const q = query(
+          collection(firestore, 'coinRequests'),
+          where('userId', '==', user.uid),
+          orderBy('requestDate', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CoinRequestType));
+        setCoinRequests(requests);
+      } catch (error) {
+        console.error("Error fetching coin requests:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-  const { data: coinRequests, isLoading } = useCollection<CoinRequestType>(coinRequestsQuery);
+    fetchCoinRequests();
+  }, [user, firestore]);
 
     const getStatusVariant = (status: string) => {
     switch (status) {
@@ -54,6 +72,13 @@ export function Wallet() {
         return 'outline';
     }
   };
+  
+  // Helper to format Firestore Timestamp
+  const formatDate = (timestamp: Timestamp | Date) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
+    return format(date, 'MMM d, yyyy');
+  }
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -82,18 +107,16 @@ export function Wallet() {
                                 <TableCell colSpan={3} className="text-center">Loading requests...</TableCell>
                             </TableRow>
                         )}
-                        {!isLoading && coinRequests?.length === 0 && (
+                        {!isLoading && coinRequests.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="text-center">No requests found.</TableCell>
                             </TableRow>
                         )}
-                        {coinRequests?.map((request) => (
+                        {!isLoading && coinRequests.map((request) => (
                         <TableRow key={request.id}>
                             <TableCell>{request.amountCoins} coins</TableCell>
                             <TableCell>
-                            {request.requestDate
-                                ? format(new Date(request.requestDate.seconds * 1000), 'MMM d, yyyy')
-                                : 'N/A'}
+                            {formatDate(request.requestDate as any)}
                             </TableCell>
                             <TableCell className="text-right">
                                 <Badge variant={getStatusVariant(request.status)} className="capitalize">{request.status}</Badge>
