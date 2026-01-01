@@ -7,7 +7,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
 import { HireStaffForm } from './hire-staff-form';
-import { Gem } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function AdminDashboard() {
@@ -38,13 +38,19 @@ export function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="dashboard">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="profile">Profile</TabsTrigger>
+          <Tabs defaultValue="dashboard" orientation="vertical" className="flex gap-8">
+            <TabsList className="flex flex-col h-full space-y-2">
+                <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="w-full justify-start gap-2">
+                    <UserIcon className="h-5 w-5" />
+                    Profile
+                </TabsTrigger>
             </TabsList>
-            <TabsContent value="dashboard" className="mt-6">
-                <p className="mb-6">Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
+            <TabsContent value="dashboard" className="mt-0 flex-1">
+                <p className="mb-6 text-muted-foreground">Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                     <CardHeader>
@@ -68,7 +74,7 @@ export function AdminDashboard() {
                     </Card>
                 </div>
             </TabsContent>
-            <TabsContent value="profile" className="mt-6">
+            <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
                     <CardHeader>
                         <CardTitle>My Profile</CardTitle>
