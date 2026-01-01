@@ -29,6 +29,7 @@ import { useEffect, useState } from 'react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -63,6 +64,8 @@ export function RegisterForm() {
   const [formData, setFormData] = useState<z.infer<typeof formSchema> | null>(
     null
   );
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -152,9 +155,32 @@ export function RegisterForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        {...field}
+                        className="pr-10"
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute inset-y-0 right-0 h-full px-3"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">
+                        {showPassword ? 'Hide password' : 'Show password'}
+                      </span>
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
