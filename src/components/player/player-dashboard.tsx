@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
@@ -43,15 +43,18 @@ export function PlayerDashboard() {
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
                 </TabsTrigger>
+                <TabsTrigger value="wallet" className="w-full justify-start gap-2">
+                    <WalletIcon className="h-5 w-5" />
+                    My Wallet
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-0 flex-1">
-                <p className="mb-6 text-muted-foreground">This is your player dashboard. From here, you can manage your wallet, view your teams, and see upcoming matches.</p>
+                <p className="mb-6 text-muted-foreground">This is your player dashboard. From here, you can view your teams and see upcoming matches.</p>
                 <div className="grid gap-6 md:grid-cols-2">
-                    <Wallet />
                     <Card>
                     <CardHeader>
                         <CardTitle>My Teams</CardTitle>
@@ -62,6 +65,9 @@ export function PlayerDashboard() {
                     </CardContent>
                     </Card>
                 </div>
+            </TabsContent>
+             <TabsContent value="wallet" className="mt-0 flex-1">
+                <Wallet />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
