@@ -55,7 +55,7 @@ export function LoginForm() {
   const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
@@ -69,12 +69,12 @@ export function LoginForm() {
 
   useEffect(() => {
     // This effect runs when the user state changes.
-    // If the user is successfully logged in (user object is present), redirect.
-    if (!isUserLoading && user) {
+    // If the user is successfully logged in and profile is loaded, redirect.
+    if (!isUserLoading && !isProfileLoading && user && profile) {
       const redirectTo = searchParams.get('redirectTo') || '/';
       router.replace(redirectTo);
     }
-  }, [user, isUserLoading, router, searchParams]);
+  }, [user, profile, isUserLoading, isProfileLoading, router, searchParams]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!auth || !firestore) {
@@ -98,8 +98,10 @@ export function LoginForm() {
           // Success! The useEffect will handle the redirect.
            toast({
             title: 'Login Successful',
-            description: "Welcome back!",
+            description: "Welcome back! Redirecting...",
           });
+          // Note: No manual redirect here, let the useEffect handle it
+          // to ensure all data is loaded first.
         } else {
           await signOut(auth);
           toast({
@@ -113,7 +115,7 @@ export function LoginForm() {
         toast({
           variant: 'destructive',
           title: 'Login Failed',
-          description: 'User profile not found.',
+          description: 'User profile not found. Please register first.',
         });
       }
 
@@ -143,12 +145,12 @@ export function LoginForm() {
     }
   }
 
-  // Show a loading state while Firebase is determining the auth state,
-  // or if the user is already logged in and we are about to redirect.
-  if (isUserLoading || user) {
+  // Show a loading state while Firebase is determining auth state,
+  // profile is loading, or if the user is logged in and we are about to redirect.
+  if (isUserLoading || isProfileLoading || (user && profile)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <p>Loading...</p>
+        <p>Loading Dashboard...</p>
         <Skeleton className="h-96 w-96" />
       </div>
     );
@@ -230,9 +232,9 @@ export function LoginForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
                       <SelectItem value="player">Player</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

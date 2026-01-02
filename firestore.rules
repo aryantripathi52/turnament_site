@@ -53,17 +53,18 @@ service cloud.firestore {
       }
       
       // Denormalized coin request history for the specific user.
+      // A user has full control over their own history subcollections.
       match /addCoinRequests/{requestId} {
-        allow read, list, write: if isOwner(userId);
+        allow read, write, list: if isOwner(userId);
       }
       match /withdrawCoinRequests/{requestId} {
-        allow read, list, write: if isOwner(userId);
+        allow read, write, list: if isOwner(userId);
       }
     }
 
     // TOURNAMENTS & CATEGORIES: Publicly readable, but only modifiable by staff/admins.
     match /tournaments/{tournamentId} {
-      allow get, list: if true;
+      allow get, list: if isSignedIn(); // Allow any signed-in user to read
       allow create, update, delete: if isStaffOrAdmin();
 
       // Registrations are readable by any signed-in user so they can see who has joined.
@@ -76,7 +77,7 @@ service cloud.firestore {
     }
 
     match /categories/{categoryId} {
-      allow get, list: if true;
+      allow get, list: if isSignedIn(); // Allow any signed-in user to read
       allow create, update, delete: if isStaffOrAdmin();
     }
 
