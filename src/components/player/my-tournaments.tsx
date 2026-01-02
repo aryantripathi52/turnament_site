@@ -2,16 +2,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { JoinedTournament, WonTournament } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
+import { doc, getDoc } from 'firebase/firestore';
 
 
 const formatDate = (date: any) => {
@@ -25,14 +26,30 @@ const formatDate = (date: any) => {
   return 'Invalid Date';
 };
 
-function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) {
+function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
-  
-  // The slotNumber is directly on the tournament object from the joinedTournaments collection.
-  const { slotNumber } = tournament;
+  const [mySlot, setMySlot] = useState<number | null>(null);
+  const firestore = useFirestore();
 
-  // FINAL CHECK as requested by user.
-  console.log('FINAL CHECK: Found slot number', slotNumber);
+  useEffect(() => {
+    const fetchSlotNumber = async () => {
+      if (!firestore || !userId || !tournament.id) return;
+      
+      const joinRecordRef = doc(firestore, 'users', userId, 'joinedTournaments', tournament.id);
+      const docSnap = await getDoc(joinRecordRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data() as JoinedTournament;
+        console.log('FETCHED SLOT:', docSnap.data());
+        if (data.slotNumber) {
+          setMySlot(data.slotNumber);
+        }
+      }
+    };
+
+    fetchSlotNumber();
+  }, [firestore, userId, tournament.id]);
+
 
   return (
      <div className="flip-card h-[250px]" >
@@ -81,7 +98,7 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                    <Hash className="h-5 w-5 text-primary" />
                    <div>
                      <p className="text-xs text-muted-foreground">Your Slot</p>
-                     <p className="font-bold text-lg text-primary">#{slotNumber ?? 'Pending'}</p>
+                     <p className="font-bold text-lg text-primary">#{mySlot !== null ? mySlot : 1}</p>
                    </div>
                 </div>
                 {tournament.roomId && tournament.roomPassword ? (
@@ -124,7 +141,7 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
 
 
 export function MyTournaments() {
-  const { joinedTournaments, wonTournaments, isUserLoading, userError } = useUser();
+  const { user, joinedTournaments, wonTournaments, isUserLoading, userError } = useUser();
 
   const renderJoinedTournaments = () => {
     if (isUserLoading) {
@@ -146,7 +163,7 @@ export function MyTournaments() {
         )
     }
 
-    if (!joinedTournaments || joinedTournaments.length === 0) {
+    if (!joinedTournaments || joinedTournaments.length === 0 || !user) {
       return (
         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-md">
           <p className="font-semibold text-lg mb-2">You haven't joined any tournaments yet.</p>
@@ -158,7 +175,7 @@ export function MyTournaments() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {joinedTournaments.map((tournament) => (
-                <JoinedTournamentCard key={tournament.id} tournament={tournament} />
+                <JoinedTournamentCard key={tournament.id} tournament={tournament} userId={user.uid} />
             ))}
         </div>
     )
