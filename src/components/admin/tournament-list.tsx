@@ -176,6 +176,12 @@ export function TournamentList() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      Slots: <span className="font-semibold">{tournament.registeredCount} / {tournament.maxPlayers}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>
                       Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>

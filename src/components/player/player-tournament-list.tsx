@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc, increment } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem } from 'lucide-react';
+import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category, JoinedTournament } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/firebase/auth/use-user';
+import { cn } from '@/lib/utils';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -39,7 +40,7 @@ const formatDate = (date: any) => {
 
 export function PlayerTournamentList() {
   const firestore = useFirestore();
-  const { user, profile } = useUser();
+  const { user, profile, joinedTournaments } = useUser();
   const { toast } = useToast();
 
   const tournamentsQuery = useMemoFirebase(() => {
@@ -60,6 +61,10 @@ export function PlayerTournamentList() {
     return new Map(categories.map(cat => [cat.id, cat.name]));
   }, [categories]);
 
+  const joinedTournamentIds = useMemo(() => {
+    return new Set(joinedTournaments?.map(t => t.id));
+  }, [joinedTournaments]);
+
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
@@ -70,6 +75,7 @@ export function PlayerTournamentList() {
     }
 
     const userRef = doc(firestore, 'users', user.uid);
+    const tournamentRef = doc(firestore, 'tournaments', tournament.id);
     const registrationCollectionRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
     const newRegistrationRef = doc(registrationCollectionRef); // Auto-generate ID for registration
     const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', tournament.id);
@@ -78,22 +84,27 @@ export function PlayerTournamentList() {
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-          throw new Error("User profile not found.");
-        }
+        const tournamentDoc = await transaction.get(tournamentRef);
 
+        if (!userDoc.exists()) throw new Error("User profile not found.");
+        if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
+        
         const userProfile = userDoc.data() as UserProfile;
+        const currentTournament = tournamentDoc.data() as Tournament;
 
-        if (userProfile.coins < tournament.entryFee) {
-          throw new Error('Insufficient coins to enter this tournament.');
-        }
+        if (userProfile.coins < currentTournament.entryFee) throw new Error('Insufficient coins.');
+        if (currentTournament.registeredCount >= currentTournament.maxPlayers) throw new Error('Tournament is full.');
+        if (currentTournament.status !== 'upcoming') throw new Error('Registrations are closed for this tournament.');
 
-        const newCoinBalance = userProfile.coins - tournament.entryFee;
+        const newCoinBalance = userProfile.coins - currentTournament.entryFee;
         
         // 1. Update user's coin balance
         transaction.update(userRef, { coins: newCoinBalance });
+        
+        // 2. Increment tournament's registered count
+        transaction.update(tournamentRef, { registeredCount: increment(1) });
 
-        // 2. Create the new registration document
+        // 3. Create the new registration document
         transaction.set(newRegistrationRef, {
             tournamentId: tournament.id,
             teamName: profile.username, // Using username as team name for solo entry
@@ -101,7 +112,7 @@ export function PlayerTournamentList() {
             registrationDate: serverTimestamp(),
         });
 
-        // 3. Create the denormalized joined tournament document
+        // 4. Create the denormalized joined tournament document
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: tournament.name,
             startDate: tournament.startDate,
@@ -159,62 +170,89 @@ export function PlayerTournamentList() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {tournaments.map((tournament) => (
-        <Card key={tournament.id} className="flex flex-col">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-                <CardTitle className="text-xl">{tournament.name}</CardTitle>
-                <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-grow space-y-4">
-             <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
-             <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-primary" />
+      {tournaments.map((tournament) => {
+         const isFull = tournament.registeredCount >= tournament.maxPlayers;
+         const hasJoined = joinedTournamentIds.has(tournament.id);
+         const isRegistrationClosed = tournament.status !== 'upcoming';
+
+        return (
+          <Card key={tournament.id} className="flex flex-col">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                  <CardTitle className="text-xl">{tournament.name}</CardTitle>
+                  <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4">
+               <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
+               <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span>
+                          Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span> (1st)
+                      </span>
+                  </div>
+                   <div className="flex items-center gap-2">
+                      <Gem className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                          Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
+                      </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
                     <span>
-                        Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span> (1st)
+                      Slots: <span className={cn("font-semibold", isFull && "text-destructive")}>{tournament.registeredCount} / {tournament.maxPlayers}</span>
                     </span>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Gem className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                        Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
-                    </span>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                        Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
-                    </span>
-                </div>
-             </div>
-          </CardContent>
-          <CardFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" className="w-full">
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Enter Tournament
+                  </div>
+                   <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                          Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
+                      </span>
+                  </div>
+               </div>
+            </CardContent>
+            <CardFooter>
+            {hasJoined ? (
+                <Button size="sm" className="w-full" disabled>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Already Joined
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to enter the <span className="font-semibold text-foreground">"{tournament.name}"</span>? 
-                    The entry fee of <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleConfirmEntry(tournament)}>Confirm Entry</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardFooter>
-        </Card>
-      ))}
+            ) : isFull ? (
+                 <Button size="sm" className="w-full" disabled>
+                    Tournament Full
+                </Button>
+            ) : isRegistrationClosed ? (
+                <Button size="sm" className="w-full" disabled>
+                    Registration Closed
+                </Button>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="w-full">
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Enter Tournament
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to enter the <span className="font-semibold text-foreground">"{tournament.name}"</span>? 
+                      The entry fee of <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleConfirmEntry(tournament)}>Confirm Entry</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            </CardFooter>
+          </Card>
+        )
+      })}
     </div>
   );
 }

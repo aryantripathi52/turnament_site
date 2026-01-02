@@ -85,6 +85,14 @@
           "type": "string",
           "description": "The current status of the tournament.",
           "enum": ["upcoming", "live", "completed", "cancelled"]
+        },
+        "maxPlayers": {
+            "type": "number",
+            "description": "Maximum number of players allowed in the tournament."
+        },
+        "registeredCount": {
+            "type": "number",
+            "description": "Number of players currently registered for the tournament."
         }
       },
       "required": [
@@ -100,7 +108,9 @@
         "rules",
         "registrationLink",
         "contactEmail",
-        "status"
+        "status",
+        "maxPlayers",
+        "registeredCount"
       ]
     },
     "Registration": {

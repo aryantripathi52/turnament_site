@@ -47,6 +47,7 @@ const formSchema = z.object({
   prizePoolSecond: z.coerce.number().positive({ message: '2nd prize must be a positive number.' }),
   prizePoolThird: z.coerce.number().positive({ message: '3rd prize must be a positive number.' }),
   entryFee: z.coerce.number().min(0, { message: "Entry fee can't be negative." }),
+  maxPlayers: z.coerce.number().positive({ message: 'Max players must be a positive number.' }),
   startDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format' }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
   endDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format' }),
@@ -87,6 +88,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       prizePoolSecond: 0,
       prizePoolThird: 0,
       entryFee: 0,
+      maxPlayers: 100,
       startDate: '',
       startTime: "12:00",
       endDate: '',
@@ -113,6 +115,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
         prizePoolSecond: values.prizePoolSecond,
         prizePoolThird: values.prizePoolThird,
         entryFee: values.entryFee,
+        maxPlayers: values.maxPlayers,
+        registeredCount: 0,
         startDate: startDateTime,
         endDate: endDateTime,
         status: 'upcoming', // Default status
@@ -245,19 +249,34 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                         )}
                         />
                     </div>
-                     <FormField
-                        control={form.control}
-                        name="entryFee"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Entry Fee (Coins)</FormLabel>
-                            <FormControl>
-                                <Input type="number" placeholder="e.g., 100" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="entryFee"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Entry Fee (Coins)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 100" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="maxPlayers"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Max Players</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 100" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
                         />
+                    </div>
 
                      <div className="grid grid-cols-2 gap-4">
                          <FormField
