@@ -4,13 +4,14 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2 } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Trophy } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { ApprovalStatusTable } from './approval-status-table';
 import { PlayerTournamentList } from './player-tournament-list';
+import { MyTournaments } from './my-tournaments';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -50,6 +51,10 @@ export function PlayerDashboard() {
                  <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
                     <Gamepad2 className="h-5 w-5" />
                     Tournaments
+                </TabsTrigger>
+                 <TabsTrigger value="my-tournaments" className="w-full justify-start gap-2">
+                    <Trophy className="h-5 w-5" />
+                    My Tournaments
                 </TabsTrigger>
                 <TabsTrigger value="wallet" className="w-full justify-start gap-2">
                     <WalletIcon className="h-5 w-5" />
@@ -93,6 +98,9 @@ export function PlayerDashboard() {
             </TabsContent>
             <TabsContent value="tournaments" className="mt-0 flex-1">
                  <PlayerTournamentList />
+            </TabsContent>
+            <TabsContent value="my-tournaments" className="mt-0 flex-1">
+                <MyTournaments />
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />
