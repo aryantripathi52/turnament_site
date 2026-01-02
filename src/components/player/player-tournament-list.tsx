@@ -76,83 +76,101 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
+ const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
     if (!auth.currentUser) {
         alert("You must be logged in!");
         return;
     }
-
     const userId = auth.currentUser.uid;
     const tournamentId = selectedTournament.id;
-    // LOG EVERYTHING TO FIND THE GHOST
-    console.log("DEBUG INFO:", { userId, tournamentId, projectId: db.app.options.projectId });
-    console.dir(selectedTournament);
+    
+    // This alert is for final verification as requested.
+    alert("Sending to Project: " + db.app.options.projectId + "\nUser: " + auth.currentUser?.uid);
+
+    console.log("UserID:", userId, "TournamentID:", tournamentId);
 
 
     try {
         await runTransaction(db, async (transaction) => {
-        // 1. Get User Doc
-        const userRef = doc(db, "users", userId);
-        const userSnap = await transaction.get(userRef);
-        if (!userSnap.exists()) throw new Error("User profile not found in database!");
+            const userRef = doc(db, "users", userId);
+            const tournamentRef = doc(db, "tournaments", tournamentId);
 
-        // 2. Get Tournament Doc 
-        const tournamentRef = doc(db, "tournaments", tournamentId);
-        const tournamentSnap = await transaction.get(tournamentRef);
-        if (!tournamentSnap.exists()) throw new Error("Tournament not found!");
+            // 1. Get current state of documents
+            const userSnap = await transaction.get(userRef);
+            const tournamentSnap = await transaction.get(tournamentRef);
 
-        const data = tournamentSnap.data();
-        const entryFee = Number(data.entryFee) || 0;
-        const userCoins = Number(userSnap.data().coins) || 0;
+            if (!userSnap.exists()) {
+                throw new Error("User profile not found. Cannot process transaction.");
+            }
+            if (!tournamentSnap.exists()) {
+                throw new Error("Tournament not found. Cannot process transaction.");
+            }
 
-        if (userCoins < entryFee) throw new Error("Insufficient coins!");
-        
-        if (data.registeredCount >= data.maxPlayers) {
-            throw new Error('This tournament is already full.');
-        }
-        if (data.status !== 'upcoming') {
-            throw new Error('Registrations for this tournament are closed.');
-        }
+            const tournamentData = tournamentSnap.data() as Tournament;
+            const userData = userSnap.data() as UserProfile;
 
-        // 3. PERFORM THE WRITES
-        transaction.update(userRef, { coins: userCoins - entryFee });
-        transaction.update(tournamentRef, { registeredCount: increment(1) });
-        
-        // Use set for sub-collections
-        const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
-            userId: userId,
-            tournamentId: tournamentId,
-            teamName: profile?.username || 'Unknown Player',
-            playerIds: [userId],
-            slotNumber: (data.registeredCount || 0) + 1,
-        };
-        transaction.set(doc(db, "tournaments", tournamentId, "registrations", userId), {
-            ...registrationData,
-            registrationDate: serverTimestamp(),
+            // 2. Validate conditions
+            const entryFee = Number(tournamentData.entryFee) || 0;
+            const userCoins = Number(userData.coins) || 0;
+
+            if (userCoins < entryFee) {
+                throw new Error("Insufficient coins to enter the tournament.");
+            }
+            if (tournamentData.registeredCount >= tournamentData.maxPlayers) {
+                throw new Error('This tournament is already full.');
+            }
+            if (tournamentData.status !== 'upcoming') {
+                throw new Error('Registrations for this tournament are closed.');
+            }
+
+            const newSlotNumber = (tournamentData.registeredCount || 0) + 1;
+
+            // 3. Perform all writes atomically
+            transaction.update(userRef, { coins: increment(-entryFee) });
+            transaction.update(tournamentRef, { registeredCount: increment(1) });
+
+            const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
+                userId: userId,
+                tournamentId: tournamentId,
+                teamName: profile?.username || 'Unknown Player',
+                playerIds: [userId],
+                slotNumber: newSlotNumber,
+            };
+            transaction.set(doc(db, "tournaments", tournamentId, "registrations", userId), {
+                ...registrationData,
+                registrationDate: serverTimestamp(),
+            });
+
+            const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+                name: selectedTournament.name,
+                startDate: selectedTournament.startDate,
+                prizePoolFirst: selectedTournament.prizePoolFirst,
+                entryFee: selectedTournament.entryFee,
+                slotNumber: newSlotNumber,
+                roomId: selectedTournament.roomId || null,
+                roomPassword: selectedTournament.roomPassword || null
+            };
+            transaction.set(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
         });
-        
-        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-            name: selectedTournament.name,
-            startDate: selectedTournament.startDate,
-            prizePoolFirst: selectedTournament.prizePoolFirst,
-            entryFee: selectedTournament.entryFee,
-            slotNumber: (data.registeredCount || 0) + 1,
-            roomId: selectedTournament.roomId || null,
-            roomPassword: selectedTournament.roomPassword || null
-        };
-        transaction.set(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
+
+        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
+        toast({
+            title: 'Success!',
+            description: `You have successfully joined "${selectedTournament.name}".`,
         });
 
-        refreshJoinedTournaments();
-
-        alert("Success! You have joined.");
     } catch (error: any) {
         console.error("CRITICAL TRANSACTION FAIL:", error);
         console.dir(error);
-        alert("PERMISSION ERROR DETAILED: " + error.message);
+        toast({
+            variant: "destructive",
+            title: 'Join Failed',
+            description: error.message || "An unexpected error occurred.",
+        });
     }
   };
+
 
   if (isLoading) {
     return (
