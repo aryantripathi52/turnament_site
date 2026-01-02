@@ -70,12 +70,16 @@ export const useUser = (): UserHookResult => {
   const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
 
   useEffect(() => {
+    if (profile?.role !== 'player') {
+      setCoinRequests(null); // Clear requests if not a player
+      return;
+    }
     if (addCoinRequests || withdrawCoinRequests) {
         const combined = [...(addCoinRequests || []), ...(withdrawCoinRequests || [])];
         combined.sort((a, b) => (b.requestDate?.seconds || 0) - (a.requestDate?.seconds || 0));
         setCoinRequests(combined);
     }
-  }, [addCoinRequests, withdrawCoinRequests]);
+  }, [addCoinRequests, withdrawCoinRequests, profile]);
 
 
   // --- Fetch Joined Tournaments ---
