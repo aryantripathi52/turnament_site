@@ -31,7 +31,7 @@ import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   amountCoins: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
-  withdrawalDetails: z.string().min(10, { message: 'Please provide sufficient details for the withdrawal.' }),
+  withdrawalDetails: z.string().min(3, { message: 'Please provide sufficient details for the withdrawal.' }),
 });
 
 interface WithdrawFundsFormProps {
