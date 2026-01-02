@@ -81,10 +81,15 @@ export function PlayerTournamentList() {
       return;
     }
 
+    console.log("UserID:", user.uid, "TournamentID:", selectedTournament.id);
+
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
+    // Path for the public registration document, using the user's UID as the document ID
     const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
-    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
+    // Path for the user's private record of joining this tournament
+    const joinedTournamentRef = doc(firestore, `users/${user.uid}/joinedTournaments`, selectedTournament.id);
+
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -126,7 +131,7 @@ export function PlayerTournamentList() {
         };
         transaction.set(registrationRef, registrationData);
 
-        // 4. Create the denormalized "joined" record for the user
+        // 4. Create the denormalized "joined" record for the user for their private list
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: currentTournament.name,
             startDate: currentTournament.startDate,
