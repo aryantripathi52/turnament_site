@@ -9,6 +9,7 @@ import { EditProfileForm } from './edit-profile-form';
 import { HireStaffForm } from './hire-staff-form';
 import { Gem, LayoutDashboard, User as UserIcon, UserPlus, Stamp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CoinApprovalTable } from './coin-approval-table';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -84,27 +85,16 @@ export function AdminDashboard() {
                     </CardContent>
                     </Card>
             </TabsContent>
-            <TabsContent value="approval" className="mt-0 flex-1">
-                 <p className="mb-6 text-muted-foreground">Approve or deny player requests for coin purchases and withdrawals.</p>
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Add Coin Requests</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Approve or deny player requests to add coins.</p>
-                            <Button className="mt-4" disabled>Coming Soon</Button>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Withdraw Coin Requests</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Approve or deny player requests to withdraw coins.</p>
-                            <Button className="mt-4" disabled>Coming Soon</Button>
-                        </CardContent>
-                    </Card>
+            <TabsContent value="approval" className="mt-0 flex-1 space-y-6">
+                <div>
+                    <h3 className="text-xl font-semibold mb-2">Add Coin Requests</h3>
+                    <p className="mb-4 text-muted-foreground">Approve or deny player requests to add coins.</p>
+                    <CoinApprovalTable requestType="add" />
+                </div>
+                 <div>
+                    <h3 className="text-xl font-semibold mb-2">Withdraw Coin Requests</h3>
+                    <p className="mb-4 text-muted-foreground">Approve or deny player requests to withdraw coins.</p>
+                     <CoinApprovalTable requestType="withdraw" />
                 </div>
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
