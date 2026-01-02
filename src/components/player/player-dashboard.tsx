@@ -4,12 +4,13 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Users } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { ApprovalStatusTable } from './approval-status-table';
+import { PlayerTournamentList } from './player-tournament-list';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -44,6 +45,14 @@ export function PlayerDashboard() {
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
                 </TabsTrigger>
+                 <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                    <Gamepad2 className="h-5 w-5" />
+                    Tournaments
+                </TabsTrigger>
+                <TabsTrigger value="my-teams" className="w-full justify-start gap-2">
+                    <Users className="h-5 w-5" />
+                    My Teams
+                </TabsTrigger>
                 <TabsTrigger value="wallet" className="w-full justify-start gap-2">
                     <WalletIcon className="h-5 w-5" />
                     My Wallet
@@ -58,11 +67,24 @@ export function PlayerDashboard() {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-0 flex-1">
-                <p className="mb-6 text-muted-foreground">This is your player dashboard. From here, you can view your teams and see upcoming matches.</p>
+                <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your teams.</p>
                 <div className="grid gap-6 md:grid-cols-2">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Find a Tournament</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Browse the list of available tournaments and join the battle.</p>
+                             <Tabs>
+                                <Button className="mt-4" asChild>
+                                    <TabsTrigger value="tournaments">View Tournaments</TabsTrigger>
+                                </Button>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
                     <Card>
                     <CardHeader>
-                        <CardTitle>My Teams</CardTitle>
+                        <CardTitle>Manage Your Team</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p>Manage your team rosters and view team stats.</p>
@@ -70,6 +92,20 @@ export function PlayerDashboard() {
                     </CardContent>
                     </Card>
                 </div>
+            </TabsContent>
+            <TabsContent value="tournaments" className="mt-0 flex-1">
+                 <PlayerTournamentList />
+            </TabsContent>
+            <TabsContent value="my-teams" className="mt-0 flex-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>My Teams</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Manage your team rosters and view team stats.</p>
+                        <Button className="mt-4" disabled>Coming Soon</Button>
+                    </CardContent>
+                </Card>
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />
