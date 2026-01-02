@@ -40,9 +40,9 @@ service cloud.firestore {
       allow list: if isStaffOrAdmin(); 
       allow create: if isOwner(userId);
       
-      // Allow user to update their own username.
-      // Allow 'coins' to be updated by staff/admin (via transactions for coin requests)
-      // Allow admins/staff to update any user profile fully.
+      // Allow user to update own username.
+      // Allow staff/admin to update coins (via transactions).
+      // Allow staff/admin to update any profile fully.
       allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
                     || isStaffOrAdmin();
 
@@ -76,6 +76,7 @@ service cloud.firestore {
 
       match /registrations/{registrationId} {
         allow read, list: if isStaffOrAdmin(); // Only staff/admin can see full registration list
+        allow get: if isOwner(request.resource.data.userId); // User can get their own registration
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isStaffOrAdmin();
       }

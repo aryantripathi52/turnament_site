@@ -29,7 +29,8 @@ export function StaffCoinRequests() {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      orderBy('requestDate', 'asc')
     );
   }, [firestore, profile]);
 
@@ -37,7 +38,8 @@ export function StaffCoinRequests() {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      orderBy('requestDate', 'asc')
     );
   }, [firestore, profile]);
 
@@ -69,6 +71,7 @@ export function StaffCoinRequests() {
 
     const requestRef = doc(firestore, request.collectionName, request.id);
     const userRef = doc(firestore, 'users', request.userId);
+    const playerRequestRef = doc(firestore, `users/${request.userId}/${request.collectionName}`, request.id);
 
     try {
         await runTransaction(firestore, async (transaction) => {
@@ -91,7 +94,6 @@ export function StaffCoinRequests() {
             });
             
             // Update the player's private copy of the request
-            const playerRequestRef = doc(firestore, `users/${request.userId}/${request.collectionName}`, request.id);
             transaction.update(playerRequestRef, {
                 status: decision
             });
@@ -137,7 +139,7 @@ export function StaffCoinRequests() {
           <Ban className="h-4 w-4" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
-            You do not have permission to view this section. Please contact an administrator.
+            You do not have permission to view this section.
           </AlertDescription>
         </Alert>
       );
@@ -156,7 +158,7 @@ export function StaffCoinRequests() {
        return (
         <Alert>
           <Clock className="h-4 w-4" />
-          <AlertTitle>Database is preparing</AlertTitle>
+          <AlertTitle>{error.message.includes('index') ? 'Database is preparing' : 'Error Loading Data'}</AlertTitle>
           <AlertDescription>
             {error.message.includes('index')
               ? 'Database indexes are building to speed up queries. This will resolve in a few minutes.'
