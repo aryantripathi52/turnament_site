@@ -10,16 +10,9 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    // Admin check based on the user's role in their profile document.
-    // This can only be securely used on 'write' operations where the role isn't being changed,
-    // or on 'read' operations if another rule grants the initial get.
-    // For simplicity to unblock the user, we will make admin reads/writes more open.
-    function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
+    // A temp fix for staff permissions
     function isStaff() {
-        return isSignedIn() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' || isAdmin());
+        return isSignedIn() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
     function isExistingDoc() {
@@ -28,12 +21,12 @@ service cloud.firestore {
 
     match /users/{userId} {
       // An admin can get any user doc. A user can get their own.
-      allow get: if isAdmin() || isOwner(userId);
+      allow get: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || isOwner(userId);
       // Let anyone who is signed in list users for now to simplify permissions.
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       // Admins can update any user, owners can update their own.
-      allow update: if isAdmin() || isOwner(userId);
+      allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || isOwner(userId);
       allow delete: if isOwner(userId);
     }
 
@@ -41,7 +34,7 @@ service cloud.firestore {
       allow get: if true;
       allow list: if true;
       // A temp fix for staff permissions
-      allow create, update, delete: if isStaff() || isAdmin();
+      allow create, update, delete: if isStaff();
     }
 
     match /tournaments/{tournamentId}/registrations/{registrationId} {
@@ -52,33 +45,33 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
 
-      allow get: if isExistingTeamMember() || isStaff() || isAdmin();
-      allow list: if isStaff() || isAdmin();
+      allow get: if isExistingTeamMember() || isStaff();
+      allow list: if isStaff();
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
-      allow delete: if isExistingTeamMember() || isStaff() || isAdmin();
+      allow delete: if isExistingTeamMember() || isStaff();
     }
 
     match /announcements/{announcementId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isStaff() || isAdmin();
+      allow create, update, delete: if isStaff();
     }
 
     match /highlights/{highlightId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isStaff() || isAdmin();
+      allow create, update, delete: if isStaff();
     }
     
     match /coinRequests/{coinRequestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // An admin can get any request. A user can get their own.
-      allow get: if isAdmin() || (isSignedIn() && isOwner(resource.data.userId));
+      allow get: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || (isSignedIn() && isOwner(resource.data.userId));
       // An admin can list all requests. A user can only query for their own.
-      allow list: if isAdmin() || (isSignedIn() && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || (isSignedIn() && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
       // Only admins can approve/deny (update) or delete requests.
-      allow update, delete: if isAdmin();
+      allow update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
