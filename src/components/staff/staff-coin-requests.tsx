@@ -39,13 +39,11 @@ export function StaffCoinRequests() {
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
-    // Admin/Staff get all pending requests
     return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
-    // Admin/Staff get all pending requests
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
@@ -62,7 +60,6 @@ export function StaffCoinRequests() {
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-        // Handle cases where date might be missing or not yet a timestamp
         if (!dateB) return -1;
         if (!dateA) return 1;
         return dateB.toMillis() - dateA.toMillis();
