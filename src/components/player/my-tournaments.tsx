@@ -29,9 +29,9 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
-     <div className={cn("flip-card h-[250px]")} onClick={() => {
+     <div className={cn("flip-card h-[250px]")} onClick={(event) => {
         // Prevent flipping when clicking buttons inside
-        if (event?.target instanceof HTMLButtonElement) return;
+        if (event.target instanceof HTMLButtonElement || (event.target as HTMLElement).closest('button')) return;
         setIsFlipped(!isFlipped)
     }}>
       <div className={cn("flip-card-inner", isFlipped && "[transform:rotateY(180deg)]")}>
@@ -75,15 +75,15 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                 <CardTitle className="text-xl">Room Details</CardTitle>
              </CardHeader>
              <CardContent className="flex-grow space-y-4">
+                <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+                   <Hash className="h-5 w-5 text-primary" />
+                   <div>
+                     <p className="text-xs text-muted-foreground">Your Slot</p>
+                     <p className="font-bold text-lg">#{tournament.slotNumber}</p>
+                   </div>
+                </div>
                 {tournament.roomId && tournament.roomPassword ? (
                     <>
-                        <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
-                           <Hash className="h-5 w-5 text-primary" />
-                           <div>
-                             <p className="text-xs text-muted-foreground">Your Slot</p>
-                             <p className="font-bold text-lg">#{tournament.slotNumber}</p>
-                           </div>
-                        </div>
                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
                            <Ticket className="h-5 w-5 text-primary" />
                            <div>
@@ -103,8 +103,6 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                     <div className="flex items-center text-center justify-center h-full">
                        <p className="text-muted-foreground text-sm">
                            Room details will be shared 15 minutes before the match.
-                           <br />
-                           Your Slot: <span className="font-bold text-foreground">#{tournament.slotNumber}</span>
                        </p>
                     </div>
                 )}
