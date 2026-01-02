@@ -49,7 +49,6 @@ const formSchema = z.object({
   categoryId: z.string({ required_error: 'Please select a game category.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   prizePool: z.coerce.number().positive({ message: 'Prize pool must be a positive number.' }),
-  region: z.string().min(2, { message: 'Region is required.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
   endDate: z.date({ required_error: 'An end date is required.' }),
 }).refine((data) => data.endDate > data.startDate, {
@@ -81,7 +80,6 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       name: '',
       description: '',
       prizePool: 0,
-      region: '',
     },
   });
 
@@ -186,24 +184,10 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="prizePool"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="col-span-2">
                   <FormLabel>Prize Pool (INR)</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="e.g., 50000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-             <FormField
-              control={form.control}
-              name="region"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Region</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., India" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
