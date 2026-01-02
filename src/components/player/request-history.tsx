@@ -68,6 +68,7 @@ export function RequestHistory() {
     return combined.sort((a, b) => {
         const dateA = a.requestDate;
         const dateB = b.requestDate;
+        if (!dateA || !dateB) return 0;
         return dateB.toMillis() - dateA.toMillis();
     });
   }, [addRequests, withdrawRequests]);

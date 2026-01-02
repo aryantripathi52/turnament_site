@@ -94,13 +94,15 @@ service cloud.firestore {
     // GLOBAL ADD COIN REQUESTS (for Admin/Staff review)
     match /addCoinRequests/{requestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow get, list, update, delete: if isStaffOrAdmin();
+      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
+      allow list, update, delete: if isStaffOrAdmin();
     }
 
     // GLOBAL WITHDRAW COIN REQUESTS (for Admin/Staff review)
     match /withdrawCoinRequests/{requestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow get, list, update, delete: if isStaffOrAdmin();
+      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
+      allow list, update, delete: if isStaffOrAdmin();
     }
   }
 }

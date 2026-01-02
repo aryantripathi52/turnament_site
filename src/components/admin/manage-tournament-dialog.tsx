@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc, writeBatch, getDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch, getDoc, serverTimestamp, increment, Timestamp } from 'firebase/firestore';
 import type { Tournament, Registration, UserProfile, WonTournament } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { format } from 'date-fns';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 
 interface ManageTournamentDialogProps {
   tournament: WithId<Tournament>;
@@ -62,6 +63,10 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
   const getPlayerName = (userId: string | undefined) => players.find(p => p.id === userId)?.name || 'N/A';
 
   const handleSubmitWinners = async () => {
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
+        return;
+    }
     if (!firstPlace || !secondPlace || !thirdPlace) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select winners for all three places.' });
       return;
@@ -105,7 +110,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
         batch.delete(joinedTournamentRef);
         
         // Add to 'wonTournaments'
-        const wonTournamentData: Omit<WonTournament, 'id'> = {
+        const wonTournamentData: Omit<WonTournament, 'id' | 'completionDate'> & { completionDate: any } = {
             name: tournament.name,
             prizeWon: prize,
             place: place as WonTournament['place'],
@@ -245,7 +250,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                       {reg.teamName}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                       {format(reg.registrationDate.toDate(), 'PPp')}
+                       {reg.registrationDate ? format(reg.registrationDate.toDate(), 'PPp') : 'Date missing'}
                     </span>
                   </li>
                 ))}

@@ -21,15 +21,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
 import { useEffect, useState } from 'react';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { setDoc, doc } from 'firebase/firestore';
 import { Eye, EyeOff } from 'lucide-react';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -53,7 +50,7 @@ const getRoleFromKey = (key: string): 'admin' | 'staff' | 'player' | null => {
   if (key === 'STAFF_DPS#1') {
     return 'staff';
   }
-  if (key === '') {
+  if (key === '' || !key) {
     return 'player';
   }
   return null; // Invalid key
@@ -64,11 +61,7 @@ export function RegisterForm() {
   const firestore = useFirestore();
   const router = useRouter();
   const { user, isUserLoading } = useUser();
-  const [formData, setFormData] = useState<z.infer<typeof formSchema> | null>(
-    null
-  );
   const [showPassword, setShowPassword] = useState(false);
-
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,35 +74,46 @@ export function RegisterForm() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && user && formData) {
-      const role = getRoleFromKey(formData.roleKey || '');
-      if (role) {
-        const newUser: any = {
-          id: user.uid,
-          email: user.email,
-          username: formData.username,
-          role: role,
-          registrationIds: [],
-          coins: role === 'player' ? 100 : 0, // Starting coins for players
-        };
-        const userDocRef = doc(firestore, 'users', user.uid);
-        setDocumentNonBlocking(userDocRef, newUser, { merge: true });
-        router.push('/');
-      }
+    if (!isUserLoading && user) {
+      router.push('/');
     }
-  }, [user, isUserLoading, router, firestore, formData]);
+  }, [user, isUserLoading, router]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!auth || !firestore) {
+      console.error("Firebase not initialized");
+      return;
+    }
+    
     const role = getRoleFromKey(values.roleKey || '');
     if (!role) {
       form.setError('roleKey', {
         type: 'manual',
-        message: 'Invalid Role Key. Please leave blank or enter a valid key.',
+        message: 'Invalid Role Key. Leave blank for player.',
       });
       return;
     }
-    setFormData(values);
-    initiateEmailSignUp(auth, values.email, values.password);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const newUser = userCredential.user;
+
+      const userProfile = {
+        id: newUser.uid,
+        email: newUser.email,
+        username: values.username,
+        role: role,
+        coins: role === 'player' ? 100 : 0, // Starting coins for players
+      };
+      
+      const userDocRef = doc(firestore, 'users', newUser.uid);
+      await setDoc(userDocRef, userProfile);
+      
+      // The useEffect will handle the redirect
+    } catch (error) {
+      console.error("Registration Error:", error);
+      // Handle error display to user, e.g., using a toast
+    }
   }
 
   if (isUserLoading) {
@@ -205,8 +209,8 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              Register
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+               {form.formState.isSubmitting ? 'Registering...' : 'Register'}
             </Button>
           </form>
         </Form>
