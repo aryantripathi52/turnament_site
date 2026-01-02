@@ -13,7 +13,7 @@ import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
 
-type CoinRequest = AddCoinRequest | WithdrawCoinRequest;
+type CoinRequest = WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>;
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -55,7 +55,7 @@ export function RequestHistory() {
   const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
   const allRequests = useMemo(() => {
-    const combined = [...(addRequests || []), ...(withdrawRequests || [])];
+    const combined: CoinRequest[] = [...(addRequests || []), ...(withdrawRequests || [])];
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp;
         const dateB = b.requestDate as Timestamp;
@@ -97,11 +97,11 @@ export function RequestHistory() {
 
   return (
     <div className="space-y-4">
-      {allRequests.map((request, index) => {
+      {allRequests.map((request) => {
         const isAddRequest = request.type === 'add';
         const statusInfo = statusConfig[request.status];
         return (
-          <Card key={`${request.id}-${index}`}>
+          <Card key={request.id}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <p className="font-semibold">
