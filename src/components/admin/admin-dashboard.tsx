@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Stamp } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Stamp, History } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CoinApprovalTable } from './coin-approval-table';
+import { CoinRequestHistoryTable } from './coin-request-history-table';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -47,6 +48,10 @@ export function AdminDashboard() {
                     <Stamp className="h-5 w-5" />
                     Coin Approval
                 </TabsTrigger>
+                 <TabsTrigger value="history" className="w-full justify-start gap-2">
+                    <History className="h-5 w-5" />
+                    Request History
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -76,6 +81,13 @@ export function AdminDashboard() {
                     <h3 className="text-xl font-semibold mb-2">Withdraw Coin Requests</h3>
                     <p className="mb-4 text-muted-foreground">Approve or deny player requests to withdraw coins.</p>
                      <CoinApprovalTable requestType="withdraw" />
+                </div>
+            </TabsContent>
+            <TabsContent value="history" className="mt-0 flex-1 space-y-6">
+                 <div>
+                    <h3 className="text-xl font-semibold mb-2">Completed Requests</h3>
+                    <p className="mb-4 text-muted-foreground">A log of all approved and denied coin requests.</p>
+                    <CoinRequestHistoryTable />
                 </div>
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
@@ -115,5 +127,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
