@@ -5,7 +5,7 @@ import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { CoinRequest } from '@/lib/types';
+import type { CoinRequest, Team, TeamInvitation } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
 import { useCollection } from '../firestore/use-collection';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,8 @@ export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
   coinRequests: WithId<CoinRequest>[] | null;
+  teams: WithId<Team>[] | null;
+  teamInvitations: WithId<TeamInvitation>[] | null;
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
@@ -55,10 +57,10 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
+  // --- Fetch Coin Requests ---
   const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsError, setRequestsError] = useState<Error | null>(null);
-
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -71,28 +73,50 @@ export const useUser = (): UserHookResult => {
         const q = query(collection(firestore, "coinRequests"), where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithId<CoinRequest>));
-        // Sort client-side
         requests.sort((a, b) => b.requestDate.toMillis() - a.requestDate.toMillis());
         setCoinRequests(requests);
       } catch (e: any) {
-        console.error("Failed to fetch coin requests:", e);
         setRequestsError(e);
       } finally {
         setRequestsLoading(false);
       }
     };
-
     fetchRequests();
   }, [user, firestore, profile]);
-  
+
+
+  // --- Fetch Teams ---
+  const teamsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'teams'), where('members', 'array-contains', user.uid));
+  }, [user, firestore]);
+
+  const { data: teams, isLoading: teamsLoading, error: teamsError } = useCollection<Team>(teamsQuery);
+
+  // --- Fetch Team Invitations ---
+  const invitationsQuery = useMemoFirebase(() => {
+      if (!user || !firestore) return null;
+      return query(
+          collection(firestore, 'users', user.uid, 'teamInvitations'),
+          where('status', '==', 'pending'),
+          orderBy('requestDate', 'desc')
+      );
+  }, [user, firestore]);
+
+  const { data: teamInvitations, isLoading: invitationsLoading, error: invitationsError } = useCollection<TeamInvitation>(invitationsQuery);
+
+
+  const combinedIsLoading = isUserLoading || isProfileLoading || requestsLoading || teamsLoading || invitationsLoading;
+  const combinedError = userError || profileError || requestsError || teamsError || invitationsError;
+
   return {
     user,
     profile,
     coinRequests,
+    teams,
+    teamInvitations,
     isUserLoading,
-    isProfileLoading: isUserLoading || isProfileLoading || requestsLoading,
-    userError: userError || profileError || requestsError,
+    isProfileLoading: combinedIsLoading,
+    userError: combinedError,
   };
 };
-
-    

@@ -328,6 +328,42 @@
         "status",
         "requestDate"
       ]
+    },
+    "Team": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team",
+      "type": "object",
+      "description": "Represents a player team.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the Team entity." },
+        "name": { "type": "string", "description": "Name of the team." },
+        "ownerId": { "type": "string", "description": "The user ID of the team owner." },
+        "members": { "type": "array", "items": { "type": "string" }, "description": "Array of user IDs who are members of the team." },
+        "memberUsernames": {
+            "type": "object",
+            "description": "A map of user IDs to their usernames for easy display.",
+            "additionalProperties": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "ownerId", "members", "memberUsernames"]
+    },
+    "TeamInvitation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TeamInvitation",
+      "type": "object",
+      "description": "Represents an invitation for a user to join a team.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the invitation." },
+        "teamId": { "type": "string", "description": "The ID of the team the invitation is for." },
+        "teamName": { "type": "string", "description": "The name of the team (denormalized)." },
+        "fromUserId": { "type": "string", "description": "The user ID of the person who sent the invitation." },
+        "fromUsername": { "type": "string", "description": "The username of the sender (denormalized)." },
+        "toUserId": { "type": "string", "description": "The user ID of the person receiving the invitation." },
+        "toUsername": { "type": "string", "description": "The username of the receiver (denormalized)." },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"], "description": "The status of the invitation." },
+        "requestDate": { "type": "string", "format": "date-time", "description": "The date the invitation was sent." }
+      },
+      "required": ["id", "teamId", "teamName", "fromUserId", "fromUsername", "toUserId", "toUsername", "status", "requestDate"]
     }
   },
   "auth": {
@@ -451,6 +487,27 @@
               "name": "categoryId",
               "description": "Unique identifier for the category."
             }
+          ]
+        }
+      },
+       {
+        "path": "/teams/{teamId}",
+        "definition": {
+          "entityName": "Team",
+          "schema": { "$ref": "#/backend/entities/Team" },
+          "description": "Stores team information.",
+          "params": [{ "name": "teamId", "description": "Unique identifier for the team." }]
+        }
+      },
+      {
+        "path": "/users/{userId}/teamInvitations/{invitationId}",
+        "definition": {
+          "entityName": "TeamInvitation",
+          "schema": { "$ref": "#/backend/entities/TeamInvitation" },
+          "description": "Stores invitations sent to a user to join a team. Subcollection of users for easy querying.",
+          "params": [
+            { "name": "userId", "description": "The user receiving the invitation." },
+            { "name": "invitationId", "description": "Unique identifier for the invitation." }
           ]
         }
       }

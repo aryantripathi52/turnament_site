@@ -42,3 +42,23 @@ export type Category = {
   name: string;
   imageUrl: string;
 };
+
+export type Team = {
+  id: string;
+  name: string;
+  ownerId: string;
+  members: string[]; // array of user IDs
+  memberUsernames: { [userId: string]: string }; // map of userId to username
+};
+
+export type TeamInvitation = {
+  id: string;
+  teamId: string;
+  teamName: string;
+  fromUserId: string;
+  fromUsername: string;
+  toUserId: string;
+  toUsername: string;
+  status: 'pending' | 'accepted' | 'declined';
+  requestDate: Timestamp;
+};

@@ -4,13 +4,15 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Users } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Users, Mail } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { ApprovalStatusTable } from './approval-status-table';
 import { PlayerTournamentList } from './player-tournament-list';
+import { MyTeams } from './my-teams';
+import { TeamRequestList } from './team-request-list';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -55,6 +57,10 @@ export function PlayerDashboard() {
                     <Users className="h-5 w-5" />
                     My Teams
                 </TabsTrigger>
+                <TabsTrigger value="team-requests" className="w-full justify-start gap-2">
+                    <Mail className="h-5 w-5" />
+                    Team Requests
+                </TabsTrigger>
                 <TabsTrigger value="wallet" className="w-full justify-start gap-2">
                     <WalletIcon className="h-5 w-5" />
                     My Wallet
@@ -77,7 +83,7 @@ export function PlayerDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p>Browse the list of available tournaments and join the battle.</p>
-                            <Button className="mt-4" onClick={() => setActiveTab('tournaments')}>
+                             <Button className="mt-4" onClick={() => setActiveTab('tournaments')}>
                                 View Tournaments
                             </Button>
                         </CardContent>
@@ -87,8 +93,10 @@ export function PlayerDashboard() {
                         <CardTitle>Manage Your Team</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>Manage your team rosters and view team stats.</p>
-                        <Button className="mt-4" disabled>Coming Soon</Button>
+                        <p>Create a new team or manage your existing team rosters.</p>
+                        <Button className="mt-4" onClick={() => setActiveTab('my-teams')}>
+                            Go to My Teams
+                        </Button>
                     </CardContent>
                     </Card>
                 </div>
@@ -97,15 +105,10 @@ export function PlayerDashboard() {
                  <PlayerTournamentList />
             </TabsContent>
             <TabsContent value="my-teams" className="mt-0 flex-1">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>My Teams</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Manage your team rosters and view team stats.</p>
-                        <Button className="mt-4" disabled>Coming Soon</Button>
-                    </CardContent>
-                </Card>
+                 <MyTeams />
+            </TabsContent>
+            <TabsContent value="team-requests" className="mt-0 flex-1">
+                 <TeamRequestList />
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />
