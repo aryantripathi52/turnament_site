@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '../ui/textarea';
 import type { Category } from '@/lib/types';
+import { Calendar } from 'lucide-react';
 
 
 const formSchema = z.object({
