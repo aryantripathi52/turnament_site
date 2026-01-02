@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Timestamp } from 'firebase/firestore';
 
 const statusConfig = {
   pending: {
@@ -38,6 +39,17 @@ const statusConfig = {
     color: 'bg-red-500',
     label: 'Denied',
   },
+};
+
+const formatDate = (date: Timestamp | Date | undefined | null) => {
+  if (!date) return 'N/A';
+  if (date instanceof Timestamp) {
+    return date.toDate().toLocaleDateString();
+  }
+  if (date instanceof Date) {
+    return date.toLocaleDateString();
+  }
+  return 'Invalid Date';
 };
 
 export function ApprovalStatusTable() {
@@ -132,12 +144,10 @@ export function ApprovalStatusTable() {
                     </TooltipProvider>
                   </TableCell>
                   <TableCell>
-                    {req.requestDate.toDate().toLocaleDateString()}
+                    {formatDate(req.requestDate)}
                   </TableCell>
                   <TableCell>
-                    {req.decisionDate
-                      ? req.decisionDate.toDate().toLocaleDateString()
-                      : 'N/A'}
+                    {formatDate(req.decisionDate)}
                   </TableCell>
                 </TableRow>
               );

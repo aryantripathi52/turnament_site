@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
   Table,
@@ -38,15 +38,27 @@ const statusConfig = {
   },
 };
 
+const formatDate = (date: Timestamp | Date | undefined | null) => {
+  if (!date) return 'N/A';
+  if (date instanceof Timestamp) {
+    return date.toDate().toLocaleDateString();
+  }
+  if (date instanceof Date) {
+    return date.toLocaleDateString();
+  }
+  // Fallback for serialized data that might just be a string
+  if (typeof date === 'string') {
+    return new Date(date).toLocaleDateString();
+  }
+  return 'Invalid Date';
+};
+
 
 export function CoinRequestHistoryTable() {
   const firestore = useFirestore();
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Firestore requires the first orderBy field to be the same as the inequality field
-    // if that field is part of a composite index. We will sort by requestDate as it is
-    // always present and provides a consistent order.
     return query(
       collection(firestore, 'coinRequests'),
       where('status', 'in', ['approved', 'denied']),
@@ -134,8 +146,8 @@ export function CoinRequestHistoryTable() {
                             </Tooltip>
                             </TooltipProvider>
                         </TableCell>
-                        <TableCell>{req.requestDate?.toDate().toLocaleDateString() ?? 'N/A'}</TableCell>
-                        <TableCell>{req.decisionDate ? req.decisionDate.toDate().toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell>{formatDate(req.requestDate)}</TableCell>
+                        <TableCell>{formatDate(req.decisionDate)}</TableCell>
                     </TableRow>
                   );
                 })}
