@@ -39,7 +39,7 @@ service cloud.firestore {
 
       allow get: if isExistingTeamMember() || isSignedIn();
       // Allow a user to list registrations they are a part of.
-      allow list: if isSignedIn() && request.query.where.array_contains[1] == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
       allow delete: if isExistingTeamMember() || isSignedIn();
