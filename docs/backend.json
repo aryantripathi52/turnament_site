@@ -93,6 +93,35 @@
         "registeredCount": {
             "type": "number",
             "description": "Number of players currently registered for the tournament."
+        },
+        "winners": {
+            "type": "object",
+            "properties": {
+                "first": {
+                    "type": "object",
+                    "properties": {
+                        "userId": {"type": "string"},
+                        "username": {"type": "string"}
+                    }
+                },
+                "second": {
+                    "type": "object",
+                    "properties": {
+                        "userId": {"type": "string"},
+                        "username": {"type": "string"}
+                    }
+                },
+                "third": {
+                    "type": "object",
+                    "properties": {
+                        "userId": {"type": "string"},
+                        "username": {"type": "string"}
+                    }
+                }
+            }
+        },
+        "categoryId": {
+            "type": "string"
         }
       },
       "required": [
@@ -110,7 +139,8 @@
         "contactEmail",
         "status",
         "maxPlayers",
-        "registeredCount"
+        "registeredCount",
+        "categoryId"
       ]
     },
     "Registration": {
@@ -142,14 +172,16 @@
           "type": "string",
           "description": "Date and time when the team registered.",
           "format": "date-time"
-        }
+        },
+        "userId": {"type": "string"}
       },
       "required": [
         "id",
         "tournamentId",
         "teamName",
         "playerIds",
-        "registrationDate"
+        "registrationDate",
+        "userId"
       ]
     },
     "Announcement": {
@@ -305,6 +337,19 @@
         "entryFee": { "type": "number", "description": "The entry fee paid." }
       },
       "required": ["id", "name", "startDate", "prizePoolFirst", "entryFee"]
+    },
+    "WonTournament": {
+      "title": "Won Tournament",
+      "description": "A denormalized record of a tournament a user has won.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "prizeWon": { "type": "number" },
+        "place": { "type": "string", "enum": ["1st", "2nd", "3rd"] },
+        "completionDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "prizeWon", "place", "completionDate"]
     }
   },
   "auth": {
@@ -322,13 +367,7 @@
           "schema": {
             "$ref": "#/backend/entities/Tournament"
           },
-          "description": "Stores tournament information.",
-          "params": [
-            {
-              "name": "tournamentId",
-              "description": "Unique identifier for the tournament."
-            }
-          ]
+          "description": "Stores tournament information."
         }
       },
       {
@@ -338,17 +377,7 @@
           "schema": {
             "$ref": "#/backend/entities/Registration"
           },
-          "description": "Stores registration information for each tournament.",
-          "params": [
-            {
-              "name": "tournamentId",
-              "description": "Unique identifier for the tournament."
-            },
-            {
-              "name": "registrationId",
-              "description": "Unique identifier for the registration."
-            }
-          ]
+          "description": "Stores registration information for each tournament."
         }
       },
       {
@@ -358,13 +387,7 @@
           "schema": {
             "$ref": "#/backend/entities/Announcement"
           },
-          "description": "Stores global announcements.",
-          "params": [
-            {
-              "name": "announcementId",
-              "description": "Unique identifier for the announcement."
-            }
-          ]
+          "description": "Stores global announcements."
         }
       },
       {
@@ -374,13 +397,7 @@
           "schema": {
             "$ref": "#/backend/entities/Highlight"
           },
-          "description": "Stores AI-generated match highlights.",
-          "params": [
-            {
-              "name": "highlightId",
-              "description": "Unique identifier for the highlight."
-            }
-          ]
+          "description": "Stores AI-generated match highlights."
         }
       },
       {
@@ -390,13 +407,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "Unique identifier for the user."
-            }
-          ]
+          "description": "Stores user profiles."
         }
       },
        {
@@ -404,11 +415,15 @@
         "definition": {
           "entityName": "JoinedTournament",
           "schema": { "$ref": "#/backend/entities/JoinedTournament" },
-          "description": "Stores denormalized data for tournaments a user has joined for easy display.",
-          "params": [
-            { "name": "userId", "description": "The user's ID." },
-            { "name": "tournamentId", "description": "The tournament's ID." }
-          ]
+          "description": "Stores denormalized data for tournaments a user has joined for easy display."
+        }
+      },
+      {
+        "path": "/users/{userId}/wonTournaments/{tournamentId}",
+        "definition": {
+          "entityName": "WonTournament",
+          "schema": { "$ref": "#/backend/entities/WonTournament" },
+          "description": "Stores denormalized records of tournaments a user has won."
         }
       },
       {
@@ -416,8 +431,7 @@
         "definition": {
           "entityName": "AddCoinRequest",
           "schema": { "$ref": "#/backend/entities/AddCoinRequest" },
-          "description": "Stores user requests to add coins.",
-          "params": [{ "name": "requestId", "description": "Unique identifier for the request." }]
+          "description": "Stores user requests to add coins."
         }
       },
       {
@@ -425,8 +439,7 @@
         "definition": {
           "entityName": "WithdrawCoinRequest",
           "schema": { "$ref": "#/backend/entities/WithdrawCoinRequest" },
-          "description": "Stores user requests to withdraw coins.",
-          "params": [{ "name": "requestId", "description": "Unique identifier for the request." }]
+          "description": "Stores user requests to withdraw coins."
         }
       },
       {
@@ -436,16 +449,12 @@
           "schema": {
             "$ref": "#/backend/entities/Category"
           },
-          "description": "Stores game categories for tournaments.",
-          "params": [
-            {
-              "name": "categoryId",
-              "description": "Unique identifier for the category."
-            }
-          ]
+          "description": "Stores game categories for tournaments."
         }
       }
     ],
     "reasoning": "The 'coinRequests' collection has been split into 'addCoinRequests' and 'withdrawCoinRequests' to simplify security rules. This avoids complex rules for querying based on the 'type' field, which was causing permission errors for admin users trying to list all pending requests. Each new collection now has a simple, direct rule allowing admins full access, while players can only create and read their own requests. This is a more robust and secure data model."
   }
 }
+
+    
