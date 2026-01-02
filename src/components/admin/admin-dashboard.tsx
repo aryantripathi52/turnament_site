@@ -12,11 +12,13 @@ import { CoinApprovalTable } from './coin-approval-table';
 import { CoinRequestHistoryTable } from './coin-request-history-table';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
+import { CreateTournamentForm } from './create-tournament-form';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -69,7 +71,9 @@ export function AdminDashboard() {
                       </CardHeader>
                       <CardContent>
                           <p>Organize a new tournament for players.</p>
-                          <Button className="mt-4" disabled>Coming Soon</Button>
+                          <CreateTournamentForm isOpen={isTournamentDialogOpen} setIsOpen={setIsTournamentDialogOpen}>
+                                <Button className="mt-4" onClick={() => setIsTournamentDialogOpen(true)}>Create Tournament</Button>
+                          </CreateTournamentForm>
                       </CardContent>
                     </Card>
                     <Card>
@@ -145,5 +149,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
