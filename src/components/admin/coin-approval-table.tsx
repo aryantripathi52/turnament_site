@@ -135,6 +135,10 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     );
   }
 
+  if (profile?.role !== 'admin') {
+    return null;
+  }
+  
   if (!requests || requests.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-4 border rounded-md">

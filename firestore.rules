@@ -20,8 +20,6 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // This is not reliable for list queries and should be replaced with custom claims.
-      // For now, we avoid using it in list rules.
       return isSignedIn() && getRole(request.auth.uid) == 'admin';
     }
 
@@ -72,8 +70,10 @@ service cloud.firestore {
     }
     
     match /addCoinRequests/{requestId} {
-      // Admins can read/write individual documents. Listing is handled by custom claims (disabled for now).
+      // Admins can get/update/delete any single document.
       allow get, update, delete: if isAdmin();
+      // Admins can list documents if they query by status.
+      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']);
       // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // A player can only list/get their own requests.
@@ -81,9 +81,11 @@ service cloud.firestore {
     }
 
     match /withdrawCoinRequests/{requestId} {
-       // Admins can read/write individual documents. Listing is handled by custom claims (disabled for now).
+      // Admins can get/update/delete any single document.
       allow get, update, delete: if isAdmin();
-       // A player can only create a request for themselves.
+      // Admins can list documents if they query by status.
+      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']);
+      // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // A player can only list/get their own requests.
       allow list, get: if isSignedIn() && request.query.where.userId == request.auth.uid;

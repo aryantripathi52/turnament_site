@@ -85,9 +85,9 @@ export const useUser = (): UserHookResult => {
 
   // --- Fetch Joined Tournaments ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
-  }, [user, firestore]);
+  }, [user, firestore, profile]);
 
   const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
