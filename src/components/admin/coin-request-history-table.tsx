@@ -48,7 +48,6 @@ const formatDate = (date: Timestamp | Date | undefined | null) => {
   if (date instanceof Date) {
     return date.toLocaleDateString();
   }
-  // Fallback for serialized data that might just be a string
   if (typeof date === 'string') {
     return new Date(date).toLocaleDateString();
   }
@@ -96,7 +95,7 @@ export function CoinRequestHistoryTable() {
   }, [addRequests, withdrawRequests, profile]);
 
 
-  if (isLoading) {
+  if (isLoading && profile?.role === 'admin') {
     return (
         <div className="space-y-2">
             <Skeleton className="h-10 w-full" />
@@ -112,7 +111,7 @@ export function CoinRequestHistoryTable() {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Fetching History</AlertTitle>
         <AlertDescription>
-          There was a problem loading the request history. Please check your connection and permissions.
+          There was a problem loading the request history. Your account may not have the required admin permissions.
         </AlertDescription>
       </Alert>
     );

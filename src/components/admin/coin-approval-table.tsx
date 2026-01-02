@@ -30,13 +30,11 @@ interface CoinApprovalTableProps {
 export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { profile } = useUser(); // Get user profile to check role
+  const { profile } = useUser(); 
 
   const collectionName = requestType === 'add' ? 'addCoinRequests' : 'withdrawCoinRequests';
 
-  // The query is now conditional. It will only run if the user is an admin.
   const requestsQuery = useMemoFirebase(() => {
-    // DO NOT run the query if the user is not an admin to prevent permission errors.
     if (!firestore || profile?.role !== 'admin') return null;
     
     return query(
@@ -47,10 +45,8 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
 
   const { data: requests, isLoading, error, setData: setRequests } = useCollection<CoinRequest>(requestsQuery);
 
-   // Effect to handle the case where the query is disabled
-  useEffect(() => {
+   useEffect(() => {
     if (profile?.role !== 'admin') {
-      // If not an admin, we don't expect data.
       return;
     }
   }, [profile]);
@@ -91,18 +87,15 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
             }
             newCoinBalance -= request.amountCoins;
           }
-           // Update user's coin balance if approved
-          transaction.update(userRef, { coins: newCoinBalance });
+           transaction.update(userRef, { coins: newCoinBalance });
         }
         
-        // Finally, update the request status
         transaction.update(requestRef, {
             status: decision,
             decisionDate: new Date(),
         });
       });
       
-      // Optimistically update the UI by removing the processed request
       setRequests((prevRequests) => prevRequests?.filter(r => r.id !== request.id) || null);
 
       toast({
@@ -120,7 +113,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     }
    };
 
-  if (isLoading) {
+  if (isLoading && profile?.role === 'admin') {
     return (
         <div className="space-y-2">
             <Skeleton className="h-10 w-full" />
@@ -130,14 +123,13 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     );
   }
 
-  // Do not show an error if the user is not an admin, as the query is intentionally disabled.
   if (error && profile?.role === 'admin') {
      return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Fetching Requests</AlertTitle>
         <AlertDescription>
-          There was a problem loading the coin requests. Please check your connection and permissions.
+          There was a problem loading the coin requests. Your account may not have the required admin permissions.
         </AlertDescription>
       </Alert>
     );

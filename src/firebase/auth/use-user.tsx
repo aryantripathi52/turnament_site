@@ -70,8 +70,9 @@ export const useUser = (): UserHookResult => {
   const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
 
   useEffect(() => {
+    // Only combine requests if the user is a player
     if (profile?.role !== 'player') {
-      setCoinRequests(null); // Clear requests if not a player
+      setCoinRequests(null);
       return;
     }
     if (addCoinRequests || withdrawCoinRequests) {
