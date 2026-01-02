@@ -19,8 +19,8 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to update
+      allow delete: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to delete
     }
 
     match /tournaments/{tournamentId} {
