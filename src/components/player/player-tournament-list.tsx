@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -90,19 +90,19 @@ export function PlayerTournamentList() {
         const newCoinBalance = userProfile.coins - tournament.entryFee;
         
         // 1. Create the new registration document
+        const newRegistrationRef = doc(registrationColRef);
         const newRegistrationData: Omit<Registration, 'id'> = {
           tournamentId: tournament.id,
           teamName: profile.username, // Using username as team name for now
           playerIds: [user.uid],
           registrationDate: serverTimestamp(),
         };
-        // We add the document inside the transaction to get its ID.
-        const newRegistrationRef = doc(registrationColRef);
         transaction.set(newRegistrationRef, newRegistrationData);
         
-        // 2. Update user's coin balance
+        // 2. Update user's coin balance and add registrationId to user profile
         transaction.update(userRef, { 
             coins: newCoinBalance,
+            registrationIds: arrayUnion(newRegistrationRef.id)
         });
       });
 
@@ -213,3 +213,5 @@ export function PlayerTournamentList() {
     </div>
   );
 }
+
+    
