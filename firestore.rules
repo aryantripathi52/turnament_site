@@ -157,7 +157,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
       // Admins can list/query all requests. Players can only query for their own.
-      allow list: if isAdmin() || (isSignedIn() && request.query.where.size() == 1 && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.where.size() > 0 && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }
