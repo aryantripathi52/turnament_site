@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Stamp, History } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Stamp, History, Gamepad2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CoinApprovalTable } from './coin-approval-table';
 import { CoinRequestHistoryTable } from './coin-request-history-table';
@@ -61,13 +61,22 @@ export function AdminDashboard() {
                 <p className="mb-6 text-muted-foreground">Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
-                    <CardHeader>
-                        <CardTitle>Create Tournament</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Organize a new tournament for players.</p>
-                        <Button className="mt-4" disabled>Coming Soon</Button>
-                    </CardContent>
+                      <CardHeader>
+                          <CardTitle>Create Tournament</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p>Organize a new tournament for players.</p>
+                          <Button className="mt-4" disabled>Coming Soon</Button>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                          <CardTitle>Create Category</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <p>Add and manage game categories.</p>
+                          <Button className="mt-4" disabled>Coming Soon</Button>
+                      </CardContent>
                     </Card>
                 </div>
             </TabsContent>
