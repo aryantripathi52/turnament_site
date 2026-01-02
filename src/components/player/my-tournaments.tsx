@@ -37,7 +37,6 @@ const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, 
 function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [liveTournamentData, setLiveTournamentData] = useState<Tournament | null>(null);
-  const [mySlot, setMySlot] = useState<number | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -55,26 +54,11 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
       }
     });
 
-    // Direct fetch for the user's slot number from their private record
-    const fetchSlotNumber = async () => {
-        const joinRecordRef = doc(firestore, 'users', userId, 'joinedTournaments', tournament.id);
-        const docSnap = await getDoc(joinRecordRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            console.log('FETCHED SLOT:', data);
-            setMySlot(data.slotNumber);
-        } else {
-             // Fallback for safety, though it should exist
-            setMySlot(tournament.slotNumber || 1);
-        }
-    };
-    fetchSlotNumber();
-    
     // Cleanup listeners on component unmount
     return () => {
         unsubscribeTournament();
     };
-  }, [firestore, tournament.id, userId, tournament.slotNumber]);
+  }, [firestore, tournament.id, userId]);
 
   const handleCopy = (text: string | undefined | null) => {
     if (!text) return;
@@ -132,7 +116,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
                     </div>
                     <div className={cn("flex items-center gap-2 text-sm", isLive && 'font-bold text-green-500')}>
                         <Hash className="h-4 w-4"/>
-                        <span>Slot #{mySlot?.toString().padStart(2, '0') || '01'}</span>
+                        <span>Slot #{tournament.slotNumber?.toString().padStart(2, '0') || '01'}</span>
                     </div>
                 </div>
              </CardHeader>
@@ -205,10 +189,10 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
 
 
 export function MyTournaments() {
-  const { user, joinedTournaments, wonTournaments, isUserLoading, userError } = useUser();
+  const { user, joinedTournaments, wonTournaments, isTournamentsLoading, tournamentsError } = useUser();
 
   const renderJoinedTournaments = () => {
-    if (isUserLoading) {
+    if (isTournamentsLoading) {
         return (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Skeleton className="h-[320px] w-full" />
@@ -217,7 +201,7 @@ export function MyTournaments() {
         );
     }
 
-    if (userError) {
+    if (tournamentsError) {
         return (
              <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -246,11 +230,11 @@ export function MyTournaments() {
   };
 
   const renderWonTournaments = () => {
-    if (isUserLoading) {
+    if (isTournamentsLoading) {
         return <Skeleton className="h-48 w-full" />;
     }
 
-    if (userError) {
+    if (tournamentsError) {
         return null;
     }
 
