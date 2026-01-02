@@ -49,6 +49,9 @@ const formatDate = (date: Timestamp | Date | undefined | null) => {
   if (date instanceof Date) {
     return date.toLocaleDateString();
   }
+  if (typeof date === 'string') {
+    return new Date(date).toLocaleDateString();
+  }
   return 'Invalid Date';
 };
 

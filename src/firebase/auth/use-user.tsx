@@ -26,7 +26,7 @@ export interface UserHookResult {
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
-  joinedTournaments: WithId<JoinedTournament>[] | null; 
+  joinedTournaments: WithId<JoinedTournament>[] | null;
 }
 
 /**
@@ -71,7 +71,7 @@ export const useUser = (): UserHookResult => {
     profile,
     joinedTournaments,
     isUserLoading: combinedIsLoading,
-    isProfileLoading: combinedIsLoading,
+    isProfileLoading: combinedIsLoading, // Keep a single loading indicator for profile-related data
     userError: combinedError,
   };
 };
