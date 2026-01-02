@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -71,7 +71,8 @@ export function PlayerTournamentList() {
 
     const userRef = doc(firestore, 'users', user.uid);
     const registrationCollectionRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
-    const newRegistrationRef = doc(registrationCollectionRef);
+    const newRegistrationRef = doc(registrationCollectionRef); // Auto-generate ID for registration
+    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', tournament.id);
 
 
     try {
@@ -90,9 +91,7 @@ export function PlayerTournamentList() {
         const newCoinBalance = userProfile.coins - tournament.entryFee;
         
         // 1. Update user's coin balance
-        transaction.update(userRef, { 
-            coins: newCoinBalance
-        });
+        transaction.update(userRef, { coins: newCoinBalance });
 
         // 2. Create the new registration document
         transaction.set(newRegistrationRef, {
@@ -101,6 +100,15 @@ export function PlayerTournamentList() {
             playerIds: [user.uid],
             registrationDate: serverTimestamp(),
         });
+
+        // 3. Create the denormalized joined tournament document
+        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+            name: tournament.name,
+            startDate: tournament.startDate,
+            prizePoolFirst: tournament.prizePoolFirst,
+            entryFee: tournament.entryFee,
+        };
+        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
       toast({

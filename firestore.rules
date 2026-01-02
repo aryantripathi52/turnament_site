@@ -19,8 +19,8 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to update
-      allow delete: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to delete
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
         match /joinedTournaments/{tournamentId} {
             allow read, write: if isOwner(userId);
@@ -40,11 +40,7 @@ service cloud.firestore {
       function isExistingTeamMember() {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
-
-      // Allow a user to list (via a collection group query) only the registrations where they are a player.
-      allow list: if request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
       
-      // A user can get a registration if they are a team member.
       allow get: if isExistingTeamMember() || isSignedIn();
 
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;

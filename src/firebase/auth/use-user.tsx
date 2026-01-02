@@ -3,11 +3,11 @@
 import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, getDocs, Timestamp, getDoc, collectionGroup } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { CoinRequest, Registration, Tournament } from '@/lib/types';
+import type { CoinRequest, JoinedTournament } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
-import { useEffect, useState } from 'react';
+import { useCollection } from '../firestore/use-collection';
 
 
 // Define the shape of the user profile document in Firestore
@@ -19,15 +19,11 @@ export interface UserProfile {
   coins: number;
 }
 
-export interface JoinedTournament extends WithId<Tournament> {
-    registrationId: string;
-}
-
 export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
   coinRequests: WithId<CoinRequest>[] | null;
-  joinedTournaments: JoinedTournament[] | null;
+  joinedTournaments: WithId<JoinedTournament>[] | null;
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
@@ -58,82 +54,32 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
-  // --- State for combined data ---
-  const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
-  const [joinedTournaments, setJoinedTournaments] = useState<JoinedTournament[] | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [dataError, setDataError] = useState<Error | null>(null);
+  // --- Fetch Coin Requests ---
+  const coinRequestsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, "coinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
+  }, [user, firestore]);
+
+  const {data: coinRequests, isLoading: isCoinRequestsLoading, error: coinRequestsError } = useCollection<CoinRequest>(coinRequestsQuery);
+
+  // --- Fetch Joined Tournaments ---
+  const joinedTournamentsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
+  }, [user, firestore]);
+
+  const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
 
-  useEffect(() => {
-    if (!user || !firestore) {
-      setDataLoading(false);
-      return;
-    }
-
-    const fetchUserData = async () => {
-      setDataLoading(true);
-      try {
-        // --- Fetch Coin Requests ---
-        const requestsQuery = query(collection(firestore, "coinRequests"), where("userId", "==", user.uid));
-        const requestsSnapshot = await getDocs(requestsQuery);
-        const requests = requestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithId<CoinRequest>));
-        requests.sort((a, b) => {
-            const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
-            const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
-            return dateB - dateA;
-        });
-        setCoinRequests(requests);
-
-        // --- Fetch Joined Tournaments ---
-        const registrationsQuery = query(collectionGroup(firestore, 'registrations'), where('playerIds', 'array-contains', user.uid));
-        const registrationSnapshot = await getDocs(registrationsQuery);
-        const userRegistrations = registrationSnapshot.docs.map(d => ({id: d.id, ...d.data()} as WithId<Registration>));
-
-        if (userRegistrations.length > 0) {
-            const tournamentPromises = userRegistrations.map(async (reg) => {
-                const tournamentRef = doc(firestore, 'tournaments', reg.tournamentId);
-                const tournamentSnap = await getDoc(tournamentRef);
-                if (tournamentSnap.exists()) {
-                    return {
-                        ...(tournamentSnap.data() as Tournament),
-                        id: tournamentSnap.id,
-                        registrationId: reg.id
-                    } as JoinedTournament;
-                }
-                return null;
-            });
-            const tournaments = (await Promise.all(tournamentPromises)).filter(t => t !== null) as JoinedTournament[];
-            setJoinedTournaments(tournaments);
-        } else {
-            setJoinedTournaments([]);
-        }
-
-        setDataError(null);
-
-      } catch (e: any) {
-        console.error("Error fetching user data:", e);
-        setDataError(e);
-        setJoinedTournaments(null); // Clear data on error
-        setCoinRequests(null);
-      } finally {
-        setDataLoading(false);
-      }
-    };
-    
-    fetchUserData();
-  }, [user, firestore]); 
-
-
-  const combinedIsLoading = isUserLoading || isProfileLoading || dataLoading;
-  const combinedError = userError || profileError || dataError;
+  const combinedIsLoading = isUserLoading || isProfileLoading || isCoinRequestsLoading || isTournamentsLoading;
+  const combinedError = userError || profileError || coinRequestsError || tournamentsError;
 
   return {
     user,
     profile,
     coinRequests,
     joinedTournaments,
-    isUserLoading: combinedIsLoading, // Use a single loading state for simplicity in UI
+    isUserLoading: combinedIsLoading,
     isProfileLoading: combinedIsLoading,
     userError: combinedError,
   };
