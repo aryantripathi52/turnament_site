@@ -137,7 +137,7 @@ export function ApprovalStatusTable() {
           </TableHeader>
           <TableBody>
             {allRequests.map((req) => {
-              const statusInfo = statusConfig[req.status];
+              const statusInfo = statusConfig[req.status as keyof typeof statusConfig];
               return (
                 <TableRow key={req.id}>
                   <TableCell className="capitalize font-medium">
@@ -164,12 +164,12 @@ export function ApprovalStatusTable() {
                               req.status === 'denied' && 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 hover:bg-red-100'
                             )}
                           >
-                            <statusInfo.icon className="h-3.5 w-3.5" />
-                            {statusInfo.label}
+                            {statusInfo && <statusInfo.icon className="h-3.5 w-3.5" />}
+                            {statusInfo ? statusInfo.label : req.status}
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{statusInfo.label}</p>
+                          <p>{statusInfo ? statusInfo.label : req.status}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
