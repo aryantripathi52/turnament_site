@@ -53,7 +53,7 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && resource.data.userId == request.auth.uid;
       }
       
-      allow read, list: if isExistingTeamMember() || isAdmin();
+      allow read, list: if isSignedIn();
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
       allow delete: if isExistingTeamMember() || isAdmin();
