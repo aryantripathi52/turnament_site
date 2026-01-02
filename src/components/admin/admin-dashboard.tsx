@@ -19,6 +19,7 @@ export function AdminDashboard() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -43,7 +44,7 @@ export function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="dashboard" orientation="vertical" className="flex gap-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex gap-8">
             <TabsList className="flex flex-col h-full space-y-2">
                 <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                     <LayoutDashboard className="h-5 w-5" />

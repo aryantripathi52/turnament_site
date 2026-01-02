@@ -57,23 +57,23 @@ export const useUser = (): UserHookResult => {
 
   // --- Fetch Joined Tournaments (Player-specific) ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
+    if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
-  }, [user, firestore, profile, isProfileLoading]);
+  }, [user, firestore, profile]);
 
-  const { data: joinedTournaments, isLoading: isJoinedTournamentsLoading } = useCollection<JoinedTournament>(joinedTournamentsQuery);
+  const { data: joinedTournaments, isLoading: isJoinedTournamentsLoading, error: joinedTournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
     // --- Fetch Won Tournaments (Player-specific) ---
     const wonTournamentsQuery = useMemoFirebase(() => {
-        if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
+        if (!user || !firestore || profile?.role !== 'player') return null;
         return query(collection(firestore, 'users', user.uid, 'wonTournaments'), orderBy('completionDate', 'desc'));
-    }, [user, firestore, profile, isProfileLoading]);
+    }, [user, firestore, profile]);
 
     const { data: wonTournaments, isLoading: isWonTournamentsLoading, error: wonTournamentsError } = useCollection<WonTournament>(wonTournamentsQuery);
 
 
   const combinedIsLoading = isUserLoading || isProfileLoading || isJoinedTournamentsLoading || isWonTournamentsLoading;
-  const combinedError = userError || profileError || wonTournamentsError;
+  const combinedError = userError || profileError || joinedTournamentsError || wonTournamentsError;
 
   return {
     user,

@@ -36,6 +36,7 @@ import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/firebase/auth/use-user';
+import { Skeleton } from '../ui/skeleton';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -67,28 +68,39 @@ export function LoginForm() {
   });
 
   useEffect(() => {
+    // This effect runs when the user state changes.
+    // If the user is successfully logged in (user object is present), redirect.
     if (!isUserLoading && user) {
       const redirectTo = searchParams.get('redirectTo') || '/';
-      router.push(redirectTo);
+      router.replace(redirectTo);
     }
   }, [user, isUserLoading, router, searchParams]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!auth || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Firebase not initialized. Please try again.',
+      });
+      return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const loggedInUser = userCredential.user;
 
-      // After successful sign-in, fetch user's profile to verify role
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const userProfile = userDocSnap.data() as UserProfile;
-        // Check if the selected role matches the stored role
         if (userProfile.role === values.role) {
-          // Role matches, let the useEffect handle redirection
+          // Success! The useEffect will handle the redirect.
+           toast({
+            title: 'Login Successful',
+            description: "Welcome back!",
+          });
         } else {
-          // Role mismatch, sign out and show error
           await signOut(auth);
           toast({
             variant: 'destructive',
@@ -97,7 +109,6 @@ export function LoginForm() {
           });
         }
       } else {
-        // This case should ideally not happen if registration is done correctly
         await signOut(auth);
         toast({
           variant: 'destructive',
@@ -121,6 +132,7 @@ export function LoginForm() {
           description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
           break;
         default:
+          console.error("Login Error:", error)
           description = 'An unexpected error occurred. Please try again.';
       }
        toast({
@@ -131,8 +143,15 @@ export function LoginForm() {
     }
   }
 
-  if (isUserLoading || (!isUserLoading && user)) {
-    return <div>Loading...</div>;
+  // Show a loading state while Firebase is determining the auth state,
+  // or if the user is already logged in and we are about to redirect.
+  if (isUserLoading || user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <p>Loading...</p>
+        <Skeleton className="h-96 w-96" />
+      </div>
+    );
   }
 
   return (

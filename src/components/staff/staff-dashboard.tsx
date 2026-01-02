@@ -14,6 +14,7 @@ import { StaffCoinRequests } from './staff-coin-requests';
 export function StaffDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -38,7 +39,7 @@ export function StaffDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="dashboard" orientation="vertical" className="flex gap-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex gap-8">
             <TabsList className="flex flex-col h-full space-y-2">
               <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                 <LayoutDashboard className="h-5 w-5" />
@@ -66,7 +67,9 @@ export function StaffDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p>View, edit, and update ongoing or upcoming tournaments.</p>
-                    <Button className="mt-4" disabled>Coming Soon</Button>
+                     <Button className="mt-4" onClick={() => setActiveTab('tournaments')}>
+                      Manage Tournaments
+                    </Button>
                   </CardContent>
                 </Card>
                 <Card>
@@ -75,7 +78,9 @@ export function StaffDashboard() {
                   </CardHeader>
                   <CardContent>
                     <p>Review and process player requests to add or withdraw coins.</p>
-                     <Button className="mt-4" disabled>Coming Soon</Button>
+                     <Button className="mt-4" onClick={() => setActiveTab('coin-requests')}>
+                      Review Requests
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
