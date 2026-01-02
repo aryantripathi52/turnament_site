@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, doc, writeBatch, serverTimestamp, increment, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, writeBatch, serverTimestamp, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -39,34 +39,28 @@ export function StaffCoinRequests() {
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
-    return query(
-      collection(firestore, 'addCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
-    );
+    return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
-    return query(
-      collection(firestore, 'withdrawCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
-    );
+    return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const { data: addRequests, setData: setAddRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
   const allRequests = useMemo((): CombinedRequest[] => {
-    const adds = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
-    const withdraws = withdrawRequests?.map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
+    const adds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
+    const withdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
     const combined = [...adds, ...withdraws];
+    
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-        if (!dateA || !dateB) return 0;
-        return dateA.toMillis() - dateB.toMillis();
+        if (!dateB) return -1;
+        if (!dateA) return 1;
+        return dateB.toMillis() - dateA.toMillis();
     });
 }, [addRequests, withdrawRequests]);
 
