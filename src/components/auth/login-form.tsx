@@ -107,20 +107,28 @@ export function LoginForm() {
       }
 
     } catch (error: any) {
-      console.error(error);
-      if (error.code === 'auth/invalid-credential') {
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'The email or password you entered is incorrect.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'An unexpected error occurred.',
-          description: 'Please try again later.',
-        });
+      console.error("Login Error:", error.code);
+      let description = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          description = 'The email or password you entered is incorrect.';
+          break;
+        case 'auth/invalid-email':
+          description = 'The email address is not valid.';
+          break;
+        case 'auth/too-many-requests':
+          description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
+          break;
+        default:
+          description = 'An unexpected error occurred. Please try again.';
       }
+       toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: description,
+      });
     }
   }
 
