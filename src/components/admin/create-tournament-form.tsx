@@ -81,6 +81,8 @@ interface CreateTournamentFormProps {
 export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTournamentFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isStartOpen, setIsStartOpen] = React.useState(false);
+  const [isEndOpen, setIsEndOpen] = React.useState(false);
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -279,7 +281,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                 <FormLabel>Start Date & Time</FormLabel>
-                                <Popover>
+                                <Popover open={isStartOpen} onOpenChange={setIsStartOpen}>
                                     <PopoverTrigger asChild>
                                     <FormControl>
                                         <Button
@@ -298,8 +300,11 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                                     <Calendar
                                         mode="single"
                                         selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => date < new Date()}
+                                        onSelect={(date) => {
+                                            field.onChange(date);
+                                            setIsStartOpen(false);
+                                        }}
+                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                         initialFocus
                                     />
                                     </PopoverContent>
@@ -328,7 +333,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                 <FormLabel>End Date & Time</FormLabel>
-                                <Popover>
+                                <Popover open={isEndOpen} onOpenChange={setIsEndOpen}>
                                     <PopoverTrigger asChild>
                                     <FormControl>
                                         <Button
@@ -347,8 +352,11 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                                     <Calendar
                                         mode="single"
                                         selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => date < (form.getValues("startDate") || new Date())}
+                                        onSelect={(date) => {
+                                            field.onChange(date);
+                                            setIsEndOpen(false);
+                                        }}
+                                        disabled={(date) => date < (form.getValues("startDate") || new Date(new Date().setHours(0,0,0,0)))}
                                         initialFocus
                                     />
                                     </PopoverContent>
