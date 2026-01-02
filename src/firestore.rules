@@ -14,19 +14,32 @@ service cloud.firestore {
     function isExistingDoc() {
       return resource != null;
     }
+    
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin(userId) {
+      return getRole(userId) == 'admin';
+    }
+
 
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to update
-      allow delete: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to delete
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      match /joinedTournaments/{tournamentId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /tournaments/{tournamentId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin(request.auth.uid);
     }
 
     match /tournaments/{tournamentId}/registrations/{registrationId} {
@@ -36,16 +49,12 @@ service cloud.firestore {
       function isExistingTeamMember() {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
-
-      // Allow a user to list (via a collection group query) only the registrations where they are a player.
-      allow list: if request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
       
-      // A user can get a registration if they are a team member.
-      allow get: if isExistingTeamMember() || isSignedIn();
+      allow get: if isExistingTeamMember() || (isSignedIn() && isAdmin(request.auth.uid));
 
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
-      allow delete: if isExistingTeamMember() || isSignedIn();
+      allow delete: if isExistingTeamMember() || (isSignedIn() && isAdmin(request.auth.uid));
     }
 
     match /announcements/{announcementId} {
@@ -61,8 +70,15 @@ service cloud.firestore {
     }
     
     match /coinRequests/{coinRequestId} {
-      // Temporarily allowing any signed-in user to perform admin actions to unblock development.
-      allow list, get, update, delete: if isSignedIn();
+      // Admins can list all requests.
+      // Players can only list their own requests.
+      allow list: if isSignedIn() && (isAdmin(request.auth.uid) || request.query.where.userId == request.auth.uid);
+      
+      // Admins and the user who made the request can get it.
+      allow get: if isSignedIn() && (isAdmin(request.auth.uid) || isOwner(resource.data.userId));
+      
+      // Admins can update/delete any request.
+      allow update, delete: if isSignedIn() && isAdmin(request.auth.uid);
       
       // A user can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
@@ -71,7 +87,7 @@ service cloud.firestore {
     match /categories/{categoryId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn(); // For now, any signed-in user can manage categories
+      allow create, update, delete: if isSignedIn() && isAdmin(request.auth.uid);
     }
   }
 }
