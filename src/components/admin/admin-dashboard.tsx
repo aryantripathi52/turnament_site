@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2 } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
 import { CreateTournamentForm } from './create-tournament-form';
 import { TournamentList } from './tournament-list';
+import { StaffCoinRequests } from '../staff/staff-coin-requests';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -51,6 +52,10 @@ export function AdminDashboard() {
                 <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
                     <Gamepad2 className="h-5 w-5" />
                     Tournaments
+                </TabsTrigger>
+                <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
+                    <Coins className="h-5 w-5" />
+                    Coin Requests
                 </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
@@ -94,6 +99,9 @@ export function AdminDashboard() {
                     <p className="mb-4 text-muted-foreground">View and manage all active and upcoming tournaments.</p>
                     <TournamentList />
                 </div>
+            </TabsContent>
+            <TabsContent value="coin-requests" className="mt-0 flex-1">
+                <StaffCoinRequests />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>

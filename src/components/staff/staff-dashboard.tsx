@@ -4,10 +4,12 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, LayoutDashboard, User as UserIcon } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
+import { TournamentList } from '../admin/tournament-list';
+import { StaffCoinRequests } from './staff-coin-requests';
 
 export function StaffDashboard() {
   const { user, profile } = useUser();
@@ -42,14 +44,22 @@ export function StaffDashboard() {
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
               </TabsTrigger>
+               <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                    <Gamepad2 className="h-5 w-5" />
+                    Tournaments
+                </TabsTrigger>
+                 <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
+                    <Coins className="h-5 w-5" />
+                    Coin Requests
+                </TabsTrigger>
               <TabsTrigger value="profile" className="w-full justify-start gap-2">
                 <UserIcon className="h-5 w-5" />
                 Profile
               </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-0 flex-1">
-              <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments and player registrations from here.</p>
-              <div className="grid gap-6 md:grid-cols-2">
+              <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments and player coin requests from here.</p>
+               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader>
                     <CardTitle>Manage Tournaments</CardTitle>
@@ -61,14 +71,24 @@ export function StaffDashboard() {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Player Registrations</CardTitle>
+                    <CardTitle>Player Coin Requests</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>View and manage team registrations for tournaments.</p>
-                    <Button className="mt-4" disabled>Coming Soon</Button>
+                    <p>Review and process player requests to add or withdraw coins.</p>
+                     <Button className="mt-4" disabled>Coming Soon</Button>
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+            <TabsContent value="tournaments" className="mt-0 flex-1 space-y-6">
+                <div>
+                    <h3 className="text-xl font-semibold mb-2">All Tournaments</h3>
+                    <p className="mb-4 text-muted-foreground">View and manage all active and upcoming tournaments.</p>
+                    <TournamentList />
+                </div>
+            </TabsContent>
+            <TabsContent value="coin-requests" className="mt-0 flex-1">
+                <StaffCoinRequests />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
               <Card>
