@@ -143,9 +143,9 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
               name="amountPaid"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount Paid (USD)</FormLabel>
+                  <FormLabel>Amount Paid (INR)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 10.00" {...field} />
+                    <Input type="number" placeholder="e.g., 100.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

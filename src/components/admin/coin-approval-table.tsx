@@ -154,7 +154,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                 <TableRow key={req.id}>
                     <TableCell>{req.username}</TableCell>
                     <TableCell className="text-right font-medium">{req.amountCoins.toLocaleString()}</TableCell>
-                    {requestType === 'add' && <TableCell className="text-right">${(req.amountPaid ?? 0).toFixed(2)}</TableCell>}
+                    {requestType === 'add' && <TableCell className="text-right">₹{(req.amountPaid ?? 0).toFixed(2)}</TableCell>}
                     {requestType === 'add' && <TableCell><Badge variant="secondary">{req.transactionId}</Badge></TableCell>}
                     {requestType === 'withdraw' && <TableCell className="text-sm">{req.withdrawalDetails}</TableCell>}
                     <TableCell>{new Date(req.requestDate.seconds * 1000).toLocaleDateString()}</TableCell>
