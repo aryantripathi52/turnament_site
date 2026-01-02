@@ -31,34 +31,21 @@ service cloud.firestore {
       return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
 
-    // --- Collection Rules ---
+    // --- Collection Rules (Temporary Debugging) ---
 
-    // USER DATA: Users can manage their own data and ALL subcollections within their doc.
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-      allow list: if isStaffOrAdmin(request.auth.uid);
-      allow create: if isOwner(userId);
-      
-      // Wildcard for all user subcollections (joinedTournaments, etc.)
+      allow read, write: if isOwner(userId);
       match /{allSubcollections=**} {
         allow read, write: if isOwner(userId);
       }
     }
 
-    // TOURNAMENTS: Publicly readable. Modifiable by staff/admins.
-    match /tournaments/{tournamentId} {
-      allow get, list: if isSignedIn();
-      allow create, delete: if isStaffOrAdmin(request.auth.uid);
+    match /tournaments/{tId} {
+      allow read: if true;
+      allow update: if isSignedIn(); // Temporarily loosened for testing
 
-      // Allow staff/admins to update anything.
-      // Allow any signed-in user to ONLY update 'registeredCount'.
-      allow update: if isStaffOrAdmin(request.auth.uid) || 
-                      (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
-      
-      // Wildcard for all tournament subcollections (registrations, etc.)
       match /{allSubcollections=**} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn();
+        allow read, write: if isSignedIn();
       }
     }
 

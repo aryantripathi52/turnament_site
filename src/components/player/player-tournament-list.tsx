@@ -85,11 +85,8 @@ export function PlayerTournamentList() {
 
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
-    // Path for the public registration document, using the user's UID as the document ID
     const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
-    // Path for the user's private record of joining this tournament
     const joinedTournamentRef = doc(firestore, `users/${user.uid}/joinedTournaments`, selectedTournament.id);
-
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -152,12 +149,12 @@ export function PlayerTournamentList() {
       });
 
     } catch (e: any) {
-      console.error("Tournament entry transaction failed:", e);
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: e.message || 'An unexpected error occurred.',
-      });
+        console.error("FULL TRANSACTION ERROR:", e.code, e.message);
+        toast({
+            variant: 'destructive',
+            title: 'Registration Failed',
+            description: e.message || 'An unexpected error occurred. Check the console for more details.',
+        });
     }
   };
 
