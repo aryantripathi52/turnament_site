@@ -4,15 +4,13 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Users, Mail } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2 } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { ApprovalStatusTable } from './approval-status-table';
 import { PlayerTournamentList } from './player-tournament-list';
-import { MyTeams } from './my-teams';
-import { TeamRequestList } from './team-request-list';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -53,14 +51,6 @@ export function PlayerDashboard() {
                     <Gamepad2 className="h-5 w-5" />
                     Tournaments
                 </TabsTrigger>
-                <TabsTrigger value="my-teams" className="w-full justify-start gap-2">
-                    <Users className="h-5 w-5" />
-                    My Teams
-                </TabsTrigger>
-                <TabsTrigger value="team-requests" className="w-full justify-start gap-2">
-                    <Mail className="h-5 w-5" />
-                    Team Requests
-                </TabsTrigger>
                 <TabsTrigger value="wallet" className="w-full justify-start gap-2">
                     <WalletIcon className="h-5 w-5" />
                     My Wallet
@@ -75,7 +65,7 @@ export function PlayerDashboard() {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard" className="mt-0 flex-1">
-                <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your teams.</p>
+                <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your wallet.</p>
                 <div className="grid gap-6 md:grid-cols-2">
                      <Card>
                         <CardHeader>
@@ -90,12 +80,12 @@ export function PlayerDashboard() {
                     </Card>
                     <Card>
                     <CardHeader>
-                        <CardTitle>Manage Your Team</CardTitle>
+                        <CardTitle>Manage Your Wallet</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>Create a new team or manage your existing team rosters.</p>
-                        <Button className="mt-4" onClick={() => setActiveTab('my-teams')}>
-                            Go to My Teams
+                        <p>Add funds to your wallet or withdraw your winnings.</p>
+                        <Button className="mt-4" onClick={() => setActiveTab('wallet')}>
+                            Go to My Wallet
                         </Button>
                     </CardContent>
                     </Card>
@@ -103,12 +93,6 @@ export function PlayerDashboard() {
             </TabsContent>
             <TabsContent value="tournaments" className="mt-0 flex-1">
                  <PlayerTournamentList />
-            </TabsContent>
-            <TabsContent value="my-teams" className="mt-0 flex-1">
-                 <MyTeams />
-            </TabsContent>
-            <TabsContent value="team-requests" className="mt-0 flex-1">
-                 <TeamRequestList />
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />

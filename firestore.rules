@@ -69,30 +69,5 @@ service cloud.firestore {
       allow list: if true;
       allow create, update, delete: if isSignedIn(); // For now, any signed-in user can manage categories
     }
-
-    match /teams/{teamId} {
-      function isTeamOwner(team) {
-        return isSignedIn() && request.auth.uid == team.data.ownerId;
-      }
-      function isTeamMember(team) {
-         return isSignedIn() && request.auth.uid in team.data.members;
-      }
-      allow get: if isTeamMember(resource);
-      // This rule allows a user to query for teams they are a member of.
-      // It ensures the query is looking for the user's own UID in the 'members' array.
-      allow list: if isSignedIn() && request.query.where.members[0] == 'array-contains' && request.query.where.members[1] == request.auth.uid;
-      allow create: if isSignedIn() 
-                    && request.resource.data.ownerId == request.auth.uid
-                    && request.auth.uid in request.resource.data.members;
-      allow update: if isTeamOwner(resource); // Owner can update (e.g. invite)
-      allow delete: if isTeamOwner(resource);
-    }
-
-    match /users/{userId}/teamInvitations/{invitationId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId); // User can list their own invitations
-      allow create: if isSignedIn(); // Any signed-in user can send an invite
-      allow update, delete: if isOwner(userId); // User can accept/decline/delete their own invites
-    }
   }
 }
