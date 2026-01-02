@@ -31,8 +31,8 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
   // The slotNumber is directly on the tournament object from the joinedTournaments collection.
   const { slotNumber } = tournament;
 
-  // Debugging log to see if the value is correctly passed to the card.
-  console.log('User Slot Number for tournament', tournament.name, ':', slotNumber);
+  // FINAL CHECK as requested by user.
+  console.log('FINAL CHECK: Found slot number', slotNumber);
 
   return (
      <div className="flip-card h-[250px]" >
