@@ -107,7 +107,6 @@ export function LoginForm() {
       }
 
     } catch (error: any) {
-      console.error("Login Error:", error.code);
       let description = 'An unexpected error occurred. Please try again.';
       switch (error.code) {
         case 'auth/user-not-found':
