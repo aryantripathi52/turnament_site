@@ -84,7 +84,8 @@ export function PlayerTournamentList() {
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
     const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
-    
+    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
+
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -124,10 +125,20 @@ export function PlayerTournamentList() {
             slotNumber: newSlotNumber
         };
         transaction.set(registrationRef, registrationData);
+
+        // 4. Create the denormalized "joined" record for the user
+        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+            name: currentTournament.name,
+            startDate: currentTournament.startDate,
+            prizePoolFirst: currentTournament.prizePoolFirst,
+            entryFee: currentTournament.entryFee,
+            slotNumber: newSlotNumber,
+            roomId: currentTournament.roomId || null,
+            roomPassword: currentTournament.roomPassword || null,
+        };
+        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
-      // TODO: Re-add the joinedTournaments write here, outside the transaction,
-      // after its security rule has been added. For now, we prioritize fixing the join logic.
       refreshJoinedTournaments();
 
       toast({
