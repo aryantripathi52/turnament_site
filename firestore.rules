@@ -72,18 +72,18 @@ service cloud.firestore {
 
     /**
      * @description Manages user profiles. A user can create their own profile,
-     *              and can only read or write their own data.
+     *              and can only read or write their own data. Admins can manage any user.
      * @path /users/{userId}
      * @allow (create) An authenticated user with UID 'user_abc' creates their document at /users/user_abc.
      * @deny (get) User 'user_xyz' tries to read the document at /users/user_abc.
-     * @deny (list) Any user tries to list all documents in the /users collection.
+     * @deny (list) Any user except an admin tries to list all documents in the /users collection.
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow update: if (isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id) || isAdmin();
       allow delete: if isOwner(userId) && isExistingDoc();
     }
 
