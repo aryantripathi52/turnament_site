@@ -70,15 +70,15 @@ service cloud.firestore {
     }
     
     match /addCoinRequests/{requestId} {
-      allow read, list, write: if isAdmin();
+      allow read, list, update, delete: if isAdmin();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if isOwner(request.resource.data.userId);
+      allow list, get: if isSignedIn() && request.query.where.userId == request.auth.uid;
     }
 
     match /withdrawCoinRequests/{requestId} {
-      allow read, list, write: if isAdmin();
+      allow read, list, update, delete: if isAdmin();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if isOwner(request.resource.data.userId);
+      allow list, get: if isSignedIn() && request.query.where.userId == request.auth.uid;
     }
 
     match /categories/{categoryId} {
