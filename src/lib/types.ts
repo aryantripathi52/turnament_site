@@ -14,6 +14,7 @@ export type Tournament = {
   registrationLink: string;
   contactEmail: string;
   categoryId: string;
+  status: 'upcoming' | 'live' | 'completed' | 'cancelled';
 };
 
 export type Registration = {

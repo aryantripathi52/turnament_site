@@ -115,6 +115,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
         entryFee: values.entryFee,
         startDate: startDateTime,
         endDate: endDateTime,
+        status: 'upcoming', // Default status
         rules: "Standard tournament rules apply.", // Placeholder
         registrationLink: "#", // Placeholder
         contactEmail: "contact@example.com", // Placeholder

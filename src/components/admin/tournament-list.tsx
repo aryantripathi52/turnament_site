@@ -1,33 +1,65 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, orderBy, query } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, orderBy, query, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Calendar, Users, Trophy, Gem } from 'lucide-react';
+import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
 import { Button } from '../ui/button';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
-  // Timestamps from Firestore might be objects with seconds and nanoseconds
   if (date.seconds) {
     return format(new Date(date.seconds * 1000), 'PPp');
   }
-  // Or they might already be Date objects
   if (date instanceof Date) {
     return format(date, 'PPp');
   }
   return 'Invalid Date';
 };
 
+const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, label: string, color: string } } = {
+  upcoming: { icon: Clock, label: 'Upcoming', color: 'bg-blue-500' },
+  live: { icon: PlayCircle, label: 'Live', color: 'bg-green-500' },
+  completed: { icon: CheckCircle, label: 'Completed', color: 'bg-gray-500' },
+  cancelled: { icon: XCircle, label: 'Cancelled', color: 'bg-red-500' },
+};
+
+
 export function TournamentList() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [tournamentToDelete, setTournamentToDelete] = useState<WithId<Tournament> | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -39,7 +71,7 @@ export function TournamentList() {
     return collection(firestore, 'categories');
   }, [firestore]);
 
-  const { data: tournaments, isLoading: isLoadingTournaments, error: tournamentsError } = useCollection<Tournament>(tournamentsQuery);
+  const { data: tournaments, setData: setTournaments, isLoading: isLoadingTournaments, error: tournamentsError } = useCollection<Tournament>(tournamentsQuery);
   const { data: categories, isLoading: isLoadingCategories, error: categoriesError } = useCollection<Category>(categoriesQuery);
 
   const categoriesMap = useMemo(() => {
@@ -49,6 +81,34 @@ export function TournamentList() {
 
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
+
+  const handleDeleteTournament = async () => {
+    if (!firestore || !tournamentToDelete) return;
+    try {
+      await deleteDoc(doc(firestore, 'tournaments', tournamentToDelete.id));
+      setTournaments(prev => prev?.filter(t => t.id !== tournamentToDelete.id) || null);
+      toast({ title: 'Success', description: 'Tournament has been deleted.' });
+    } catch (e) {
+      console.error("Error deleting tournament: ", e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not delete the tournament.' });
+    } finally {
+      setDeleteAlertOpen(false);
+      setTournamentToDelete(null);
+    }
+  };
+
+  const handleUpdateStatus = async (tournamentId: string, status: Tournament['status']) => {
+    if (!firestore) return;
+    try {
+      const tournamentRef = doc(firestore, 'tournaments', tournamentId);
+      await updateDoc(tournamentRef, { status });
+      setTournaments(prev => prev?.map(t => t.id === tournamentId ? { ...t, status } : t) || null);
+      toast({ title: 'Success', description: 'Tournament status has been updated.' });
+    } catch (e) {
+      console.error("Error updating status: ", e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update status.' });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -82,43 +142,105 @@ export function TournamentList() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {tournaments.map((tournament) => (
-        <Card key={tournament.id} className="flex flex-col">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-                <CardTitle className="text-xl">{tournament.name}</CardTitle>
-                <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-grow space-y-4">
-             <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
-             <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tournaments.map((tournament) => {
+          const statusInfo = statusConfig[tournament.status] || statusConfig.upcoming;
+          return (
+            <Card key={tournament.id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-xl pr-4">{tournament.name}</CardTitle>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
+                    <Badge className={cn("capitalize text-white", statusInfo.color)}>
+                      <statusInfo.icon className="mr-1 h-3 w-3" />
+                      {statusInfo.label}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow space-y-4">
+                <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-primary" />
                     <span>
-                        Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()}</span> (1st)
+                      Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()}</span> (1st)
                     </span>
-                </div>
-                 <div className="flex items-center gap-2">
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Gem className="h-4 w-4 text-muted-foreground" />
                     <span>
-                        Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
+                      Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
                     </span>
-                </div>
-                 <div className="flex items-center gap-2">
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>
-                        Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
+                      Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
                     </span>
+                  </div>
                 </div>
-             </div>
-          </CardContent>
-          <CardFooter>
-             <Button variant="outline" size="sm" className="w-full" disabled>Manage Tournament</Button>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
+              </CardContent>
+              <CardFooter>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Manage Tournament
+                      <MoreVertical className="ml-auto h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {Object.entries(statusConfig).map(([status, config]) => (
+                          <DropdownMenuItem key={status} onClick={() => handleUpdateStatus(tournament.id, status as Tournament['status'])}>
+                            <config.icon className="mr-2 h-4 w-4" />
+                            <span>{config.label}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => {
+                        setTournamentToDelete(tournament);
+                        setDeleteAlertOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardFooter>
+            </Card>
+          )
+        })}
+      </div>
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the tournament
+              <span className="font-semibold"> {tournamentToDelete?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTournament} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

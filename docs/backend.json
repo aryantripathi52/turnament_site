@@ -80,6 +80,11 @@
           "type": "string",
           "description": "Contact email address for the tournament organizer.",
           "format": "email"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the tournament.",
+          "enum": ["upcoming", "live", "completed", "cancelled"]
         }
       },
       "required": [
@@ -94,7 +99,8 @@
         "description",
         "rules",
         "registrationLink",
-        "contactEmail"
+        "contactEmail",
+        "status"
       ]
     },
     "Registration": {
