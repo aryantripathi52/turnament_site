@@ -25,21 +25,23 @@ export function StaffCoinRequests() {
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Temporarily removed orderBy to allow loading while indexes are created.
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
       where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      // orderBy('requestDate', 'asc') // This will be re-enabled after index is built
     );
   }, [firestore, profile]);
 
+  // Temporarily removed orderBy to allow loading while indexes are created.
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
       where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      // orderBy('requestDate', 'asc') // This will be re-enabled after index is built
     );
   }, [firestore, profile]);
 
@@ -49,8 +51,15 @@ export function StaffCoinRequests() {
   const allRequests = useMemo((): CombinedRequest[] => {
     const adds = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const withdraws = withdrawRequests?.map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
-    return [...adds, ...withdraws].sort((a, b) => (a.requestDate as Timestamp).toMillis() - (b.requestDate as Timestamp).toMillis());
-  }, [addRequests, withdrawRequests]);
+    const combined = [...adds, ...withdraws];
+    // Sort client-side since we removed orderBy from the query
+    return combined.sort((a, b) => {
+        const dateA = a.requestDate as Timestamp | undefined;
+        const dateB = b.requestDate as Timestamp | undefined;
+        if (!dateA || !dateB) return 0;
+        return dateA.toMillis() - dateB.toMillis();
+    });
+}, [addRequests, withdrawRequests]);
 
   const isLoading = loadingAdd || loadingWithdraw;
   const error = addError || withdrawError;
@@ -146,6 +155,18 @@ export function StaffCoinRequests() {
         </div>
       );
     }
+    
+    if (error?.message.includes('requires an index')) {
+      return (
+        <Alert>
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Database is preparing</AlertTitle>
+          <AlertDescription>
+            Database indexes are currently building to speed up queries. This page will update automatically. Please wait a few minutes.
+          </AlertDescription>
+        </Alert>
+      );
+    }
 
     if (error) {
       return (
@@ -164,7 +185,7 @@ export function StaffCoinRequests() {
         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-md">
           <CheckCircle className="mx-auto h-12 w-12" />
           <h3 className="mt-4 text-lg font-medium">All Caught Up</h3>
-          <p className="mt-1 text-sm">No pending coin requests found or access denied.</p>
+          <p className="mt-1 text-sm">No pending coin requests found.</p>
         </div>
       );
     }
@@ -185,7 +206,7 @@ export function StaffCoinRequests() {
                     <Badge variant="outline">Pending</Badge>
                 </div>
                  <CardDescription>
-                    {format((request.requestDate as Timestamp).toDate(), 'PPp')}
+                    {request.requestDate ? format((request.requestDate as Timestamp).toDate(), 'PPp') : 'Date missing'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">

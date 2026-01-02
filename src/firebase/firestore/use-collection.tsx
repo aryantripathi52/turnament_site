@@ -84,10 +84,18 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
+        // Gracefully handle specific Firestore errors instead of crashing the app.
         if (error.code === 'permission-denied') {
           console.warn('Silent Permission Denied: Returning empty array. Check Firestore rules.');
-          setData([]); // Return empty array on permission error to prevent crash
-          setError(error); // Still set the error state for optional UI feedback
+          setData([]); // Return empty array on permission error.
+          setError(error); // Still set the error for optional UI feedback.
+        } else if (error.code === 'failed-precondition') {
+            // This error often means a composite index is required.
+            console.warn('Firestore query failed: This usually indicates a missing index. Check the console for a link to create it.');
+            setData([]); // Return empty array to prevent crash.
+            // Create a more user-friendly error message for the UI.
+            const indexError = new Error('Query requires an index. The database is updating, please wait a few minutes.');
+            setError(indexError);
         } else {
           // For other errors, log them and set state appropriately
           console.error("useCollection Firestore Error:", error);
