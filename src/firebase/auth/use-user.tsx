@@ -56,14 +56,14 @@ export const useUser = (): UserHookResult => {
 
   // --- Fetch Coin Requests (only for players) ---
   const addCoinRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore || profile?.role !== 'player') return null;
+    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, "addCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore, profile]);
+  }, [user, firestore, profile, isProfileLoading]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore || profile?.role !== 'player') return null;
+    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, "withdrawCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore, profile]);
+  }, [user, firestore, profile, isProfileLoading]);
 
   const {data: addCoinRequests, isLoading: isAddLoading, error: addError } = useCollection<CoinRequest>(addCoinRequestsQuery);
   const {data: withdrawCoinRequests, isLoading: isWithdrawLoading, error: withdrawError } = useCollection<CoinRequest>(withdrawCoinRequestsQuery);
@@ -85,9 +85,9 @@ export const useUser = (): UserHookResult => {
 
   // --- Fetch Joined Tournaments ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
-    if (!user || !firestore || profile?.role !== 'player') return null;
+    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
-  }, [user, firestore, profile]);
+  }, [user, firestore, profile, isProfileLoading]);
 
   const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
