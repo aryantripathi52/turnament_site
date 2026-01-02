@@ -80,7 +80,7 @@ service cloud.firestore {
       allow get: if isTeamMember(resource);
       // This rule allows a user to query for teams they are a member of.
       // It ensures the query is looking for the user's own UID in the 'members' array.
-      allow list: if isSignedIn() && request.query.where.array_contains[0] == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where.members[0] == 'array-contains' && request.query.where.members[1] == request.auth.uid;
       allow create: if isSignedIn() 
                     && request.resource.data.ownerId == request.auth.uid
                     && request.auth.uid in request.resource.data.members;
