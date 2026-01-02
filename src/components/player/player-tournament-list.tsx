@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment, writeBatch } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -83,7 +83,8 @@ export function PlayerTournamentList() {
 
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
-    let slotNumber = 0;
+    const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
+    const joinedTournamentRef = doc(firestore, `users/${user.uid}/joinedTournaments`, selectedTournament.id);
     
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -106,42 +107,38 @@ export function PlayerTournamentList() {
           throw new Error('Registrations for this tournament are closed.');
         }
 
-        slotNumber = currentTournament.registeredCount + 1;
+        const newSlotNumber = currentTournament.registeredCount + 1;
 
-        // Perform the updates within the transaction
+        // 1. Update user's coins
         transaction.update(userRef, { coins: increment(-currentTournament.entryFee) });
+        
+        // 2. Update tournament's registered count
         transaction.update(tournamentRef, { registeredCount: increment(1) });
+        
+        // 3. Create the public registration document
+        const registrationData: Omit<Registration, 'id'> = {
+            tournamentId: selectedTournament.id,
+            userId: user.uid,
+            teamName: profile.username,
+            playerIds: [user.uid],
+            registrationDate: serverTimestamp(),
+            slotNumber: newSlotNumber
+        };
+        transaction.set(registrationRef, registrationData);
+        
+        // 4. Create the user's private joined tournament record
+        const joinedTournamentData: JoinedTournament = {
+            id: selectedTournament.id,
+            name: selectedTournament.name,
+            startDate: selectedTournament.startDate,
+            prizePoolFirst: selectedTournament.prizePoolFirst,
+            entryFee: selectedTournament.entryFee,
+            slotNumber: newSlotNumber,
+            roomId: selectedTournament.roomId || null,
+            roomPassword: selectedTournament.roomPassword || null,
+        };
+        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
-
-      // After the transaction is successful, write non-critical registration data
-      const batch = writeBatch(firestore);
-      
-      // 1. Add user to the registrations subcollection for the admin view
-      const registrationRef = doc(collection(firestore, 'tournaments', selectedTournament.id, 'registrations'));
-      const registrationData: Omit<Registration, 'id'> = {
-        tournamentId: selectedTournament.id,
-        userId: user.uid,
-        teamName: profile.username,
-        playerIds: [user.uid],
-        registrationDate: serverTimestamp(),
-        slotNumber: slotNumber
-      };
-      batch.set(registrationRef, registrationData);
-
-      // 2. Add tournament to the user's private joinedTournaments subcollection
-      const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
-      const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-        name: selectedTournament.name,
-        startDate: selectedTournament.startDate,
-        prizePoolFirst: selectedTournament.prizePoolFirst,
-        entryFee: selectedTournament.entryFee,
-        slotNumber: slotNumber,
-        roomId: selectedTournament.roomId || null,
-        roomPassword: selectedTournament.roomPassword || null,
-      };
-      batch.set(joinedTournamentRef, joinedTournamentData);
-      
-      await batch.commit();
 
       refreshJoinedTournaments(); // Refresh the user's joined tournaments list
 

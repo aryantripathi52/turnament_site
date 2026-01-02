@@ -39,9 +39,10 @@ service cloud.firestore {
       allow list: if isStaffOrAdmin(request.auth.uid); 
       allow create: if isOwner(userId);
       
-      // Allow user to update their own profile (username, or coins via transaction).
-      // Allow staff/admins to update any profile.
-      allow update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
+      // Allow user to update their own username.
+      // Allow updating 'coins' by staff/admin or through a tournament join transaction.
+      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'coins']))
+                    || isStaffOrAdmin(request.auth.uid);
 
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
@@ -72,9 +73,8 @@ service cloud.firestore {
 
       match /registrations/{registrationId} {
         allow read, list: if isStaffOrAdmin(request.auth.uid);
-        allow get: if isSignedIn() && isOwner(request.resource.data.userId);
-        // Allow a user to create a registration for themselves.
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        // A user can create a registration for themselves, using their UID as the doc ID.
+        allow create: if isSignedIn() && request.auth.uid == registrationId;
         allow update, delete: if isStaffOrAdmin(request.auth.uid);
       }
     }
