@@ -41,8 +41,8 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
 
-      // A user can list their own registrations.
-      allow list: if isSignedIn() && request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
+      // Allow a user to list (via a collection group query) only the registrations where they are a player.
+      allow list: if request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
       
       // A user can get a registration if they are a team member.
       allow get: if isExistingTeamMember() || isSignedIn();
