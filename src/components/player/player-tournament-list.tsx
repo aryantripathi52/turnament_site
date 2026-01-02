@@ -1,10 +1,21 @@
 'use client';
 
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, orderBy, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { AlertCircle, Calendar, Users, Trophy, Gem, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
@@ -12,6 +23,7 @@ import { Button } from '../ui/button';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -28,6 +40,8 @@ const formatDate = (date: any) => {
 
 export function PlayerTournamentList() {
   const firestore = useFirestore();
+  const { profile } = useUser();
+  const { toast } = useToast();
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -49,6 +63,25 @@ export function PlayerTournamentList() {
 
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
+
+  const handleConfirmEntry = (tournament: Tournament) => {
+    if (!profile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to enter.' });
+        return;
+    }
+
+    if (profile.coins < tournament.entryFee) {
+        toast({ variant: 'destructive', title: 'Insufficient Coins', description: 'You do not have enough coins to enter this tournament.' });
+        return;
+    }
+
+    // Placeholder for actual registration logic
+    console.log(`Entering tournament ${tournament.name} for user ${profile.username}`);
+    toast({
+      title: 'Registration Successful!',
+      description: `You have entered the "${tournament.name}" tournament. Good luck!`,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -115,10 +148,27 @@ export function PlayerTournamentList() {
              </div>
           </CardContent>
           <CardFooter>
-             <Button size="sm" className="w-full" disabled>
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                Enter Tournament
-             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" className="w-full">
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Enter Tournament
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to enter the <span className="font-semibold text-foreground">"{tournament.name}"</span>? 
+                    The entry fee of <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleConfirmEntry(tournament)}>Confirm Entry</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardFooter>
         </Card>
       ))}
