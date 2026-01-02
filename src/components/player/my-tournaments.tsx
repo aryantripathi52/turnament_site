@@ -27,11 +27,12 @@ const formatDate = (date: any) => {
 
 function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) {
   const [isFlipped, setIsFlipped] = useState(false);
+  
+  // The slotNumber is directly on the tournament object from the joinedTournaments collection.
   const { slotNumber } = tournament;
 
-  // Debugging log to check the slotNumber value.
-  console.log('User Slot Number:', slotNumber);
-
+  // Debugging log to see if the value is correctly passed to the card.
+  console.log('User Slot Number for tournament', tournament.name, ':', slotNumber);
 
   return (
      <div className="flip-card h-[250px]" >
@@ -80,7 +81,7 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                    <Hash className="h-5 w-5 text-primary" />
                    <div>
                      <p className="text-xs text-muted-foreground">Your Slot</p>
-                     <p className="font-bold text-lg text-primary">#{slotNumber ?? 'N/A'}</p>
+                     <p className="font-bold text-lg text-primary">#{slotNumber ?? 'Pending'}</p>
                    </div>
                 </div>
                 {tournament.roomId && tournament.roomPassword ? (
