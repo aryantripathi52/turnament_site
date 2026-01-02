@@ -2,8 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // User data is private, but users can update their own profiles
+    // User data is private. User can create their own profile, and can read/update it.
     match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
       allow read, update: if request.auth != null && request.auth.uid == userId;
 
       // Allow users to read and write to their own subcollections
@@ -33,7 +34,7 @@ service cloud.firestore {
       // Registrations are public to read, but only the user can create their own
       match /registrations/{registrationId} {
         allow read, list: if request.auth != null;
-        allow create: if request.auth != null && request.auth.uid == registrationId;
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       }
     }
     

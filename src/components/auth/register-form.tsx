@@ -27,6 +27,7 @@ import { useEffect, useState } from 'react';
 import { setDoc, doc } from 'firebase/firestore';
 import { Eye, EyeOff } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -60,6 +61,7 @@ export function RegisterForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -81,7 +83,11 @@ export function RegisterForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!auth || !firestore) {
-      console.error("Firebase not initialized");
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Firebase not initialized. Please try again.',
+      });
       return;
     }
     
@@ -103,16 +109,39 @@ export function RegisterForm() {
         email: newUser.email,
         username: values.username,
         role: role,
-        coins: 0, // Set initial coins to 0
+        coins: 0, // Initial coins set to 0
       };
       
       const userDocRef = doc(firestore, 'users', newUser.uid);
       await setDoc(userDocRef, userProfile);
       
-      // The useEffect will handle the redirect
-    } catch (error) {
+      toast({
+        title: 'Registration Successful',
+        description: "Welcome! We're logging you in...",
+      });
+      // The useEffect will handle the redirect to '/'
+    } catch (error: any) {
       console.error("Registration Error:", error);
-      // Handle error display to user, e.g., using a toast
+      let description = 'An unexpected error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+            description = 'This email is already in use. Please log in instead.';
+            break;
+        case 'auth/invalid-email':
+            description = 'The email address is not valid.';
+            break;
+        case 'auth/weak-password':
+            description = 'The password is too weak.';
+            break;
+        default:
+            description = 'An unexpected error occurred during registration.';
+            break;
+      }
+       toast({
+        variant: 'destructive',
+        title: 'Registration Failed',
+        description: description,
+      });
     }
   }
 
