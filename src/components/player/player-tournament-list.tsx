@@ -77,20 +77,21 @@ export function PlayerTournamentList() {
   const error = tournamentsError || categoriesError;
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-     if (!auth.currentUser) {
-      alert("You must be logged in!");
-      return;
+    const db = firestore;
+    if (!auth.currentUser) {
+        alert("You must be logged in!");
+        return;
     }
 
     const userId = auth.currentUser.uid;
     const tournamentId = selectedTournament.id;
-    const db = firestore;
-
     // LOG EVERYTHING TO FIND THE GHOST
     console.log("DEBUG INFO:", { userId, tournamentId, projectId: db.app.options.projectId });
+    console.dir(selectedTournament);
+
 
     try {
-      await runTransaction(db, async (transaction) => {
+        await runTransaction(db, async (transaction) => {
         // 1. Get User Doc
         const userRef = doc(db, "users", userId);
         const userSnap = await transaction.get(userRef);
@@ -108,28 +109,30 @@ export function PlayerTournamentList() {
         if (userCoins < entryFee) throw new Error("Insufficient coins!");
         
         if (data.registeredCount >= data.maxPlayers) {
-          throw new Error('This tournament is already full.');
+            throw new Error('This tournament is already full.');
         }
         if (data.status !== 'upcoming') {
-          throw new Error('Registrations for this tournament are closed.');
+            throw new Error('Registrations for this tournament are closed.');
         }
-
 
         // 3. PERFORM THE WRITES
         transaction.update(userRef, { coins: userCoins - entryFee });
         transaction.update(tournamentRef, { registeredCount: increment(1) });
         
         // Use set for sub-collections
+        const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
+            userId: userId,
+            tournamentId: tournamentId,
+            teamName: profile?.username || 'Unknown Player',
+            playerIds: [userId],
+            slotNumber: (data.registeredCount || 0) + 1,
+        };
         transaction.set(doc(db, "tournaments", tournamentId, "registrations", userId), {
-          userId,
-          tournamentId: tournamentId,
-          teamName: profile?.username, // from useUser() hook
-          playerIds: [userId],
-          registrationDate: serverTimestamp(),
-          slotNumber: (data.registeredCount || 0) + 1
+            ...registrationData,
+            registrationDate: serverTimestamp(),
         });
-
-        transaction.set(doc(db, "users", userId, "joinedTournaments", tournamentId), {
+        
+        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
             prizePoolFirst: selectedTournament.prizePoolFirst,
@@ -137,17 +140,17 @@ export function PlayerTournamentList() {
             slotNumber: (data.registeredCount || 0) + 1,
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
+        };
+        transaction.set(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
         });
-      });
 
-      refreshJoinedTournaments();
+        refreshJoinedTournaments();
 
-      alert("Success! You have joined.");
-      window.location.reload(); // Force refresh to show the new card back
+        alert("Success! You have joined.");
     } catch (error: any) {
-      console.error("CRITICAL TRANSACTION FAIL:", error);
-      console.dir(error);
-      alert("PERMISSION ERROR DETAILED: " + error.message);
+        console.error("CRITICAL TRANSACTION FAIL:", error);
+        console.dir(error);
+        alert("PERMISSION ERROR DETAILED: " + error.message);
     }
   };
 
