@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -14,14 +13,10 @@ service cloud.firestore {
     }
 
     // Correctly and safely get the role of the currently signed-in user.
-    // This is the most critical helper function.
     function getUserRole() {
-        // Use exists() to avoid errors on non-existent documents, which can happen during signup
-        // or if the user profile creation is delayed.
         if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
             return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
         }
-        // If the user document doesn't exist, they have no specific role.
         return null;
     }
     
@@ -33,7 +28,6 @@ service cloud.firestore {
       return isSignedIn() && getUserRole() == 'staff';
     }
     
-    // Check if the signed-in user is an Admin or Staff. This simplifies many rules.
     function isStaffOrAdmin() {
       let role = getUserRole();
       return isSignedIn() && (role == 'admin' || role == 'staff');
@@ -44,22 +38,26 @@ service cloud.firestore {
     // USER DATA: Users can only manage their own data. Admins/Staff can read any user profile for management.
     match /users/{userId} {
       allow get: if isOwner(userId) || isStaffOrAdmin();
-      allow list: if isStaffOrAdmin(); // Only admins/staff can list all users.
-      allow create: if isOwner(userId); // A user can create their own profile document.
-      allow update, delete: if isOwner(userId) || isAdmin(); // Only a user or an admin can modify/delete a profile.
+      allow list: if isStaffOrAdmin(); 
+      allow create: if isOwner(userId); 
+      allow update, delete: if isOwner(userId) || isAdmin();
 
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
-        // A user can read and write their own records of joined tournaments.
         allow read, write: if isOwner(userId);
-        // Admins/Staff can view for management purposes.
         allow list: if isOwner(userId) || isStaffOrAdmin();
       }
       match /wonTournaments/{tournamentId} {
-        // A user can read the tournaments they have won.
         allow read, list: if isOwner(userId) || isStaffOrAdmin();
-        // Only Admin/Staff can write to this collection to award prizes.
         allow write: if isStaffOrAdmin();
+      }
+      
+      // Denormalized coin request history for the specific user.
+      match /addCoinRequests/{requestId} {
+        allow read, list, write: if isOwner(userId);
+      }
+      match /withdrawCoinRequests/{requestId} {
+        allow read, list, write: if isOwner(userId);
       }
     }
 
@@ -71,11 +69,8 @@ service cloud.firestore {
       // Registrations are readable by any signed-in user so they can see who has joined.
       match /registrations/{registrationId} {
         allow read, list: if isSignedIn();
-        // A player can create their own registration.
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        // Only an admin/staff can delete a registration.
         allow delete: if isStaffOrAdmin();
-        // Updates are disallowed to prevent tampering.
         allow update: if false;
       }
     }
@@ -96,24 +91,16 @@ service cloud.firestore {
       allow create, update, delete: if isStaffOrAdmin();
     }
     
-    // ADD COIN REQUESTS: Players create for themselves. Staff/Admins manage.
+    // GLOBAL ADD COIN REQUESTS (for Admin/Staff review)
     match /addCoinRequests/{requestId} {
-      // A player can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Players can read THEIR OWN requests to check status, but cannot list all requests.
-      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
-      // Admins/Staff have full read/write access to all requests.
-      allow list, update, delete: if isStaffOrAdmin();
+      allow get, list, update, delete: if isStaffOrAdmin();
     }
 
-    // WITHDRAW COIN REQUESTS: Players create for themselves. Staff/Admins manage.
+    // GLOBAL WITHDRAW COIN REQUESTS (for Admin/Staff review)
     match /withdrawCoinRequests/{requestId} {
-      // A player can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-       // Players can read THEIR OWN requests to check status, but cannot list all requests.
-      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
-      // Admins/Staff have full read/write access to all requests.
-      allow list, update, delete: if isStaffOrAdmin();
+      allow get, list, update, delete: if isStaffOrAdmin();
     }
   }
 }

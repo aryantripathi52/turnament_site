@@ -66,7 +66,7 @@ export type AddCoinRequest = {
     amountPaid: number;
     transactionId: string;
     status: 'pending' | 'approved' | 'denied';
-    requestDate: Timestamp;
+    requestDate: Timestamp | any;
     decisionDate?: Timestamp | null;
 };
 
@@ -78,8 +78,22 @@ export type WithdrawCoinRequest = {
     amountCoins: number;
     withdrawalDetails: string;
     status: 'pending' | 'approved' | 'denied';
-    requestDate: Timestamp;
+    requestDate: Timestamp | any;
     decisionDate?: Timestamp | null;
+};
+
+export type PlayerAddCoinRequest = {
+    id: string;
+    amountCoins: number;
+    status: 'pending' | 'approved' | 'denied';
+    requestDate: Timestamp;
+};
+
+export type PlayerWithdrawCoinRequest = {
+    id: string;
+    amountCoins: number;
+    status: 'pending' | 'approved' | 'denied';
+    requestDate: Timestamp;
 };
 
 

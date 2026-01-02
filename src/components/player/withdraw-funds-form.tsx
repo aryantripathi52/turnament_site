@@ -26,12 +26,14 @@ import {
 import { useFirestore, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import { Textarea } from '../ui/textarea';
+import type { WithdrawCoinRequest, PlayerWithdrawCoinRequest } from '@/lib/types';
+
 
 const formSchema = z.object({
   amountCoins: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
-  withdrawalDetails: z.string().min(3, { message: 'Please provide sufficient details for the withdrawal.' }),
+  withdrawalDetails: z.string().min(10, { message: 'Please provide sufficient details for the withdrawal (at least 10 characters).' }),
 });
 
 interface WithdrawFundsFormProps {
@@ -54,7 +56,7 @@ export function WithdrawFundsForm({ children, isOpen, setIsOpen }: WithdrawFunds
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !profile) {
+    if (!user || !profile || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
@@ -74,21 +76,38 @@ export function WithdrawFundsForm({ children, isOpen, setIsOpen }: WithdrawFunds
 
 
     try {
-      const coinRequestCollection = collection(firestore, 'withdrawCoinRequests');
-      await addDoc(coinRequestCollection, {
+      const batch = writeBatch(firestore);
+      const requestDate = serverTimestamp();
+
+      // 1. Create request in the global collection for admin review
+      const globalRequestRef = doc(collection(firestore, 'withdrawCoinRequests'));
+      const globalRequestData: Omit<WithdrawCoinRequest, 'id'> = {
         userId: user.uid,
         username: profile.username,
         type: 'withdraw',
         amountCoins: values.amountCoins,
         withdrawalDetails: values.withdrawalDetails,
         status: 'pending',
-        requestDate: serverTimestamp(),
+        requestDate: requestDate,
         decisionDate: null,
-      });
+      };
+      batch.set(globalRequestRef, globalRequestData);
+
+      // 2. Create a denormalized copy in the user's private subcollection
+      const userRequestRef = doc(collection(firestore, `users/${user.uid}/withdrawCoinRequests`), globalRequestRef.id);
+      const userRequestData: Omit<PlayerWithdrawCoinRequest, 'id'> = {
+         amountCoins: values.amountCoins,
+         status: 'pending',
+         requestDate: requestDate,
+      };
+      batch.set(userRequestRef, userRequestData);
+      
+      await batch.commit();
+
 
       toast({
         title: 'Request Submitted',
-        description: 'Your request to withdraw coins has been sent for approval. Please allow up to 12 hours for the review.',
+        description: 'Your request to withdraw coins has been sent for approval. You can track its status in your History tab.',
       });
       setIsOpen(false);
       form.reset();

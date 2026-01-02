@@ -292,7 +292,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "AddCoinRequest",
       "type": "object",
-      "description": "Represents a user's request to add coins.",
+      "description": "Represents a user's request to add coins. This is the global record for admin review.",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
@@ -307,11 +307,24 @@
       },
       "required": ["userId", "username", "type", "amountCoins", "amountPaid", "transactionId", "status", "requestDate"]
     },
+     "PlayerAddCoinRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PlayerAddCoinRequest",
+      "type": "object",
+      "description": "A denormalized copy of a coin addition request, stored in a user's subcollection for their private history.",
+      "properties": {
+        "id": { "type": "string" },
+        "amountCoins": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "denied"] },
+        "requestDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["amountCoins", "status", "requestDate"]
+    },
     "WithdrawCoinRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WithdrawCoinRequest",
       "type": "object",
-      "description": "Represents a user's request to withdraw coins.",
+      "description": "Represents a user's request to withdraw coins. This is the global record for admin review.",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
@@ -324,6 +337,19 @@
         "decisionDate": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "username", "type", "amountCoins", "withdrawalDetails", "status", "requestDate"]
+    },
+    "PlayerWithdrawCoinRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PlayerWithdrawCoinRequest",
+      "type": "object",
+      "description": "A denormalized copy of a coin withdrawal request, stored in a user's subcollection for their private history.",
+      "properties": {
+        "id": { "type": "string" },
+        "amountCoins": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "denied"] },
+        "requestDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["amountCoins", "status", "requestDate"]
     },
      "JoinedTournament": {
       "title": "Joined Tournament",
@@ -427,11 +453,27 @@
         }
       },
       {
+        "path": "/users/{userId}/addCoinRequests/{requestId}",
+        "definition": {
+          "entityName": "PlayerAddCoinRequest",
+          "schema": { "$ref": "#/backend/entities/PlayerAddCoinRequest" },
+          "description": "Stores a player's private history of coin addition requests."
+        }
+      },
+      {
+        "path": "/users/{userId}/withdrawCoinRequests/{requestId}",
+        "definition": {
+          "entityName": "PlayerWithdrawCoinRequest",
+          "schema": { "$ref": "#/backend/entities/PlayerWithdrawCoinRequest" },
+          "description": "Stores a player's private history of coin withdrawal requests."
+        }
+      },
+      {
         "path": "/addCoinRequests/{requestId}",
         "definition": {
           "entityName": "AddCoinRequest",
           "schema": { "$ref": "#/backend/entities/AddCoinRequest" },
-          "description": "Stores user requests to add coins."
+          "description": "Global collection for admin review of coin addition requests."
         }
       },
       {
@@ -439,7 +481,7 @@
         "definition": {
           "entityName": "WithdrawCoinRequest",
           "schema": { "$ref": "#/backend/entities/WithdrawCoinRequest" },
-          "description": "Stores user requests to withdraw coins."
+          "description": "Global collection for admin review of coin withdrawal requests."
         }
       },
       {

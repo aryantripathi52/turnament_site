@@ -1,19 +1,26 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import type { AddCoinRequest, WithdrawCoinRequest } from '@/lib/types';
+import type { PlayerAddCoinRequest, PlayerWithdrawCoinRequest } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
 
-type CoinRequest = WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>;
+// Unified type for display purposes
+type CombinedRequest = {
+  id: string;
+  type: 'add' | 'withdraw';
+  amountCoins: number;
+  status: 'pending' | 'approved' | 'denied';
+  requestDate: Timestamp;
+}
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -36,8 +43,7 @@ export function RequestHistory() {
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
-      collection(firestore, 'addCoinRequests'),
-      where('userId', '==', user.uid),
+      collection(firestore, `users/${user.uid}/addCoinRequests`),
       orderBy('requestDate', 'desc')
     );
   }, [firestore, user]);
@@ -45,20 +51,23 @@ export function RequestHistory() {
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
-      collection(firestore, 'withdrawCoinRequests'),
-      where('userId', '==', user.uid),
+      collection(firestore, `users/${user.uid}/withdrawCoinRequests`),
       orderBy('requestDate', 'desc')
     );
   }, [firestore, user]);
 
-  const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
-  const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
+  const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<PlayerAddCoinRequest>(addCoinRequestsQuery);
+  const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<PlayerWithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
-  const allRequests = useMemo(() => {
-    const combined: CoinRequest[] = [...(addRequests || []), ...(withdrawRequests || [])];
+  const allRequests = useMemo((): CombinedRequest[] => {
+    const adds: CombinedRequest[] = addRequests?.map(r => ({ ...r, type: 'add' })) || [];
+    const withdraws: CombinedRequest[] = withdrawRequests?.map(r => ({ ...r, type: 'withdraw' })) || [];
+    
+    const combined = [...adds, ...withdraws];
+
     return combined.sort((a, b) => {
-        const dateA = a.requestDate as Timestamp;
-        const dateB = b.requestDate as Timestamp;
+        const dateA = a.requestDate;
+        const dateB = b.requestDate;
         return dateB.toMillis() - dateA.toMillis();
     });
   }, [addRequests, withdrawRequests]);

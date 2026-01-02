@@ -28,7 +28,8 @@ import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import type { AddCoinRequest, PlayerAddCoinRequest } from '@/lib/types';
 
 const formSchema = z.object({
   amountCoins: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
@@ -58,7 +59,7 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !profile) {
+    if (!user || !profile || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
@@ -68,8 +69,12 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
     }
 
     try {
-      const coinRequestCollection = collection(firestore, 'addCoinRequests');
-      await addDoc(coinRequestCollection, {
+      const batch = writeBatch(firestore);
+      const requestDate = serverTimestamp();
+
+      // 1. Create request in the global collection for admin review
+      const globalRequestRef = doc(collection(firestore, 'addCoinRequests'));
+      const globalRequestData: Omit<AddCoinRequest, 'id'> = {
         userId: user.uid,
         username: profile.username,
         type: 'add',
@@ -77,13 +82,25 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
         amountPaid: values.amountPaid,
         transactionId: values.transactionId,
         status: 'pending',
-        requestDate: serverTimestamp(),
+        requestDate: requestDate,
         decisionDate: null,
-      });
+      };
+      batch.set(globalRequestRef, globalRequestData);
+
+      // 2. Create a denormalized copy in the user's private subcollection for their history
+      const userRequestRef = doc(collection(firestore, `users/${user.uid}/addCoinRequests`), globalRequestRef.id);
+      const userRequestData: Omit<PlayerAddCoinRequest, 'id'> = {
+        amountCoins: values.amountCoins,
+        status: 'pending',
+        requestDate: requestDate,
+      };
+      batch.set(userRequestRef, userRequestData);
+      
+      await batch.commit();
 
       toast({
         title: 'Request Submitted',
-        description: 'Your request to add coins has been sent for approval. Please allow up to 12 hours for the review.',
+        description: 'Your request to add coins has been sent for approval. You can track its status in your History tab.',
       });
       setIsOpen(false);
       form.reset();
