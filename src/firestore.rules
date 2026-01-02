@@ -73,7 +73,7 @@ service cloud.firestore {
       // Admins can get/update/delete any single document.
       allow get, update, delete: if isAdmin();
       // Admins can list documents if they query by status.
-      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']);
+      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']) && 'status' in request.query.where;
       // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // A player can only list/get their own requests.
@@ -84,7 +84,7 @@ service cloud.firestore {
       // Admins can get/update/delete any single document.
       allow get, update, delete: if isAdmin();
       // Admins can list documents if they query by status.
-      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']);
+      allow list: if isAdmin() && request.query.keys().hasOnly(['where', 'limit']) && 'status' in request.query.where;
       // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // A player can only list/get their own requests.
