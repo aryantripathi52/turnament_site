@@ -141,8 +141,6 @@
         "id",
         "tournamentId",
         "teamName",
-        "contactName",
-        "contactEmail",
         "playerIds",
         "registrationDate"
       ]

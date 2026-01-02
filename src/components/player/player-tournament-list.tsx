@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,12 +18,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AlertCircle, Calendar, Users, Trophy, Gem, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Tournament, Category } from '@/lib/types';
+import type { Tournament, Category, Registration } from '@/lib/types';
 import { Button } from '../ui/button';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import type { UserProfile } from '@/firebase/auth/use-user';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -40,7 +41,7 @@ const formatDate = (date: any) => {
 
 export function PlayerTournamentList() {
   const firestore = useFirestore();
-  const { profile } = useUser();
+  const { user, profile } = useUser();
   const { toast } = useToast();
 
   const tournamentsQuery = useMemoFirebase(() => {
@@ -64,23 +65,55 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = (tournament: Tournament) => {
-    if (!profile) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to enter.' });
-        return;
+  const handleConfirmEntry = async (tournament: Tournament) => {
+    if (!firestore || !user || !profile) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to enter.' });
+      return;
     }
 
-    if (profile.coins < tournament.entryFee) {
-        toast({ variant: 'destructive', title: 'Insufficient Coins', description: 'You do not have enough coins to enter this tournament.' });
-        return;
-    }
+    const userRef = doc(firestore, 'users', user.uid);
+    const registrationColRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
 
-    // Placeholder for actual registration logic
-    console.log(`Entering tournament ${tournament.name} for user ${profile.username}`);
-    toast({
-      title: 'Registration Successful!',
-      description: `You have entered the "${tournament.name}" tournament. Good luck!`,
-    });
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User profile not found.");
+        }
+
+        const userProfile = userDoc.data() as UserProfile;
+
+        if (userProfile.coins < tournament.entryFee) {
+          throw new Error('Insufficient coins to enter this tournament.');
+        }
+
+        const newCoinBalance = userProfile.coins - tournament.entryFee;
+        transaction.update(userRef, { coins: newCoinBalance });
+
+        const newRegistration: Omit<Registration, 'id'> = {
+          tournamentId: tournament.id,
+          teamName: profile.username, // Using username as team name for now
+          playerIds: [user.uid],
+          registrationDate: serverTimestamp(),
+        };
+        // In a transaction, we need to create a new doc ref first
+        const newRegistrationRef = doc(registrationColRef);
+        transaction.set(newRegistrationRef, newRegistration);
+      });
+
+      toast({
+        title: 'Registration Successful!',
+        description: `You have entered the "${tournament.name}" tournament. Good luck!`,
+      });
+
+    } catch (e: any) {
+      console.error("Tournament entry failed:", e);
+      toast({
+        variant: 'destructive',
+        title: 'Registration Failed',
+        description: e.message || 'An unexpected error occurred.',
+      });
+    }
   };
 
   if (isLoading) {
