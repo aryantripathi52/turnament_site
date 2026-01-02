@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
@@ -21,8 +20,6 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { UserProfile } from '@/firebase/auth/use-user';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
 
 interface CoinApprovalTableProps {
   requestType: 'add' | 'withdraw';
@@ -78,13 +75,10 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
             }
             newCoinBalance -= request.amountCoins;
           }
-        }
-        
-        // Update user's coin balance if approved
-        if (decision === 'approved') {
+           // Update user's coin balance if approved
           transaction.update(userRef, { coins: newCoinBalance });
         }
-
+        
         // Finally, update the request status
         transaction.update(requestRef, {
             status: decision,
