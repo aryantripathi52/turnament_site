@@ -28,7 +28,7 @@ export function StaffCoinRequests() {
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
   useEffect(() => {
-    if (profile) {
+    if (profile && user) {
       console.log("Current User Status:", {
         role: profile.role,
         isStaffOrAdmin: isStaffOrAdmin,
@@ -39,11 +39,13 @@ export function StaffCoinRequests() {
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
+    // Admin/Staff get all pending requests
     return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
+    // Admin/Staff get all pending requests
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
@@ -53,16 +55,20 @@ export function StaffCoinRequests() {
   const allRequests = useMemo((): CombinedRequest[] => {
     const adds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const withdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
+    
     const combined = [...adds, ...withdraws];
     
+    // Sort in-memory
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
+        // Handle cases where date might be missing or not yet a timestamp
         if (!dateB) return -1;
         if (!dateA) return 1;
         return dateB.toMillis() - dateA.toMillis();
     });
-}, [addRequests, withdrawRequests]);
+  }, [addRequests, withdrawRequests]);
+
 
   const isLoading = loadingAdd || loadingWithdraw;
   const error = addError || withdrawError;
