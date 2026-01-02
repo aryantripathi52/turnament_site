@@ -2,78 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    
-    function isAdmin(userId) {
-      // Hardcoded admin email for superuser access
-      return getUserRole(userId) == 'admin' || request.auth.token.email == 'admin@dps.in';
-    }
-
-    function isStaff(userId) {
-      return getUserRole(userId) == 'staff';
-    }
-    
-    function isStaffOrAdmin(userId) {
-      let role = getUserRole(userId);
-      // Hardcoded admin email for superuser access
-      return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
-    }
-
-    // --- Collection Rules (Temporary Debugging) ---
-
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
-      match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-
-    match /tournaments/{tId} {
-      allow read: if true;
-      allow update: if isSignedIn(); // Temporarily loosened for testing
-
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn();
-      }
-    }
-
-    match /categories/{categoryId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
-    }
-
-    // ANNOUNCEMENTS & HIGHLIGHTS: Publicly readable, modifiable by staff/admins.
-    match /announcements/{announcementId} {
-      allow get, list: if true;
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
-    }
-
-    match /highlights/{highlightId} {
-      allow get, list: if true;
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
-    }
-    
-    // GLOBAL COIN REQUESTS (for Admin/Staff review)
-    match /addCoinRequests/{requestId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
-    }
-
-    match /withdrawCoinRequests/{requestId} {
-       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-       allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,9 +40,12 @@ const formatDate = (date: any) => {
 };
 
 export function PlayerTournamentList() {
+  const auth = useAuth();
   const firestore = useFirestore();
   const { user, profile, joinedTournaments, refreshJoinedTournaments } = useUser();
   const { toast } = useToast();
+
+  console.log("Current User UID:", auth.currentUser?.uid);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -83,13 +86,11 @@ export function PlayerTournamentList() {
 
     console.log("UserID:", user.uid, "TournamentID:", selectedTournament.id);
 
-    const userRef = doc(firestore, 'users', user.uid);
-    const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
-    const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
-    const joinedTournamentRef = doc(firestore, `users/${user.uid}/joinedTournaments`, selectedTournament.id);
-
     try {
       await runTransaction(firestore, async (transaction) => {
+        const userRef = doc(firestore, 'users', user.uid);
+        const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
+        
         const userDoc = await transaction.get(userRef);
         const tournamentDoc = await transaction.get(tournamentRef);
 
@@ -109,8 +110,6 @@ export function PlayerTournamentList() {
           throw new Error('Registrations for this tournament are closed.');
         }
 
-        const newSlotNumber = currentTournament.registeredCount + 1;
-
         // 1. Update user's coins
         transaction.update(userRef, { coins: increment(-currentTournament.entryFee) });
         
@@ -118,27 +117,16 @@ export function PlayerTournamentList() {
         transaction.update(tournamentRef, { registeredCount: increment(1) });
         
         // 3. Create the public registration document
+        const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
         const registrationData: Omit<Registration, 'id'> = {
             tournamentId: selectedTournament.id,
             userId: user.uid,
             teamName: profile.username,
             playerIds: [user.uid],
             registrationDate: serverTimestamp(),
-            slotNumber: newSlotNumber
+            slotNumber: currentTournament.registeredCount + 1
         };
         transaction.set(registrationRef, registrationData);
-
-        // 4. Create the denormalized "joined" record for the user for their private list
-        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-            name: currentTournament.name,
-            startDate: currentTournament.startDate,
-            prizePoolFirst: currentTournament.prizePoolFirst,
-            entryFee: currentTournament.entryFee,
-            slotNumber: newSlotNumber,
-            roomId: currentTournament.roomId || null,
-            roomPassword: currentTournament.roomPassword || null,
-        };
-        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
       refreshJoinedTournaments();
@@ -148,13 +136,14 @@ export function PlayerTournamentList() {
         description: `You have entered "${selectedTournament.name}". Good luck!`,
       });
 
-    } catch (e: any) {
-        console.error("FULL TRANSACTION ERROR:", e.code, e.message);
+    } catch (error: any) {
+        console.error("FULL TRANSACTION ERROR:", error.code, error.message);
         toast({
             variant: 'destructive',
             title: 'Registration Failed',
-            description: e.message || 'An unexpected error occurred. Check the console for more details.',
+            description: error.message || 'An unexpected error occurred. Check the console for more details.',
         });
+        alert("Error: " + error.message);
     }
   };
 
