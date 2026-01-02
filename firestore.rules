@@ -70,14 +70,20 @@ service cloud.firestore {
     }
     
     match /addCoinRequests/{requestId} {
-      allow list, get, update, delete: if isAdmin();
+      // Admins can perform any action.
+      allow read, write: if isAdmin();
+      // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // A player can only list their own requests.
       allow list, get: if isSignedIn() && request.query.where.userId == request.auth.uid;
     }
 
     match /withdrawCoinRequests/{requestId} {
-      allow list, get, update, delete: if isAdmin();
+      // Admins can perform any action.
+      allow read, write: if isAdmin();
+       // A player can only create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // A player can only list their own requests.
       allow list, get: if isSignedIn() && request.query.where.userId == request.auth.uid;
     }
 
