@@ -10,14 +10,13 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    function getRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
+    // Correct way to check for admin role using custom claims.
     function isAdmin() {
-      return isSignedIn() && getRole(request.auth.uid) == 'admin';
+        return isSignedIn() && request.auth.token.admin == true;
     }
+    // Correct way to check for staff role using custom claims.
     function isStaff() {
-      return isSignedIn() && (getRole(request.auth.uid) == 'staff' || isAdmin());
+        return isSignedIn() && (request.auth.token.staff == true || isAdmin());
     }
     function isExistingDoc() {
       return resource != null;
@@ -26,7 +25,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get, list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) || isAdmin();
+      // Admins can update any user, owners can update their own.
+      allow update: if isAdmin() || isOwner(userId);
       allow delete: if isOwner(userId);
     }
 
@@ -67,11 +67,9 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
       // Admins can list all requests. Players can only query for their own.
-      allow list: if isAdmin() || (isSignedIn() && request.query.where.size() > 0 && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }
   }
 }
-
-    

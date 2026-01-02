@@ -84,7 +84,7 @@ export function RegisterForm() {
     if (!isUserLoading && user && formData) {
       const role = getRoleFromKey(formData.roleKey || '');
       if (role) {
-        const newUser = {
+        const newUser: any = {
           id: user.uid,
           email: user.email,
           username: formData.username,
@@ -92,6 +92,13 @@ export function RegisterForm() {
           registrationIds: [],
           coins: role === 'player' ? 100 : 0, // Starting coins for players
         };
+        // This is a flag for a backend process to pick up
+        if (role === 'admin') {
+          newUser.customClaims = { admin: true };
+        }
+        if (role === 'staff') {
+            newUser.customClaims = { staff: true };
+        }
         const userDocRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(userDocRef, newUser, { merge: true });
         router.push('/');
@@ -220,5 +227,3 @@ export function RegisterForm() {
     </Card>
   );
 }
-
-    
