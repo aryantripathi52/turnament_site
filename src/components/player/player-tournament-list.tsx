@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,9 +16,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Calendar, Users, Trophy, Gem, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Tournament, Category, Registration } from '@/lib/types';
+import type { Tournament, Category, JoinedTournament } from '@/lib/types';
 import { Button } from '../ui/button';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
@@ -28,11 +28,9 @@ import type { UserProfile } from '@/firebase/auth/use-user';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
-  // Timestamps from Firestore might be objects with seconds and nanoseconds
   if (date.seconds) {
     return format(new Date(date.seconds * 1000), 'PPp');
   }
-  // Or they might already be Date objects
   if (date instanceof Date) {
     return format(date, 'PPp');
   }
@@ -72,7 +70,7 @@ export function PlayerTournamentList() {
     }
 
     const userRef = doc(firestore, 'users', user.uid);
-    const registrationColRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
+    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', tournament.id);
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -89,21 +87,20 @@ export function PlayerTournamentList() {
 
         const newCoinBalance = userProfile.coins - tournament.entryFee;
         
-        // 1. Create the new registration document
-        const newRegistrationRef = doc(registrationColRef);
-        const newRegistrationData: Omit<Registration, 'id'> = {
-          tournamentId: tournament.id,
-          teamName: profile.username, // Using username as team name for now
-          playerIds: [user.uid],
-          registrationDate: serverTimestamp(),
-        };
-        transaction.set(newRegistrationRef, newRegistrationData);
-        
-        // 2. Update user's coin balance and add registrationId to user profile
+        // 1. Update user's coin balance
         transaction.update(userRef, { 
-            coins: newCoinBalance,
-            registrationIds: arrayUnion(newRegistrationRef.id)
+            coins: newCoinBalance
         });
+
+        // 2. Create a denormalized record of the joined tournament
+        const joinedTournamentData: JoinedTournament = {
+            id: tournament.id,
+            name: tournament.name,
+            startDate: tournament.startDate,
+            prizePoolFirst: tournament.prizePoolFirst,
+            entryFee: tournament.entryFee,
+        };
+        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
       toast({
@@ -213,5 +210,3 @@ export function PlayerTournamentList() {
     </div>
   );
 }
-
-    

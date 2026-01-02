@@ -24,6 +24,14 @@ export type Registration = {
     registrationDate: Timestamp;
 };
 
+export type JoinedTournament = {
+  id: string; // This will be the tournamentId
+  name: string;
+  startDate: Timestamp;
+  prizePoolFirst: number;
+  entryFee: number;
+};
+
 
 export type Announcement = {
   id: string;

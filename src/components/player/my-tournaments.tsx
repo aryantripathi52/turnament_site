@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import type { JoinedTournament } from '@/firebase/auth/use-user';
+import type { JoinedTournament } from '@/lib/types';
 
 
 const formatDate = (date: any) => {

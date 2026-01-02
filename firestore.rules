@@ -21,6 +21,10 @@ service cloud.firestore {
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to update
       allow delete: if isOwner(userId) || isSignedIn(); // TEMPORARY: Allow any signed in user to delete
+
+        match /joinedTournaments/{tournamentId} {
+            allow read, write: if isOwner(userId);
+        }
     }
 
     match /tournaments/{tournamentId} {
@@ -75,5 +79,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
