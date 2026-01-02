@@ -2,23 +2,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // --- Super Admin Function ---
+    // PASTE YOUR ADMIN UID FROM THE FIREBASE AUTHENTICATION TAB HERE
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.uid == 'YOUR_ACTUAL_UID_HERE'; 
+    }
+
+    function isStaffOrAdmin() {
+       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+    }
+    
     // User can create their own profile, and can read/update it.
     match /users/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
 
       // Allow users to read and write to their own subcollections
       match /joinedTournaments/{tournamentId} {
-        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
       }
        match /wonTournaments/{tournamentId} {
-        allow read, list: if request.auth != null && request.auth.uid == userId;
+        allow read, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
       }
        match /addCoinRequests/{requestId} {
-        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
       }
        match /withdrawCoinRequests/{requestId} {
-        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
       }
     }
 
@@ -27,9 +37,9 @@ service cloud.firestore {
       allow read: if true;
       
       // Allow authenticated users to ONLY update the registeredCount field (for joining)
-      allow update: if request.auth != null && 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'])); // Admins/Staff can update anything
+      // Admins/Staff can update anything
+      allow update: if (request.auth != null && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])) || isStaffOrAdmin() || isSuperAdmin();
 
       // Registrations are public to read, but only the user can create their own
       match /registrations/{registrationId} {
@@ -41,19 +51,18 @@ service cloud.firestore {
     // Categories are public
     match /categories/{categoryId} {
         allow read: if true;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow write: if isStaffOrAdmin() || isSuperAdmin();
     }
 
     // Global Coin Requests: Players can CREATE, Staff/Admins can READ/WRITE
     match /addCoinRequests/{requestId} {
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
     }
     match /withdrawCoinRequests/{requestId} {
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
     }
-
 
     // Announcements and Highlights are public read-only for now
     match /announcements/{announcementId} {
