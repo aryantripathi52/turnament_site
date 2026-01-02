@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
@@ -19,7 +19,6 @@ export interface UserProfile {
   coins: number;
 }
 
-// This hook result is now simplified. Components will fetch their own specific data.
 export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
@@ -28,6 +27,7 @@ export interface UserHookResult {
   userError: Error | null;
   joinedTournaments: WithId<JoinedTournament>[] | null;
   wonTournaments: WithId<WonTournament>[] | null;
+  refreshJoinedTournaments: () => void;
 }
 
 /**
@@ -42,6 +42,9 @@ export const useUser = (): UserHookResult => {
     userError,
     firestore,
   } = useFirebase();
+
+  // State to force a re-fetch of joined tournaments
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Memoize the document reference to prevent re-renders
   const userProfileRef = useMemoFirebase(() => {
@@ -59,7 +62,7 @@ export const useUser = (): UserHookResult => {
   const joinedTournamentsQuery = useMemoFirebase(() => {
     if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
-  }, [user, firestore, profile]);
+  }, [user, firestore, profile, refreshKey]); // Add refreshKey to dependencies
 
   const { data: joinedTournaments, isLoading: isJoinedTournamentsLoading, error: joinedTournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
@@ -71,6 +74,9 @@ export const useUser = (): UserHookResult => {
 
     const { data: wonTournaments, isLoading: isWonTournamentsLoading, error: wonTournamentsError } = useCollection<WonTournament>(wonTournamentsQuery);
 
+  const refreshJoinedTournaments = useCallback(() => {
+    setRefreshKey(oldKey => oldKey + 1);
+  }, []);
 
   const combinedIsLoading = isUserLoading || isProfileLoading || isJoinedTournamentsLoading || isWonTournamentsLoading;
   const combinedError = userError || profileError || joinedTournamentsError || wonTournamentsError;
@@ -83,5 +89,6 @@ export const useUser = (): UserHookResult => {
     isUserLoading: combinedIsLoading,
     isProfileLoading: combinedIsLoading, 
     userError: combinedError,
+    refreshJoinedTournaments,
   };
 };

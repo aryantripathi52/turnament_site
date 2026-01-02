@@ -19,12 +19,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, doc, writeBatch, getDoc, serverTimestamp, increment, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, writeBatch, serverTimestamp, increment, Timestamp } from 'firebase/firestore';
 import type { Tournament, Registration, UserProfile, WonTournament } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, User, Crown, Medal, Trophy } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
@@ -47,15 +47,23 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
   const [thirdPlace, setThirdPlace] = useState<string | undefined>(tournament.winners?.third?.userId);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setFirstPlace(tournament.winners?.first?.userId);
+    setSecondPlace(tournament.winners?.second?.userId);
+    setThirdPlace(tournament.winners?.third?.userId);
+  }, [tournament]);
+
   const registrationsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'tournaments', tournament.id, 'registrations'), orderBy('registrationDate', 'asc'));
   }, [firestore, tournament.id]);
 
   const { data: registrations, isLoading, error } = useCollection<Registration>(registrationsQuery);
+  
+  const isCompleted = tournament.status === 'completed';
 
   const players = useMemo(() => {
-    if (tournament.status === 'completed' && tournament.winners) {
+    if (isCompleted && tournament.winners) {
         const winnerList = [];
         if (tournament.winners.first) winnerList.push({ id: tournament.winners.first.userId, name: tournament.winners.first.username });
         if (tournament.winners.second) winnerList.push({ id: tournament.winners.second.userId, name: tournament.winners.second.username });
@@ -63,10 +71,8 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
         return winnerList;
     }
     return registrations?.map(reg => ({ id: reg.userId, name: reg.teamName })) || [];
-  }, [registrations, tournament.status, tournament.winners]);
+  }, [registrations, isCompleted, tournament.winners]);
   
-  const isCompleted = tournament.status === 'completed';
-
   const getPlayerName = (userId: string | undefined) => players.find(p => p.id === userId)?.name || 'N/A';
 
   const handleSubmitWinners = async () => {
@@ -88,17 +94,15 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
     try {
       const batch = writeBatch(firestore);
       
-      const winners = {
+      const winnersPayload = {
         first: { userId: firstPlace, username: getPlayerName(firstPlace) },
         second: { userId: secondPlace, username: getPlayerName(secondPlace) },
         third: { userId: thirdPlace, username: getPlayerName(thirdPlace) },
       };
 
-      // 1. Update tournament doc with winners and set status to 'completed'
       const tournamentRef = doc(firestore, 'tournaments', tournament.id);
-      batch.update(tournamentRef, { winners, status: 'completed' });
+      batch.update(tournamentRef, { winners: winnersPayload, status: 'completed' });
 
-      // 2. Pay out prizes and manage user subcollections
       const prizeMap = new Map([
           [firstPlace, { prize: tournament.prizePoolFirst, place: '1st' }],
           [secondPlace, { prize: tournament.prizePoolSecond, place: '2nd' }],
@@ -110,14 +114,10 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
         const joinedTournamentRef = doc(firestore, 'users', userId, 'joinedTournaments', tournament.id);
         const wonTournamentRef = doc(firestore, 'users', userId, 'wonTournaments', tournament.id);
 
-        // Increment user's coin balance
         batch.update(userRef, { coins: increment(prize) });
-
-        // Delete from 'joinedTournaments'
         batch.delete(joinedTournamentRef);
         
-        // Add to 'wonTournaments'
-        const wonTournamentData: Omit<WonTournament, 'id' | 'completionDate'> & { completionDate: any } = {
+        const wonTournamentData: Omit<WonTournament, 'id'> = {
             name: tournament.name,
             prizeWon: prize,
             place: place as WonTournament['place'],
@@ -129,7 +129,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
       await batch.commit();
 
       toast({ title: 'Success!', description: 'Winners have been set and prizes have been paid out.' });
-      onTournamentUpdate({ ...tournament, status: 'completed', winners });
+      onTournamentUpdate({ ...tournament, status: 'completed', winners: winnersPayload });
       setIsOpen(false);
 
     } catch (e) {
@@ -220,7 +220,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
               <Select value={firstPlace} onValueChange={setFirstPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 1st Place" /></SelectTrigger>
                 <SelectContent>
-                  {players.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {players.map(p => <SelectItem key={`1-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -229,7 +229,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
               <Select value={secondPlace} onValueChange={setSecondPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 2nd Place" /></SelectTrigger>
                 <SelectContent>
-                  {players.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {players.map(p => <SelectItem key={`2-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -238,7 +238,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
               <Select value={thirdPlace} onValueChange={setThirdPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 3rd Place" /></SelectTrigger>
                 <SelectContent>
-                  {players.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  {players.map(p => <SelectItem key={`3-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -29,7 +29,7 @@ export type Registration = {
     tournamentId: string;
     teamName: string; // This is the user's username
     playerIds: string[]; // This is an array with just the user's ID
-    registrationDate: Timestamp;
+    registrationDate: any;
     userId: string;
 };
 
@@ -46,7 +46,7 @@ export type WonTournament = {
     name: string;
     prizeWon: number;
     place: '1st' | '2nd' | '3rd';
-    completionDate: Timestamp;
+    completionDate: any;
 }
 
 
@@ -86,14 +86,14 @@ export type PlayerAddCoinRequest = {
     id: string;
     amountCoins: number;
     status: 'pending' | 'approved' | 'denied';
-    requestDate: Timestamp;
+    requestDate: any;
 };
 
 export type PlayerWithdrawCoinRequest = {
     id: string;
     amountCoins: number;
     status: 'pending' | 'approved' | 'denied';
-    requestDate: Timestamp;
+    requestDate: any;
 };
 
 

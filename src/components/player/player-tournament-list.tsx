@@ -1,8 +1,8 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment, writeBatch } from 'firebase/firestore';
+import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users, Info } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Tournament, Category, JoinedTournament } from '@/lib/types';
+import type { Tournament, Category, JoinedTournament, Registration } from '@/lib/types';
 import { Button } from '../ui/button';
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
@@ -41,7 +41,7 @@ const formatDate = (date: any) => {
 
 export function PlayerTournamentList() {
   const firestore = useFirestore();
-  const { user, profile, joinedTournaments } = useUser();
+  const { user, profile, joinedTournaments, refreshJoinedTournaments } = useUser();
   const { toast } = useToast();
 
   const tournamentsQuery = useMemoFirebase(() => {
@@ -68,26 +68,22 @@ export function PlayerTournamentList() {
 
   const availableTournaments = useMemo(() => {
     if (!tournaments) return [];
-    return tournaments.filter(t => !joinedTournamentIds.has(t.id));
+    return tournaments.filter(t => !joinedTournamentIds.has(t.id) && t.status === 'upcoming');
   }, [tournaments, joinedTournamentIds]);
 
 
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = async (selectedTournament: Tournament) => {
-    if (!firestore || !user || !profile || !selectedTournament) {
+  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
+    if (!firestore || !user || !profile) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process entry. Please try again.' });
       return;
     }
 
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
-    const registrationCollectionRef = collection(firestore, 'tournaments', selectedTournament.id, 'registrations');
-    const newRegistrationRef = doc(registrationCollectionRef); // Auto-generate ID for registration
-    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
-
-
+    
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
@@ -99,37 +95,48 @@ export function PlayerTournamentList() {
         const userProfile = userDoc.data() as UserProfile;
         const currentTournament = tournamentDoc.data() as Tournament;
 
-        if (userProfile.coins < currentTournament.entryFee) throw new Error('Insufficient coins.');
-        if (currentTournament.registeredCount >= currentTournament.maxPlayers) throw new Error('Tournament is full.');
-        if (currentTournament.status !== 'upcoming') throw new Error('Registrations are closed for this tournament.');
+        if (userProfile.coins < currentTournament.entryFee) {
+          throw new Error('Insufficient coins to enter the tournament.');
+        }
+        if (currentTournament.registeredCount >= currentTournament.maxPlayers) {
+          throw new Error('This tournament is already full.');
+        }
+        if (currentTournament.status !== 'upcoming') {
+          throw new Error('Registrations for this tournament are closed.');
+        }
 
-        const newCoinBalance = userProfile.coins - currentTournament.entryFee;
-        
-        // 1. Update user's coin balance
-        transaction.update(userRef, { coins: newCoinBalance });
-        
-        // 2. Increment tournament's registered count
+        // Perform the updates
+        transaction.update(userRef, { coins: increment(-currentTournament.entryFee) });
         transaction.update(tournamentRef, { registeredCount: increment(1) });
-
-        // 3. Create the new registration document
-        transaction.set(newRegistrationRef, {
-            id: newRegistrationRef.id,
-            tournamentId: selectedTournament.id,
-            teamName: profile.username, // Using username as team name for solo entry
-            playerIds: [user.uid],
-            registrationDate: serverTimestamp(),
-            userId: user.uid,
-        });
-
-        // 4. Create the denormalized joined tournament document
-        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-            name: selectedTournament.name,
-            startDate: selectedTournament.startDate,
-            prizePoolFirst: selectedTournament.prizePoolFirst,
-            entryFee: selectedTournament.entryFee,
-        };
-        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
+
+      // After the transaction is successful, write non-critical registration data
+      const batch = writeBatch(firestore);
+      
+      // Add user to the registrations subcollection
+      const registrationRef = doc(collection(firestore, 'tournaments', selectedTournament.id, 'registrations'));
+      const registrationData: Omit<Registration, 'id'> = {
+        tournamentId: selectedTournament.id,
+        userId: user.uid,
+        teamName: profile.username,
+        playerIds: [user.uid],
+        registrationDate: serverTimestamp(),
+      };
+      batch.set(registrationRef, registrationData);
+
+      // Add tournament to the user's joinedTournaments subcollection
+      const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
+      const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+        name: selectedTournament.name,
+        startDate: selectedTournament.startDate,
+        prizePoolFirst: selectedTournament.prizePoolFirst,
+        entryFee: selectedTournament.entryFee,
+      };
+      batch.set(joinedTournamentRef, joinedTournamentData);
+      
+      await batch.commit();
+
+      refreshJoinedTournaments(); // Refresh the user's joined tournaments list
 
       toast({
         title: 'Registration Successful!',
@@ -233,9 +240,9 @@ export function PlayerTournamentList() {
                   </Button>
               ) : (
                   <AlertDialogTrigger asChild>
-                    <Button size="sm" className="w-full">
+                    <Button size="sm" className="w-full" disabled={(profile?.coins ?? 0) < tournament.entryFee}>
                       <ShieldCheck className="mr-2 h-4 w-4" />
-                      Enter Tournament
+                      {(profile?.coins ?? 0) < tournament.entryFee ? "Insufficient Coins" : "Enter Tournament"}
                     </Button>
                   </AlertDialogTrigger>
               )}
