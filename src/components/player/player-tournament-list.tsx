@@ -109,7 +109,7 @@ export function PlayerTournamentList() {
         slotNumber = currentTournament.registeredCount + 1;
 
         // Perform the updates within the transaction
-        transaction.update(userRef, { coins: userProfile.coins - currentTournament.entryFee });
+        transaction.update(userRef, { coins: increment(-currentTournament.entryFee) });
         transaction.update(tournamentRef, { registeredCount: increment(1) });
       });
 

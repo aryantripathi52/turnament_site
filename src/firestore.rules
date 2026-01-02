@@ -35,15 +35,9 @@ service cloud.firestore {
 
     // USER DATA: Users can manage their own data. Admins/Staff can read/update any profile.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-      allow list: if isStaffOrAdmin(request.auth.uid); 
-      allow create: if isOwner(userId);
-      
-      // Allow user to update their own username.
-      // Allow updating 'coins' by staff/admin.
-      // Admins/staff can update any profile.
-      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
-                    || isStaffOrAdmin(request.auth.uid);
+      allow get, create: if isOwner(userId);
+      allow list: if isStaffOrAdmin(request.auth.uid);
+      allow read, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
 
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
@@ -68,13 +62,15 @@ service cloud.firestore {
       allow create, delete: if isStaffOrAdmin(request.auth.uid);
 
       // Allow staff/admins to update anything.
-      // Allow any signed-in user to ONLY update 'registeredCount' (for joining).
+      // Allow any signed-in user to ONLY update 'registeredCount' when joining.
       allow update: if isStaffOrAdmin(request.auth.uid) || 
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
         allow read, list: if isStaffOrAdmin(request.auth.uid);
-        allow get: if isSignedIn() && isOwner(request.resource.data.userId);
+        // A user can get their own registration doc.
+        allow get: if isSignedIn() && (isOwner(resource.data.userId) || isStaffOrAdmin(request.auth.uid));
+        // A user can create a registration for themselves.
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isStaffOrAdmin(request.auth.uid);
       }
