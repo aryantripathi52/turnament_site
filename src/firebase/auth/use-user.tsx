@@ -7,6 +7,7 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { CoinRequest } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
 
 // Define the shape of the user profile document in Firestore
 export interface UserProfile {
@@ -59,10 +60,19 @@ export const useUser = (): UserHookResult => {
   }, [user, firestore]);
 
   const {
-    data: coinRequests,
+    data: rawCoinRequests,
     isLoading: areCoinRequestsLoading,
     error: coinRequestsError,
   } = useCollection<CoinRequest>(coinRequestsQuery);
+
+  const coinRequests = useMemo(() => {
+    if (!rawCoinRequests) return null;
+    return [...rawCoinRequests].sort((a, b) => {
+      const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
+      const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
+      return dateB - dateA;
+    });
+  }, [rawCoinRequests]);
 
   return {
     user,
