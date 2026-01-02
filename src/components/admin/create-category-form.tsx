@@ -28,11 +28,21 @@ import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 import { addDoc, collection } from 'firebase/firestore';
 
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
 const formSchema = z.object({
   name: z.string().min(2, {
     message: 'Category name must be at least 2 characters.',
   }),
-  imageUrl: z.string().url({ message: 'Please enter a valid image URL.' }),
+  image: z
+    .any()
+    .refine((files) => files?.length == 1, "Image is required.")
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max file size is 4MB.`)
+    .refine(
+      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      ".jpg, .jpeg, .png and .webp files are accepted."
+    ),
 });
 
 interface CreateCategoryFormProps {
@@ -49,9 +59,20 @@ export function CreateCategoryForm({ children, isOpen, setIsOpen }: CreateCatego
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      imageUrl: '',
+      image: undefined,
     },
   });
+
+  const fileRef = form.register("image");
+
+  const convertFileToDataURI = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore) {
@@ -64,10 +85,13 @@ export function CreateCategoryForm({ children, isOpen, setIsOpen }: CreateCatego
     }
 
     try {
+      const imageFile = values.image[0] as File;
+      const imageUrl = await convertFileToDataURI(imageFile);
+
       const categoryCollection = collection(firestore, 'categories');
       await addDoc(categoryCollection, {
         name: values.name,
-        imageUrl: values.imageUrl,
+        imageUrl: imageUrl,
       });
 
       toast({
@@ -113,12 +137,12 @@ export function CreateCategoryForm({ children, isOpen, setIsOpen }: CreateCatego
             />
             <FormField
               control={form.control}
-              name="imageUrl"
+              name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL</FormLabel>
+                  <FormLabel>Category Image</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <Input type="file" accept="image/*" {...fileRef} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,5 +164,3 @@ export function CreateCategoryForm({ children, isOpen, setIsOpen }: CreateCatego
     </Dialog>
   );
 }
-
-    
