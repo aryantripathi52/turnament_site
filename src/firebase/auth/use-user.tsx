@@ -54,11 +54,12 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
-  // --- Fetch Coin Requests ---
+  // --- Fetch Coin Requests (only for players) ---
   const coinRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    // Only fetch if the user is a player. Admins/staff don't need their own requests in this global hook.
+    if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, "coinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore]);
+  }, [user, firestore, profile]);
 
   const {data: coinRequests, isLoading: isCoinRequestsLoading, error: coinRequestsError } = useCollection<CoinRequest>(coinRequestsQuery);
 

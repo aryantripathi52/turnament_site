@@ -14,6 +14,15 @@ service cloud.firestore {
     function isExistingDoc() {
       return resource != null;
     }
+    
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getRole(request.auth.uid) == 'admin';
+    }
+
 
     match /users/{userId} {
       allow get: if isSignedIn();
@@ -22,15 +31,15 @@ service cloud.firestore {
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
 
-        match /joinedTournaments/{tournamentId} {
-            allow read, write: if isOwner(userId);
-        }
+      match /joinedTournaments/{tournamentId} {
+          allow read, write: if isOwner(userId);
+      }
     }
 
     match /tournaments/{tournamentId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /tournaments/{tournamentId}/registrations/{registrationId} {
@@ -41,28 +50,34 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
       
-      allow get: if isExistingTeamMember() || isSignedIn();
+      allow get: if isExistingTeamMember() || isAdmin();
 
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
-      allow delete: if isExistingTeamMember() || isSignedIn();
+      allow delete: if isExistingTeamMember() || isAdmin();
     }
 
     match /announcements/{announcementId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /highlights/{highlightId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
     
     match /coinRequests/{coinRequestId} {
-      // Temporarily allowing any signed-in user to perform admin actions to unblock development.
-      allow list, get, update, delete: if isSignedIn();
+      // Admins can list all requests. Players can only query for their own.
+      allow list: if isAdmin() || (isSignedIn() && request.query.where.userId == request.auth.uid);
+      
+      // Admins and the user who made the request can get it.
+      allow get: if isAdmin() || isOwner(resource.data.userId);
+      
+      // Admins can update/delete any request.
+      allow update, delete: if isAdmin();
       
       // A user can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
@@ -71,7 +86,7 @@ service cloud.firestore {
     match /categories/{categoryId} {
       allow get: if true;
       allow list: if true;
-      allow create, update, delete: if isSignedIn(); // For now, any signed-in user can manage categories
+      allow create, update, delete: if isAdmin(); 
     }
   }
 }
