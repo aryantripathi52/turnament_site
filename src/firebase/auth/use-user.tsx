@@ -56,55 +56,66 @@ export const useUser = (): UserHookResult => {
 
 
   useEffect(() => {
+    // If there's no user or firestore, or if the user is not a player,
+    // we don't need to fetch tournament data.
     if (!user || !firestore || profile?.role !== 'player') {
       setIsTournamentsLoading(false);
       setJoinedTournaments([]);
       setWonTournaments([]);
       return;
     }
-
+    
+    // Start loading and clear previous errors
     setIsTournamentsLoading(true);
     setTournamentsError(null);
 
-    const joinedQuery = query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
-    const wonQuery = query(collection(firestore, 'users', user.uid, 'wonTournaments'), orderBy('completionDate', 'desc'));
+    // Set up the queries
+    const joinedQuery = query(collection(firestore, `users/${user.uid}/joinedTournaments`), orderBy('startDate', 'desc'));
+    const wonQuery = query(collection(firestore, `users/${user.uid}/wonTournaments`), orderBy('completionDate', 'desc'));
 
-    const unsubscribes: Unsubscribe[] = [];
+    let joinedUnsubscribe: Unsubscribe | null = null;
+    let wonUnsubscribe: Unsubscribe | null = null;
+    let active = true; // Flag to prevent state updates on unmounted component
 
-    const joinedUnsubscribe = onSnapshot(joinedQuery,
+    // Listener for joined tournaments
+    joinedUnsubscribe = onSnapshot(joinedQuery,
       (snapshot) => {
+        if (!active) return;
         const data = snapshot.docs.map(doc => ({ ...doc.data() as JoinedTournament, id: doc.id }));
         setJoinedTournaments(data);
+        setIsTournamentsLoading(false); // Stop loading once we have data
       },
       (error) => {
-        console.error("Error fetching joined tournaments:", error);
+        if (!active) return;
+        console.error("Snapshot Error (Joined Tournaments):", error);
         setTournamentsError(error);
         setJoinedTournaments([]);
+        setIsTournamentsLoading(false);
       }
     );
-    unsubscribes.push(joinedUnsubscribe);
 
-    const wonUnsubscribe = onSnapshot(wonQuery,
+    // Listener for won tournaments
+    wonUnsubscribe = onSnapshot(wonQuery,
       (snapshot) => {
+        if (!active) return;
         const data = snapshot.docs.map(doc => ({ ...doc.data() as WonTournament, id: doc.id }));
         setWonTournaments(data);
       },
       (error) => {
-        console.error("Error fetching won tournaments:", error);
-        setTournamentsError(error);
+        if (!active) return;
+        console.error("Snapshot Error (Won Tournaments):", error);
+        // We can choose to set a global error or handle it separately
         setWonTournaments([]);
       }
     );
-    unsubscribes.push(wonUnsubscribe);
-    
-    // Once both listeners are attached (or have errored), loading is complete for this stage.
-    // We can't know exactly when the *first* data comes back, so we'll stop loading here.
-    // The UI will handle the null -> data transition.
-    Promise.allSettled([new Promise(res => onSnapshot(joinedQuery, res)), new Promise(res => onSnapshot(wonQuery, res))])
-        .then(() => setIsTournamentsLoading(false));
 
-
-    return () => unsubscribes.forEach(unsub => unsub());
+    // Cleanup function to unsubscribe from listeners when the component unmounts
+    // or when dependencies change.
+    return () => {
+      active = false;
+      if (joinedUnsubscribe) joinedUnsubscribe();
+      if (wonUnsubscribe) wonUnsubscribe();
+    };
 
   }, [user, firestore, profile, refreshKey]);
 

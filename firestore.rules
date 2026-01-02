@@ -1,9 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // THE ULTIMATE DEBUG RULE: Allow everything for anyone logged in
+    
+    // User data is private, but users can update their own profiles
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+
+      // Allow users to read and write to their own subcollections
+      match /joinedTournaments/{tournamentId} {
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+      }
+       match /wonTournaments/{tournamentId} {
+        allow read, list: if request.auth != null && request.auth.uid == userId;
+      }
+       match /addCoinRequests/{requestId} {
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+      }
+       match /withdrawCoinRequests/{requestId} {
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Tournaments are public to read
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      
+      // Allow authenticated users to ONLY update the registeredCount field (for joining)
+      allow update: if request.auth != null && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff']); // Admins/Staff can update anything
+
+      // Registrations are public to read, but only the user can create their own
+      match /registrations/{registrationId} {
+        allow read, list: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == registrationId;
+      }
+    }
+    
+    // Categories are public
+    match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Admins and Staff can manage coin requests
+    match /addCoinRequests/{requestId} {
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+    }
+    match /withdrawCoinRequests/{requestId} {
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
+    }
+
+    // Fallback for any other collections - deny all
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }
