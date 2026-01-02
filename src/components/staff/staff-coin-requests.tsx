@@ -11,7 +11,7 @@ import type { AddCoinRequest, WithdrawCoinRequest, UserProfile } from '@/lib/typ
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,8 +25,20 @@ export function StaffCoinRequests() {
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Log admin status for debugging
+  useEffect(() => {
+    if (profile) {
+      console.log("Admin/Staff Status Check:", {
+        role: profile.role,
+        isStaffOrAdmin: profile.role === 'admin' || profile.role === 'staff',
+        UID: user?.uid,
+      });
+    }
+  }, [profile, user]);
+
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
+    // Simple query for admins to list all pending requests
     return query(
       collection(firestore, 'addCoinRequests'),
       where('status', '==', 'pending')
@@ -35,6 +47,7 @@ export function StaffCoinRequests() {
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
+    // Simple query for admins to list all pending requests
     return query(
       collection(firestore, 'withdrawCoinRequests'),
       where('status', '==', 'pending')
@@ -154,13 +167,13 @@ export function StaffCoinRequests() {
     
     if (error) {
        return (
-        <Alert>
-          <Clock className="h-4 w-4" />
-          <AlertTitle>{error.message.includes('index') ? 'Database is preparing' : 'Error Loading Data'}</AlertTitle>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
-            {error.message.includes('index')
-              ? 'Database indexes are building to speed up queries. This will resolve in a few minutes.'
-              : 'Could not load requests due to a database error.'
+             {error.message.includes('index')
+              ? 'Database indexes are building. This should resolve in a few minutes. Please wait and refresh.'
+              : 'Could not load requests. Check browser console for details and verify Firestore rules allow "list" operations for admins.'
             }
           </AlertDescription>
         </Alert>
