@@ -2,7 +2,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, writeBatch, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
   Table,
@@ -42,8 +42,6 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
 
    const onDecision = async (
     requestId: string,
-    userId: string,
-    amount: number,
     decision: 'approved' | 'denied'
   ) => {
      if (!firestore) {
@@ -56,56 +54,24 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     }
     try {
         const requestRef = doc(firestore, 'coinRequests', requestId);
-
-        if (decision === 'approved') {
-            const userRef = doc(firestore, 'users', userId);
-            const userDoc = await getDoc(userRef);
-
-            if (!userDoc.exists()) {
-                throw new Error(`User document not found for userId: ${userId}`);
-            }
-
-            const currentCoins = userDoc.data()?.coins ?? 0;
-            let newBalance;
-
-            if (requestType === 'add') {
-                newBalance = currentCoins + amount;
-            } else {
-                newBalance = currentCoins - amount;
-                if (newBalance < 0) {
-                    throw new Error("Withdrawal amount exceeds user's balance.");
-                }
-            }
-            
-            const batch = writeBatch(firestore);
-            batch.update(userRef, { coins: newBalance });
-            batch.update(requestRef, {
-                status: 'approved',
-                decisionDate: new Date(),
-            });
-            await batch.commit();
-
-        } else { // 'denied'
-             await updateDoc(requestRef, {
-                status: 'denied',
-                decisionDate: new Date(),
-            });
-        }
+        await updateDoc(requestRef, {
+            status: decision,
+            decisionDate: new Date(),
+        });
 
         toast({
             title: `Request ${decision}`,
-            description: `The coin request has been successfully ${decision}.`,
+            description: `The coin request has been successfully ${decision}. The user's balance will be updated shortly.`,
         });
     } catch (e: any) {
         console.error(`Failed to ${decision} request:`, e);
         toast({
             variant: 'destructive',
             title: 'Operation Failed',
-            description: e.message || 'An unexpected error occurred.',
+            description: e.message || 'An unexpected error occurred while updating the request status.',
         });
     }
    };
-
 
   if (isLoading) {
     return (
@@ -166,7 +132,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                         <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onDecision(req.id, req.userId, req.amountCoins, 'approved')}
+                        onClick={() => onDecision(req.id, 'approved')}
                         className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
                         >
                         <CheckCircle className="mr-2 h-4 w-4" />
@@ -175,7 +141,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                         <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onDecision(req.id, req.userId, req.amountCoins, 'denied')}
+                        onClick={() => onDecision(req.id, 'denied')}
                         className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
                         >
                         <XCircle className="mr-2 h-4 w-4" />
