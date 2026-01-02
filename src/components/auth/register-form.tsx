@@ -103,7 +103,7 @@ export function RegisterForm() {
         email: newUser.email,
         username: values.username,
         role: role,
-        coins: role === 'player' ? 100 : 0, // Starting coins for players
+        coins: 0, // Set initial coins to 0
       };
       
       const userDocRef = doc(firestore, 'users', newUser.uid);
