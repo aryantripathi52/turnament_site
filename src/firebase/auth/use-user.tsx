@@ -5,7 +5,7 @@ import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { JoinedTournament } from '@/lib/types';
+import type { JoinedTournament, WonTournament } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
 import { useCollection } from '../firestore/use-collection';
 
@@ -27,6 +27,7 @@ export interface UserHookResult {
   isProfileLoading: boolean;
   userError: Error | null;
   joinedTournaments: WithId<JoinedTournament>[] | null;
+  wonTournaments: WithId<WonTournament>[] | null;
 }
 
 /**
@@ -60,15 +61,25 @@ export const useUser = (): UserHookResult => {
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
   }, [user, firestore, profile, isProfileLoading]);
 
-  const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
+  const { data: joinedTournaments, isLoading: isJoinedTournamentsLoading } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
-  const combinedIsLoading = isUserLoading || isProfileLoading || isTournamentsLoading;
-  const combinedError = userError || profileError || tournamentsError;
+    // --- Fetch Won Tournaments (Player-specific) ---
+    const wonTournamentsQuery = useMemoFirebase(() => {
+        if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
+        return query(collection(firestore, 'users', user.uid, 'wonTournaments'), orderBy('completionDate', 'desc'));
+    }, [user, firestore, profile, isProfileLoading]);
+
+    const { data: wonTournaments, isLoading: isWonTournamentsLoading, error: wonTournamentsError } = useCollection<WonTournament>(wonTournamentsQuery);
+
+
+  const combinedIsLoading = isUserLoading || isProfileLoading || isJoinedTournamentsLoading || isWonTournamentsLoading;
+  const combinedError = userError || profileError || wonTournamentsError;
 
   return {
     user,
     profile,
     joinedTournaments,
+    wonTournaments,
     isUserLoading: combinedIsLoading,
     isProfileLoading: combinedIsLoading, 
     userError: combinedError,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc, increment } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,16 +16,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users } from 'lucide-react';
+import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users, Info } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category, JoinedTournament } from '@/lib/types';
 import { Button } from '../ui/button';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/firebase/auth/use-user';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -42,6 +43,7 @@ export function PlayerTournamentList() {
   const firestore = useFirestore();
   const { user, profile, joinedTournaments } = useUser();
   const { toast } = useToast();
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -65,20 +67,26 @@ export function PlayerTournamentList() {
     return new Set(joinedTournaments?.map(t => t.id));
   }, [joinedTournaments]);
 
+  const availableTournaments = useMemo(() => {
+    if (!tournaments) return [];
+    return tournaments.filter(t => !joinedTournamentIds.has(t.id));
+  }, [tournaments, joinedTournamentIds]);
+
+
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = async (tournament: Tournament) => {
-    if (!firestore || !user || !profile) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to enter.' });
+  const handleConfirmEntry = async () => {
+    if (!firestore || !user || !profile || !selectedTournament) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot process entry. Please try again.' });
       return;
     }
 
     const userRef = doc(firestore, 'users', user.uid);
-    const tournamentRef = doc(firestore, 'tournaments', tournament.id);
-    const registrationCollectionRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
+    const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
+    const registrationCollectionRef = collection(firestore, 'tournaments', selectedTournament.id, 'registrations');
     const newRegistrationRef = doc(registrationCollectionRef); // Auto-generate ID for registration
-    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', tournament.id);
+    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
 
 
     try {
@@ -106,25 +114,27 @@ export function PlayerTournamentList() {
 
         // 3. Create the new registration document
         transaction.set(newRegistrationRef, {
-            tournamentId: tournament.id,
+            id: newRegistrationRef.id,
+            tournamentId: selectedTournament.id,
             teamName: profile.username, // Using username as team name for solo entry
             playerIds: [user.uid],
             registrationDate: serverTimestamp(),
+            userId: user.uid,
         });
 
         // 4. Create the denormalized joined tournament document
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-            name: tournament.name,
-            startDate: tournament.startDate,
-            prizePoolFirst: tournament.prizePoolFirst,
-            entryFee: tournament.entryFee,
+            name: selectedTournament.name,
+            startDate: selectedTournament.startDate,
+            prizePoolFirst: selectedTournament.prizePoolFirst,
+            entryFee: selectedTournament.entryFee,
         };
         transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
       toast({
         title: 'Registration Successful!',
-        description: `You have entered the "${tournament.name}" tournament. Good luck!`,
+        description: `You have entered the "${selectedTournament.name}" tournament. Good luck!`,
       });
 
     } catch (e: any) {
@@ -134,6 +144,8 @@ export function PlayerTournamentList() {
         title: 'Registration Failed',
         description: e.message || 'An unexpected error occurred.',
       });
+    } finally {
+        setSelectedTournament(null);
     }
   };
 
@@ -159,20 +171,20 @@ export function PlayerTournamentList() {
     );
   }
 
-  if (!tournaments || tournaments.length === 0) {
+  if (!availableTournaments || availableTournaments.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-8 border rounded-md">
-        <p>No tournaments are available at the moment.</p>
-        <p className="text-sm mt-2">Please check back later!</p>
+        <p>No new tournaments are available at the moment.</p>
+        <p className="text-sm mt-2">Check the "My Tournaments" tab for your joined events!</p>
       </div>
     );
   }
 
   return (
+    <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {tournaments.map((tournament) => {
+      {availableTournaments.map((tournament) => {
          const isFull = tournament.registeredCount >= tournament.maxPlayers;
-         const hasJoined = joinedTournamentIds.has(tournament.id);
          const isRegistrationClosed = tournament.status !== 'upcoming';
 
         return (
@@ -213,12 +225,7 @@ export function PlayerTournamentList() {
                </div>
             </CardContent>
             <CardFooter>
-            {hasJoined ? (
-                <Button size="sm" className="w-full" disabled>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Already Joined
-                </Button>
-            ) : isFull ? (
+            {isFull ? (
                  <Button size="sm" className="w-full" disabled>
                     Tournament Full
                 </Button>
@@ -227,32 +234,35 @@ export function PlayerTournamentList() {
                     Registration Closed
                 </Button>
             ) : (
-              <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="sm" className="w-full">
+                  <Button size="sm" className="w-full" onClick={() => setSelectedTournament(tournament)}>
                     <ShieldCheck className="mr-2 h-4 w-4" />
                     Enter Tournament
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to enter the <span className="font-semibold text-foreground">"{tournament.name}"</span>? 
-                      The entry fee of <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleConfirmEntry(tournament)}>Confirm Entry</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             )}
             </CardFooter>
           </Card>
         )
       })}
     </div>
+
+    <AlertDialog open={!!selectedTournament} onOpenChange={(isOpen) => !isOpen && setSelectedTournament(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+                Are you sure you want to enter the <span className="font-semibold text-foreground">"{selectedTournament?.name}"</span>? 
+                The entry fee of <span className="font-semibold text-foreground">{selectedTournament?.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEntry}>Confirm Entry</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    </>
   );
 }

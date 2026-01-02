@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ManageTournamentDialog } from './manage-tournament-dialog';
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -60,6 +61,7 @@ export function TournamentList() {
   const { toast } = useToast();
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState<WithId<Tournament> | null>(null);
+  const [manageTournament, setManageTournament] = useState<WithId<Tournament> | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -189,12 +191,12 @@ export function TournamentList() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="gap-2">
+                <Button variant="outline" className="w-full" onClick={() => setManageTournament(tournament)}>Manage</Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Manage Tournament
-                      <MoreVertical className="ml-auto h-4 w-4" />
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -247,6 +249,17 @@ export function TournamentList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+       {manageTournament && (
+        <ManageTournamentDialog 
+          tournament={manageTournament} 
+          isOpen={!!manageTournament} 
+          setIsOpen={(isOpen) => !isOpen && setManageTournament(null)}
+          onTournamentUpdate={(updatedTournament) => {
+            setTournaments(prev => prev?.map(t => t.id === updatedTournament.id ? updatedTournament : t) || null);
+          }}
+        />
+      )}
     </>
   );
 }

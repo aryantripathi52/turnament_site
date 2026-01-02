@@ -17,14 +17,20 @@ export type Tournament = {
   status: 'upcoming' | 'live' | 'completed' | 'cancelled';
   maxPlayers: number;
   registeredCount: number;
+  winners?: {
+    first?: { userId: string; username: string };
+    second?: { userId: string; username: string };
+    third?: { userId: string; username: string };
+  }
 };
 
 export type Registration = {
     id: string;
     tournamentId: string;
-    teamName: string;
-    playerIds: string[];
+    teamName: string; // This is the user's username
+    playerIds: string[]; // This is an array with just the user's ID
     registrationDate: Timestamp;
+    userId: string;
 };
 
 export type JoinedTournament = {
@@ -35,6 +41,14 @@ export type JoinedTournament = {
   entryFee: number;
 };
 
+export type WonTournament = {
+    id: string; // tournamentId
+    name: string;
+    prizeWon: number;
+    place: '1st' | '2nd' | '3rd';
+    completionDate: Timestamp;
+}
+
 
 export type Announcement = {
   id: string;
@@ -43,19 +57,31 @@ export type Announcement = {
   date: string;
 };
 
-export type CoinRequest = {
-  id:string;
-  userId: string;
-  username: string;
-  type: 'add' | 'withdraw';
-  amountCoins: number;
-  amountPaid?: number; // Optional for withdrawals
-  transactionId?: string; // Optional for withdrawals
-  withdrawalDetails?: string; // Optional for add requests
-  status: 'pending' | 'approved' | 'denied';
-  requestDate: Timestamp;
-  decisionDate?: Timestamp;
+export type AddCoinRequest = {
+    id:string;
+    userId: string;
+    username: string;
+    type: 'add';
+    amountCoins: number;
+    amountPaid: number;
+    transactionId: string;
+    status: 'pending' | 'approved' | 'denied';
+    requestDate: Timestamp;
+    decisionDate?: Timestamp | null;
 };
+
+export type WithdrawCoinRequest = {
+    id:string;
+    userId: string;
+    username: string;
+    type: 'withdraw';
+    amountCoins: number;
+    withdrawalDetails: string;
+    status: 'pending' | 'approved' | 'denied';
+    requestDate: Timestamp;
+    decisionDate?: Timestamp | null;
+};
+
 
 export type Category = {
   id: string;
