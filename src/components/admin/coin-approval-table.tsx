@@ -2,7 +2,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, writeBatch, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
   Table,
@@ -20,8 +20,6 @@ import { Skeleton } from '../ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { handleCoinRequestDecision } from '@/firebase/coin-management';
-
 
 interface CoinApprovalTableProps {
   requestType: 'add' | 'withdraw';
@@ -57,13 +55,43 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
         return;
     }
     try {
-        await handleCoinRequestDecision(firestore, {
-            requestId,
-            userId,
-            amount,
-            decision,
-            requestType,
-        });
+        const requestRef = doc(firestore, 'coinRequests', requestId);
+
+        if (decision === 'approved') {
+            const userRef = doc(firestore, 'users', userId);
+            const userDoc = await getDoc(userRef);
+
+            if (!userDoc.exists()) {
+                throw new Error(`User document not found for userId: ${userId}`);
+            }
+
+            const currentCoins = userDoc.data()?.coins ?? 0;
+            let newBalance;
+
+            if (requestType === 'add') {
+                newBalance = currentCoins + amount;
+            } else {
+                newBalance = currentCoins - amount;
+                if (newBalance < 0) {
+                    throw new Error("Withdrawal amount exceeds user's balance.");
+                }
+            }
+            
+            const batch = writeBatch(firestore);
+            batch.update(userRef, { coins: newBalance });
+            batch.update(requestRef, {
+                status: 'approved',
+                decisionDate: new Date(),
+            });
+            await batch.commit();
+
+        } else { // 'denied'
+             await updateDoc(requestRef, {
+                status: 'denied',
+                decisionDate: new Date(),
+            });
+        }
+
         toast({
             title: `Request ${decision}`,
             description: `The coin request has been successfully ${decision}.`,
