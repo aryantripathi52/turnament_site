@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import React, { useState } from 'react';
+import React from 'react';
 import { addDoc, collection } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
@@ -50,10 +50,22 @@ const formSchema = z.object({
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   prizePool: z.coerce.number().positive({ message: 'Prize pool must be a positive number.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
   endDate: z.date({ required_error: 'An end date is required.' }),
-}).refine((data) => data.endDate > data.startDate, {
-  message: "End date must be after start date.",
-  path: ["endDate"],
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
+}).refine((data) => {
+    const startDateTime = new Date(data.startDate);
+    const [startHours, startMinutes] = data.startTime.split(':').map(Number);
+    startDateTime.setHours(startHours, startMinutes);
+
+    const endDateTime = new Date(data.endDate);
+    const [endHours, endMinutes] = data.endTime.split(':').map(Number);
+    endDateTime.setHours(endHours, endMinutes);
+
+    return endDateTime > startDateTime;
+}, {
+  message: "End date and time must be after start date and time.",
+  path: ["endDate"], // You can also put this on 'endTime'
 });
 
 
@@ -80,6 +92,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       name: '',
       description: '',
       prizePool: 0,
+      startTime: "12:00",
+      endTime: "18:00",
     },
   });
 
@@ -90,10 +104,22 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
     }
 
     try {
+        const startDateTime = new Date(values.startDate);
+        const [startHours, startMinutes] = values.startTime.split(':').map(Number);
+        startDateTime.setHours(startHours, startMinutes);
+
+        const endDateTime = new Date(values.endDate);
+        const [endHours, endMinutes] = values.endTime.split(':').map(Number);
+        endDateTime.setHours(endHours, endMinutes);
+
       const tournamentCollection = collection(firestore, 'tournaments');
       await addDoc(tournamentCollection, {
-        ...values,
-        // Default values for fields not in the form yet
+        name: values.name,
+        categoryId: values.categoryId,
+        description: values.description,
+        prizePool: values.prizePool,
+        startDate: startDateTime,
+        endDate: endDateTime,
         rules: "Standard tournament rules apply.",
         registrationLink: "#",
         contactEmail: "contact@example.com",
@@ -126,12 +152,12 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-4 gap-4">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem className="col-span-2">
+                <FormItem className="col-span-4">
                   <FormLabel>Tournament Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Summer Skirmish" {...field} />
@@ -145,7 +171,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="categoryId"
               render={({ field }) => (
-                <FormItem className="col-span-2">
+                <FormItem className="col-span-4">
                   <FormLabel>Game Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
                     <FormControl>
@@ -170,7 +196,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem className="col-span-2">
+                <FormItem className="col-span-4">
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Describe the tournament..." {...field} />
@@ -184,7 +210,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="prizePool"
               render={({ field }) => (
-                <FormItem className="col-span-2">
+                <FormItem className="col-span-4">
                   <FormLabel>Prize Pool (INR)</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="e.g., 50000" {...field} />
@@ -198,7 +224,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="startDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem className="flex flex-col col-span-3">
                   <FormLabel>Start Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -230,11 +256,26 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               )}
             />
 
+            <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col col-span-1">
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+
              <FormField
               control={form.control}
               name="endDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem className="flex flex-col col-span-3">
                   <FormLabel>End Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -266,7 +307,21 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               )}
             />
 
-            <DialogFooter className="col-span-2 pt-4">
+            <FormField
+                control={form.control}
+                name="endTime"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col col-span-1">
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                            <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <DialogFooter className="col-span-4 pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">Cancel</Button>
               </DialogClose>
@@ -280,3 +335,5 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
     </Dialog>
   );
 }
+
+    
