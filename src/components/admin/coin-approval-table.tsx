@@ -2,7 +2,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, getDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
   Table,
@@ -19,6 +19,7 @@ import type { CoinRequest } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface CoinApprovalTableProps {
   requestType: 'add' | 'withdraw';
@@ -45,6 +46,14 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     amount: number,
     decision: 'approved' | 'denied'
   ) => {
+    if (!firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Operation Failed',
+            description: 'Firestore is not available.',
+        });
+        return;
+    }
     try {
       const batch = writeBatch(firestore);
 
@@ -52,24 +61,20 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
       const requestRef = doc(firestore, 'coinRequests', requestId);
       batch.update(requestRef, {
         status: decision,
-        decisionDate: serverTimestamp(),
+        decisionDate: new Date(),
       });
 
       // 2. If approved, update the user's coin balance
-      if (decision === 'approved' && requestType === 'add') {
+      if (decision === 'approved') {
         const userRef = doc(firestore, 'users', userId);
-        // To increment, we need to read the user's current coins first.
-        // For simplicity here, we'll assume a cloud function would handle this transactionally.
-        // In a client-only scenario, you'd get the doc, calculate new total, then update.
-        // A simplified (non-transactional) increment is shown, but is not safe for production.
-        // The secure way is with a transaction or a Cloud Function.
-        
-        // For this implementation, we will use a batch write, but it's not a true transaction.
-        // It's better than separate writes but can still have race conditions.
-        const userDoc = await doc(userRef).get();
+        const userDoc = await getDoc(userRef);
         if (userDoc.exists()) {
              const currentCoins = userDoc.data()?.coins ?? 0;
-             batch.update(userRef, { coins: currentCoins + amount });
+             const newBalance = requestType === 'add' ? currentCoins + amount : currentCoins - amount;
+             if (newBalance < 0) {
+                throw new Error("Withdrawal amount exceeds user's balance.");
+             }
+             batch.update(userRef, { coins: newBalance });
         } else {
             throw new Error(`User document not found for userId: ${userId}`);
         }
@@ -144,7 +149,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                     <TableCell>
                         <Badge variant="secondary">{req.transactionId}</Badge>
                     </TableCell>
-                    <TableCell>{req.requestDate.toDate().toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(req.requestDate.seconds * 1000).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
                         <Button
