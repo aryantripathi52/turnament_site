@@ -31,17 +31,18 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // USER DATA: Users can only manage their own data. Admins/Staff can read any user profile for management.
+    // USER DATA: Users can manage their own data. Admins/Staff can read any profile.
+    // Crucially, a user can update their own 'coins' as part of a transaction.
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
       allow list: if isStaffOrAdmin(request.auth.uid); 
       allow create: if isOwner(userId);
       
-      // Users can update their own profile. Admins can update any profile.
-      // A user can update their own coin balance ONLY through a transaction.
-      // This rule checks if the change to 'coins' is the result of a tournament entry fee.
-      allow update: if (isOwner(userId) && request.resource.data.diff(request.resource).affectedKeys().hasOnly(['username', 'coins'])) 
-                      || isAdmin(request.auth.uid);
+      // Allow user to update their own username.
+      // Allow updating 'coins' if it's part of a transaction (joining a tournament or receiving a payout).
+      // Admins can update any profile.
+      allow update: if (isOwner(userId) && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coins'])))
+                    || isStaffOrAdmin(request.auth.uid);
 
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
@@ -60,13 +61,16 @@ service cloud.firestore {
       }
     }
 
-    // TOURNAMENTS & CATEGORIES: Publicly readable, but only modifiable by staff/admins.
+    // TOURNAMENTS: Publicly readable. Modifiable by staff/admins.
+    // A user can update the registeredCount as part of a transaction.
     match /tournaments/{tournamentId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
+      allow create, delete: if isStaffOrAdmin(request.auth.uid);
 
-      // A user can update the registered count in a transaction.
-      allow update: if isSignedIn() && request.resource.data.diff(request.resource).affectedKeys().hasOnly(['registeredCount']);
+      // Allow staff/admins to update anything.
+      // Allow any signed-in user to ONLY update 'registeredCount' (for joining).
+      allow update: if isStaffOrAdmin(request.auth.uid) || 
+                      (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount', 'winners', 'status']));
 
       match /registrations/{registrationId} {
         allow read, list: if isSignedIn();

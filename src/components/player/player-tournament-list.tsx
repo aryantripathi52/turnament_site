@@ -77,7 +77,7 @@ export function PlayerTournamentList() {
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     if (!firestore || !user || !profile) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Cannot process entry. Please try again.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to join.' });
       return;
     }
 
@@ -105,15 +105,15 @@ export function PlayerTournamentList() {
           throw new Error('Registrations for this tournament are closed.');
         }
 
-        // Perform the updates
-        transaction.update(userRef, { coins: increment(-currentTournament.entryFee) });
+        // Perform the updates within the transaction
+        transaction.update(userRef, { coins: userProfile.coins - currentTournament.entryFee });
         transaction.update(tournamentRef, { registeredCount: increment(1) });
       });
 
       // After the transaction is successful, write non-critical registration data
       const batch = writeBatch(firestore);
       
-      // Add user to the registrations subcollection
+      // 1. Add user to the registrations subcollection for the admin view
       const registrationRef = doc(collection(firestore, 'tournaments', selectedTournament.id, 'registrations'));
       const registrationData: Omit<Registration, 'id'> = {
         tournamentId: selectedTournament.id,
@@ -124,9 +124,10 @@ export function PlayerTournamentList() {
       };
       batch.set(registrationRef, registrationData);
 
-      // Add tournament to the user's joinedTournaments subcollection
+      // 2. Add tournament to the user's private joinedTournaments subcollection
       const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
-      const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+      const joinedTournamentData: Omit<JoinedTournament, 'id'> & {id: string} = {
+        id: selectedTournament.id,
         name: selectedTournament.name,
         startDate: selectedTournament.startDate,
         prizePoolFirst: selectedTournament.prizePoolFirst,
@@ -140,11 +141,11 @@ export function PlayerTournamentList() {
 
       toast({
         title: 'Registration Successful!',
-        description: `You have entered the "${selectedTournament.name}" tournament. Good luck!`,
+        description: `You have entered "${selectedTournament.name}". Good luck!`,
       });
 
     } catch (e: any) {
-      console.error("Tournament entry failed:", e);
+      console.error("Tournament entry transaction failed:", e);
       toast({
         variant: 'destructive',
         title: 'Registration Failed',

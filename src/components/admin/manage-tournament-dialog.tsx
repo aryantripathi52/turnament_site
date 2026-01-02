@@ -93,6 +93,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
 
     try {
       const batch = writeBatch(firestore);
+      const completionTimestamp = serverTimestamp();
       
       const winnersPayload = {
         first: { userId: firstPlace, username: getPlayerName(firstPlace) },
@@ -121,7 +122,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
             name: tournament.name,
             prizeWon: prize,
             place: place as WonTournament['place'],
-            completionDate: serverTimestamp()
+            completionDate: completionTimestamp
         };
         batch.set(wonTournamentRef, wonTournamentData);
       }
@@ -173,7 +174,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="font-semibold text-lg">{tournament.winners?.first?.username}</p>
+                            <p className="font-semibold text-lg">{tournament.winners?.first?.username || 'N/A'}</p>
                             <p className="text-sm text-muted-foreground">Won {tournament.prizePoolFirst.toLocaleString()} coins</p>
                         </CardContent>
                     </Card>
@@ -185,7 +186,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="font-semibold text-lg">{tournament.winners?.second?.username}</p>
+                            <p className="font-semibold text-lg">{tournament.winners?.second?.username || 'N/A'}</p>
                             <p className="text-sm text-muted-foreground">Won {tournament.prizePoolSecond.toLocaleString()} coins</p>
                         </CardContent>
                     </Card>
@@ -197,7 +198,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="font-semibold text-lg">{tournament.winners?.third?.username}</p>
+                            <p className="font-semibold text-lg">{tournament.winners?.third?.username || 'N/A'}</p>
                             <p className="text-sm text-muted-foreground">Won {tournament.prizePoolThird.toLocaleString()} coins</p>
                         </CardContent>
                     </Card>
@@ -286,7 +287,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
             <Button type="button" variant="secondary">Close</Button>
           </DialogClose>
           {!isCompleted && (
-            <Button type="button" onClick={handleSubmitWinners} disabled={isSubmitting}>
+            <Button type="button" onClick={handleSubmitWinners} disabled={isSubmitting || isLoading}>
               {isSubmitting ? "Submitting..." : "Confirm & Pay Out Winners"}
             </Button>
           )}
