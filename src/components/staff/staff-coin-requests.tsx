@@ -1,16 +1,15 @@
 'use client';
 
-import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, Timestamp, doc, writeBatch, serverTimestamp, increment, runTransaction, getDoc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
+import { collection, query, Timestamp, doc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, User, Ban } from 'lucide-react';
+import { AlertCircle, Ban, ArrowDown, ArrowUp, User, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import type { AddCoinRequest, WithdrawCoinRequest, UserProfile } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
-import { cn } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -21,29 +20,33 @@ type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & 
 
 export function StaffCoinRequests() {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { user, profile } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
+  // Add robust console logging for debugging
   useEffect(() => {
-    if (profile && user) {
+    if (user && profile) {
       console.log("Current User Status:", {
         role: profile.role,
-        isStaffOrAdmin: isStaffOrAdmin,
-        UID: user?.uid,
+        isStaffOrAdmin,
+        UID: user.uid,
       });
     }
-  }, [profile, user, isStaffOrAdmin]);
+  }, [user, profile, isStaffOrAdmin]);
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
+    // Simple query, no ordering at the database level
     return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
+     // Simple query, no ordering at the database level
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
@@ -51,15 +54,17 @@ export function StaffCoinRequests() {
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
   const allRequests = useMemo((): CombinedRequest[] => {
-    const adds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
-    const withdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
+    // Filter for pending requests client-side
+    const pendingAdds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
+    const pendingWithdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
     
-    const combined = [...adds, ...withdraws];
+    const combined = [...pendingAdds, ...pendingWithdraws];
     
-    // Sort in-memory
+    // Sort in-memory (client-side)
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
+        // Handle cases where dates might be null or undefined
         if (!dateB) return -1;
         if (!dateA) return 1;
         return dateB.toMillis() - dateA.toMillis();
@@ -69,6 +74,22 @@ export function StaffCoinRequests() {
 
   const isLoading = loadingAdd || loadingWithdraw;
   const error = addError || withdrawError;
+
+  // Added try/catch block for better error diagnostics
+  useEffect(() => {
+    async function fetchData() {
+        if (!isStaffOrAdmin) return;
+        try {
+            // The useCollection hook handles the fetch, this effect is for logging.
+            if(addError) throw addError;
+            if(withdrawError) throw withdrawError;
+        } catch (e: any) {
+            console.error("STAFF_COIN_REQUEST_FETCH_ERROR:", e.message, e.code);
+        }
+    }
+    fetchData();
+  }, [addError, withdrawError, isStaffOrAdmin]);
+
 
   const handleDecision = async (request: CombinedRequest, decision: 'approved' | 'denied') => {
     if (!firestore) {
@@ -162,10 +183,7 @@ export function StaffCoinRequests() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
-             {error.message.includes('index')
-              ? 'The database needs an index to perform this query. Please check the browser console (F12) for a link to create it, then wait a few minutes.'
-              : `Could not load requests. Firestore error: ${error.message}`
-            }
+            {error.message}
           </AlertDescription>
         </Alert>
       );

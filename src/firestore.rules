@@ -16,6 +16,8 @@ service cloud.firestore {
     }
 
     function isStaffOrAdmin() {
+       // This function relies on a 'get' which can cause issues. 
+       // It's kept for reference but the primary admin check is isSuperAdmin().
        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
     
@@ -67,19 +69,15 @@ service cloud.firestore {
     match /addCoinRequests/{requestId} {
         // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Staff/Admins can read individual requests and perform writes.
-        allow read, write: if isStaffOrAdmin();
-        // Staff/Admins are explicitly allowed to query the entire collection.
-        allow list: if isStaffOrAdmin();
+        // Staff/Admins can read/write individual requests and list the collection.
+        allow read, write, list: if isStaffOrAdmin();
     }
     
     match /withdrawCoinRequests/{requestId} {
         // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Staff/Admins can read individual requests and perform writes.
-        allow read, write: if isStaffOrAdmin();
-        // Staff/Admins are explicitly allowed to query the entire collection.
-        allow list: if isStaffOrAdmin();
+        // Staff/Admins can read/write individual requests and list the collection.
+        allow read, write, list: if isStaffOrAdmin();
     }
 
     // Rule: Public, read-only collections
