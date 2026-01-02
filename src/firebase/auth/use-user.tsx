@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { CoinRequest, JoinedTournament } from '@/lib/types';
+import type { JoinedTournament } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
 import { useCollection } from '../firestore/use-collection';
 
@@ -26,8 +26,6 @@ export interface UserHookResult {
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
-  // Role-specific data has been removed from here.
-  coinRequests: null; // Kept for type consistency, but will always be null.
   joinedTournaments: WithId<JoinedTournament>[] | null; 
 }
 
@@ -71,8 +69,6 @@ export const useUser = (): UserHookResult => {
   return {
     user,
     profile,
-    // The hook no longer fetches coin requests.
-    coinRequests: null, 
     joinedTournaments,
     isUserLoading: combinedIsLoading,
     isProfileLoading: combinedIsLoading,

@@ -45,13 +45,6 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
 
   const { data: requests, isLoading, error, setData: setRequests } = useCollection<CoinRequest>(requestsQuery);
 
-   useEffect(() => {
-    if (profile?.role !== 'admin') {
-      return;
-    }
-  }, [profile]);
-
-
    const onDecision = async (
     request: CoinRequest,
     decision: 'approved' | 'denied'
@@ -135,18 +128,14 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     );
   }
 
-  if (profile?.role !== 'admin') {
-    return null;
-  }
-  
-  if (!requests || requests.length === 0) {
+  if (profile?.role !== 'admin' || !requests || requests.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-4 border rounded-md">
         No pending {requestType} requests.
       </div>
     );
   }
-
+  
   return (
     <Card>
         <CardContent className="p-0">
