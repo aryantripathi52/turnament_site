@@ -3,9 +3,12 @@
 import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { CoinRequest } from '@/lib/types';
+import { useMemoFirebase } from '../provider';
+import { useCollection } from '../firestore/use-collection';
+import { useEffect, useState } from 'react';
 
 
 // Define the shape of the user profile document in Firestore
@@ -16,12 +19,13 @@ export interface UserProfile {
   role: 'admin' | 'staff' | 'player';
   registrationIds: string[];
   coins: number;
+  status: 'active' | 'blocked';
 }
 
 export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
-  coinRequests: WithId<CoinRequest>[] | null; // This will be null now
+  coinRequests: WithId<CoinRequest>[] | null;
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
@@ -41,7 +45,7 @@ export const useUser = (): UserHookResult => {
   } = useFirebase();
 
   // Memoize the document reference to prevent re-renders
-  const userProfileRef = useMemo(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
@@ -51,13 +55,45 @@ export const useUser = (): UserHookResult => {
     isLoading: isProfileLoading,
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
+
+  const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<Error | null>(null);
+
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!user || !firestore || profile?.role !== 'player') {
+        setCoinRequests(null);
+        return;
+      }
+      setRequestsLoading(true);
+      try {
+        const q = query(collection(firestore, "coinRequests"), where("userId", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+        const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithId<CoinRequest>));
+        // Sort client-side
+        requests.sort((a, b) => b.requestDate.toMillis() - a.requestDate.toMillis());
+        setCoinRequests(requests);
+      } catch (e: any) {
+        console.error("Failed to fetch coin requests:", e);
+        setRequestsError(e);
+      } finally {
+        setRequestsLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, [user, firestore, profile]);
   
   return {
     user,
     profile,
-    coinRequests: null, // No longer fetching coin requests here
+    coinRequests,
     isUserLoading,
-    isProfileLoading: isUserLoading || isProfileLoading,
-    userError: userError || profileError,
+    isProfileLoading: isUserLoading || isProfileLoading || requestsLoading,
+    userError: userError || profileError || requestsError,
   };
 };
+
+    

@@ -87,7 +87,8 @@ export function RegisterForm() {
           username: formData.username,
           role: role,
           registrationIds: [],
-          coins: 100, // Starting coins
+          coins: role === 'player' ? 100 : 0, // Starting coins for players
+          status: 'active', // Default status is active
         };
         const userDocRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(userDocRef, newUser, { merge: true });
@@ -217,3 +218,5 @@ export function RegisterForm() {
     </Card>
   );
 }
+
+    

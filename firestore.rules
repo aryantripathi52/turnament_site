@@ -62,11 +62,18 @@ service cloud.firestore {
     function getRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
+    function getUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+    function isUserActive(userId) {
+        // Default to active if status is not set
+        return getUser(userId).status == null || getUser(userId).status == 'active';
+    }
     function isAdmin() {
-        return isSignedIn() && getRole() == 'admin';
+        return isSignedIn() && getRole() == 'admin' && isUserActive(request.auth.uid);
     }
     function isStaff() {
-        return isSignedIn() && (getRole() == 'staff' || isAdmin());
+        return isSignedIn() && (getRole() == 'staff' || isAdmin()) && isUserActive(request.auth.uid);
     }
 
 
@@ -80,11 +87,11 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if (isOwner(userId) || isAdmin()) && isUserActive(request.auth.uid);
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id) || isAdmin();
-      allow delete: if isOwner(userId) && isExistingDoc();
+      allow update: if ((isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id) || isAdmin()) && isUserActive(request.auth.uid);
+      allow delete: if isOwner(userId) && isExistingDoc() && isUserActive(request.auth.uid);
     }
 
     /**
@@ -111,10 +118,10 @@ service cloud.firestore {
     match /tournaments/{tournamentId}/registrations/{registrationId} {
       // Helpers specific to registration access
       function isCreatingTeamMember() {
-        return isSignedIn() && request.auth.uid in request.resource.data.playerIds;
+        return isSignedIn() && request.auth.uid in request.resource.data.playerIds && isUserActive(request.auth.uid);
       }
       function isExistingTeamMember() {
-        return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
+        return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds && isUserActive(request.auth.uid);
       }
 
       allow get: if isExistingTeamMember() || isStaff();
@@ -158,11 +165,13 @@ service cloud.firestore {
      * @principle User can manage their own requests; admins can manage all requests.
      */
     match /coinRequests/{coinRequestId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && isUserActive(request.auth.uid);
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin()) && isUserActive(request.auth.uid);
       allow list: if isAdmin();
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }
   }
 }
+
+    
