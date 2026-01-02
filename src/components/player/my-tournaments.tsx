@@ -83,7 +83,7 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                    </div>
                 </div>
                 {tournament.roomId && tournament.roomPassword ? (
-                    <>
+                    <div className='space-y-4'>
                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
                            <Ticket className="h-5 w-5 text-primary" />
                            <div>
@@ -98,7 +98,7 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                              <p className="font-mono font-bold text-lg">{tournament.roomPassword}</p>
                            </div>
                         </div>
-                    </>
+                    </div>
                 ) : (
                     <div className="flex items-center text-center justify-center h-full">
                        <p className="text-muted-foreground text-sm">
