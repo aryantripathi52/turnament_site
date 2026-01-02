@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // User data is private. User can create their own profile, and can read/update it.
+    // User can create their own profile, and can read/update it.
     match /users/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId;
       allow read, update: if request.auth != null && request.auth.uid == userId;
@@ -28,8 +28,8 @@ service cloud.firestore {
       
       // Allow authenticated users to ONLY update the registeredCount field (for joining)
       allow update: if request.auth != null && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff']); // Admins/Staff can update anything
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'])); // Admins/Staff can update anything
 
       // Registrations are public to read, but only the user can create their own
       match /registrations/{registrationId} {
@@ -44,16 +44,27 @@ service cloud.firestore {
         allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Admins and Staff can manage coin requests
+    // Global Coin Requests: Players can CREATE, Staff/Admins can READ/WRITE
     match /addCoinRequests/{requestId} {
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
     match /withdrawCoinRequests/{requestId} {
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
 
+
+    // Announcements and Highlights are public read-only for now
+    match /announcements/{announcementId} {
+      allow read: if true;
+    }
+     match /highlights/{highlightId} {
+      allow read: if true;
+    }
+
     // Fallback for any other collections - deny all
-    match /{document=**} {
+    match /{path=**} {
       allow read, write: if false;
     }
   }
