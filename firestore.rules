@@ -32,7 +32,7 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
 
       match /joinedTournaments/{tournamentId} {
-          allow read, write, delete: if isOwner(userId);
+          allow read, write, delete: if isOwner(userId) || isAdmin();
       }
       match /wonTournaments/{tournamentId} {
           allow list, read, write: if isOwner(userId) || isAdmin();
@@ -53,7 +53,7 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && resource.data.userId == request.auth.uid;
       }
       
-      allow read, list: if isSignedIn();
+      allow read, list: if isSignedIn() || isAdmin();
 
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
