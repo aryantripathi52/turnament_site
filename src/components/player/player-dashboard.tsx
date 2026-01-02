@@ -15,6 +15,8 @@ import { PlayerTournamentList } from './player-tournament-list';
 export function PlayerDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -39,7 +41,7 @@ export function PlayerDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-           <Tabs defaultValue="dashboard" orientation="vertical" className="flex gap-8">
+           <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex gap-8">
             <TabsList className="flex flex-col h-full space-y-2">
                 <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                     <LayoutDashboard className="h-5 w-5" />
@@ -75,11 +77,9 @@ export function PlayerDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p>Browse the list of available tournaments and join the battle.</p>
-                             <Tabs>
-                                <Button className="mt-4" asChild>
-                                    <TabsTrigger value="tournaments">View Tournaments</TabsTrigger>
-                                </Button>
-                            </Tabs>
+                            <Button className="mt-4" onClick={() => setActiveTab('tournaments')}>
+                                View Tournaments
+                            </Button>
                         </CardContent>
                     </Card>
                     <Card>
