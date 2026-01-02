@@ -44,10 +44,12 @@ export function CoinRequestHistoryTable() {
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // Firestore requires the first orderBy field to be the same as the inequality field.
+    // We can sort by requestDate as it's more consistent.
     return query(
       collection(firestore, 'coinRequests'),
       where('status', 'in', ['approved', 'denied']),
-      orderBy('decisionDate', 'desc')
+      orderBy('requestDate', 'desc')
     );
   }, [firestore]);
 
