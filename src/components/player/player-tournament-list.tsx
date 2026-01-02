@@ -45,8 +45,6 @@ export function PlayerTournamentList() {
   const { user, profile, joinedTournaments, refreshJoinedTournaments } = useUser();
   const { toast } = useToast();
 
-  console.log("Current User UID:", auth?.currentUser?.uid);
-
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'tournaments'), orderBy('startDate', 'desc'));
@@ -83,18 +81,17 @@ export function PlayerTournamentList() {
       toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to join.' });
       return;
     }
+    
+    // Debug Alert to verify Project ID and User UID
+    alert("Sending to Project: " + firestore.app.options.projectId + "\nUser: " + auth.currentUser?.uid);
 
     const userId = user.uid;
     const tournamentId = selectedTournament.id;
 
-    // Deep Audit Step: Ensure doc() functions do not receive undefined variables.
     if (!userId || !tournamentId) {
       alert("Error: User ID or Tournament ID is missing. Cannot proceed.");
       return;
     }
-    
-    console.log("UserID:", userId, "TournamentID:", tournamentId);
-
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -126,8 +123,8 @@ export function PlayerTournamentList() {
         // 2. Update tournament's registered count
         transaction.update(tournamentRef, { registeredCount: increment(1) });
         
-        // 3. Create the public registration document
-        const registrationRef = doc(firestore, `tournaments/${tournamentId}/registrations`, userId);
+        // 3. Create the public registration document using the userId as the document ID
+        const registrationRef = doc(firestore, "tournaments", tournamentId, "registrations", userId);
         const registrationData: Omit<Registration, 'id'> = {
             tournamentId: tournamentId,
             userId: userId,
@@ -137,6 +134,19 @@ export function PlayerTournamentList() {
             slotNumber: currentTournament.registeredCount + 1
         };
         transaction.set(registrationRef, registrationData);
+
+        // 4. Create the private, denormalized record for the user's "My Tournaments" list
+        const joinedTournamentRef = doc(firestore, "users", userId, "joinedTournaments", tournamentId);
+        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+          name: currentTournament.name,
+          startDate: currentTournament.startDate,
+          prizePoolFirst: currentTournament.prizePoolFirst,
+          entryFee: currentTournament.entryFee,
+          slotNumber: currentTournament.registeredCount + 1,
+          roomId: currentTournament.roomId || null,
+          roomPassword: currentTournament.roomPassword || null
+        };
+        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
       refreshJoinedTournaments();
@@ -148,7 +158,7 @@ export function PlayerTournamentList() {
 
     } catch (error: any) {
         console.error("FULL TRANSACTION ERROR:", error.code, error.message);
-        console.dir(error); // Deep Audit Step: Log the full error object
+        console.dir(error);
         toast({
             variant: 'destructive',
             title: 'Registration Failed',
