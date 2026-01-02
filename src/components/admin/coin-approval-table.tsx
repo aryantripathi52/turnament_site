@@ -20,6 +20,8 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { UserProfile } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase/auth/use-user';
+import { useEffect } from 'react';
 
 interface CoinApprovalTableProps {
   requestType: 'add' | 'withdraw';
@@ -28,18 +30,31 @@ interface CoinApprovalTableProps {
 export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { profile } = useUser(); // Get user profile to check role
 
   const collectionName = requestType === 'add' ? 'addCoinRequests' : 'withdrawCoinRequests';
 
+  // The query is now conditional. It will only run if the user is an admin.
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // DO NOT run the query if the user is not an admin to prevent permission errors.
+    if (!firestore || profile?.role !== 'admin') return null;
+    
     return query(
       collection(firestore, collectionName),
       where('status', '==', 'pending')
     );
-  }, [firestore, collectionName]);
+  }, [firestore, collectionName, profile]);
 
   const { data: requests, isLoading, error, setData: setRequests } = useCollection<CoinRequest>(requestsQuery);
+
+   // Effect to handle the case where the query is disabled
+  useEffect(() => {
+    if (profile?.role !== 'admin') {
+      // If not an admin, we don't expect data.
+      return;
+    }
+  }, [profile]);
+
 
    const onDecision = async (
     request: CoinRequest,
@@ -115,7 +130,8 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     );
   }
 
-  if (error) {
+  // Do not show an error if the user is not an admin, as the query is intentionally disabled.
+  if (error && profile?.role === 'admin') {
      return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />

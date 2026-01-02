@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Stamp, History, Gamepad2 } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Stamp, History, Gamepad2, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CoinApprovalTable } from './coin-approval-table';
 import { CoinRequestHistoryTable } from './coin-request-history-table';
@@ -14,6 +14,7 @@ import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
 import { CreateTournamentForm } from './create-tournament-form';
 import { TournamentList } from './tournament-list';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -106,19 +107,33 @@ export function AdminDashboard() {
                 </div>
             </TabsContent>
             <TabsContent value="approval" className="mt-0 flex-1 space-y-6">
-                <div>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Admin Action Required</AlertTitle>
+                  <AlertDescription>
+                    The coin approval system requires a backend setup (e.g., Cloud Function) to set custom claims on admin accounts for secure access. This feature is currently disabled to prevent errors.
+                  </AlertDescription>
+                </Alert>
+                <div className="opacity-50 pointer-events-none">
                     <h3 className="text-xl font-semibold mb-2">Add Coin Requests</h3>
                     <p className="mb-4 text-muted-foreground">Approve or deny player requests to add coins.</p>
                     <CoinApprovalTable requestType="add" />
                 </div>
-                 <div>
+                 <div className="opacity-50 pointer-events-none">
                     <h3 className="text-xl font-semibold mb-2">Withdraw Coin Requests</h3>
                     <p className="mb-4 text-muted-foreground">Approve or deny player requests to withdraw coins.</p>
                      <CoinApprovalTable requestType="withdraw" />
                 </div>
             </TabsContent>
             <TabsContent value="history" className="mt-0 flex-1 space-y-6">
-                 <div>
+                 <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Admin Action Required</AlertTitle>
+                  <AlertDescription>
+                    The history system requires a backend setup (e.g., Cloud Function) to set custom claims on admin accounts for secure access. This feature is currently disabled to prevent errors.
+                  </AlertDescription>
+                </Alert>
+                 <div className="opacity-50 pointer-events-none">
                     <h3 className="text-xl font-semibold mb-2">Completed Requests</h3>
                     <p className="mb-4 text-muted-foreground">A log of all approved and denied coin requests.</p>
                     <CoinRequestHistoryTable />
