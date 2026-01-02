@@ -87,7 +87,8 @@ service cloud.firestore {
     }
 
     match /users/{userId}/teamInvitations/{invitationId} {
-      allow list, get: if isOwner(userId); // User can see their own invitations
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId); // User can list their own invitations
       allow create: if isSignedIn(); // Any signed-in user can send an invite
       allow update, delete: if isOwner(userId); // User can accept/decline/delete their own invites
     }
