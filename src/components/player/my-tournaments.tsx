@@ -1,18 +1,18 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft } from 'lucide-react';
+import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import type { JoinedTournament, WonTournament } from '@/lib/types';
+import type { JoinedTournament, WonTournament, Tournament } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 
 const formatDate = (date: any) => {
@@ -26,33 +26,37 @@ const formatDate = (date: any) => {
   return 'Invalid Date';
 };
 
+const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, label: string, color: string, description: string } } = {
+  upcoming: { icon: Clock, label: 'Upcoming', color: 'bg-blue-500', description: 'Registration open. Get ready!' },
+  live: { icon: PlayCircle, label: 'Live', color: 'bg-green-500 animate-pulse', description: 'The tournament is live! Join now!' },
+  completed: { icon: CheckCircle, label: 'Completed', color: 'bg-gray-500', description: 'This tournament has finished.' },
+  cancelled: { icon: XCircle, label: 'Cancelled', color: 'bg-red-500', description: 'Cancelled. Your entry fee has been refunded.' },
+};
+
 function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [mySlot, setMySlot] = useState<number | null>(null);
+  const [liveTournamentData, setLiveTournamentData] = useState<Tournament | null>(null);
   const firestore = useFirestore();
+  
+  const statusInfo = statusConfig[liveTournamentData?.status || 'upcoming'];
 
   useEffect(() => {
-    const fetchSlotNumber = async () => {
-      if (!firestore || !userId || !tournament.id) return;
-      
-      const joinRecordRef = doc(firestore, 'users', userId, 'joinedTournaments', tournament.id);
-      const docSnap = await getDoc(joinRecordRef);
+    if (!firestore || !tournament.id) return;
 
+    const tournamentRef = doc(firestore, 'tournaments', tournament.id);
+    const unsubscribe = onSnapshot(tournamentRef, (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data() as JoinedTournament;
-        console.log('FETCHED SLOT:', docSnap.data());
-        if (data.slotNumber) {
-          setMySlot(data.slotNumber);
-        }
+        setLiveTournamentData(docSnap.data() as Tournament);
       }
-    };
+    });
 
-    fetchSlotNumber();
-  }, [firestore, userId, tournament.id]);
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+  }, [firestore, tournament.id]);
 
 
   return (
-     <div className="flip-card h-[250px]" >
+     <div className="flip-card h-[280px]" >
       <div className={cn("flip-card-inner", isFlipped && "flipped")}>
         <div className="flip-card-front">
           <Card className="h-full flex flex-col">
@@ -83,7 +87,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
               </div>
             </CardContent>
             <CardFooter>
-                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(true)}>See Details</Button>
+                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(true)}>See Details & Status</Button>
             </CardFooter>
           </Card>
         </div>
@@ -91,42 +95,57 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
         <div className="flip-card-back">
           <Card className="h-full flex flex-col">
              <CardHeader>
-                <CardTitle className="text-xl">Room Details</CardTitle>
+                <CardTitle className="text-xl">Match Status</CardTitle>
+                <div className="flex items-center gap-2 pt-2">
+                    <statusInfo.icon className={cn("h-4 w-4", statusInfo.color.includes('green') && 'text-green-500', statusInfo.color.includes('red') && 'text-red-500')} />
+                    <span className={cn("font-semibold", statusInfo.color.includes('green') && 'text-green-500', statusInfo.color.includes('red') && 'text-red-500')}>{statusInfo.label}</span>
+                </div>
              </CardHeader>
              <CardContent className="flex-grow space-y-4">
-                <div className="flex items-center gap-3 bg-primary/10 p-3 rounded-md border border-primary/20">
-                   <Hash className="h-5 w-5 text-primary" />
-                   <div>
-                     <p className="text-xs text-muted-foreground">Your Slot</p>
-                     <p className="font-bold text-lg text-primary">#{mySlot !== null ? mySlot : 1}</p>
-                   </div>
-                </div>
-                {tournament.roomId && tournament.roomPassword ? (
+                {liveTournamentData?.status === 'live' && (
                     <div className='space-y-4'>
                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
                            <Ticket className="h-5 w-5 text-primary" />
                            <div>
                              <p className="text-xs text-muted-foreground">Room ID</p>
-                             <p className="font-mono font-bold text-lg">{tournament.roomId}</p>
+                             <p className="font-mono font-bold text-lg">{liveTournamentData.roomId || 'Pending'}</p>
                            </div>
                         </div>
                          <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
                            <KeyRound className="h-5 w-5 text-primary" />
                            <div>
                              <p className="text-xs text-muted-foreground">Password</p>
-                             <p className="font-mono font-bold text-lg">{tournament.roomPassword}</p>
+                             <p className="font-mono font-bold text-lg">{liveTournamentData.roomPassword || 'Pending'}</p>
                            </div>
                         </div>
                     </div>
-                ) : (
+                )}
+                 {liveTournamentData?.status === 'upcoming' && (
                     <div className="flex items-center text-center justify-center h-full">
                        <p className="text-muted-foreground text-sm">
-                           Room details will be shared 15 minutes before the match.
+                           Room details will be shared 15 minutes before the match starts.
                        </p>
                     </div>
-                )}
+                 )}
+                 {liveTournamentData?.status === 'completed' && (
+                     <div className="flex flex-col items-center text-center justify-center h-full">
+                       <CheckCircle className="h-10 w-10 text-green-500 mb-2"/>
+                       <p className="text-muted-foreground text-sm">
+                           The tournament has ended. Check the "Tournament Wins" section for results!
+                       </p>
+                    </div>
+                 )}
+                 {liveTournamentData?.status === 'cancelled' && (
+                     <div className="flex flex-col items-center text-center justify-center h-full">
+                       <XCircle className="h-10 w-10 text-red-500 mb-2"/>
+                       <p className="text-muted-foreground text-sm">
+                           This tournament was cancelled. Your entry fee has been refunded.
+                       </p>
+                    </div>
+                 )}
              </CardContent>
-             <CardFooter>
+             <CardFooter className='flex-col gap-2'>
+                 {liveTournamentData?.status === 'live' && <Button className="w-full">Join Room</Button>}
                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
@@ -147,8 +166,8 @@ export function MyTournaments() {
     if (isUserLoading) {
         return (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="h-[250px] w-full" />
-                <Skeleton className="h-[250px] w-full" />
+                <Skeleton className="h-[280px] w-full" />
+                <Skeleton className="h-[280px] w-full" />
             </div>
         );
     }
