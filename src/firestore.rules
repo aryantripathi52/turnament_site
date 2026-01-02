@@ -35,19 +35,15 @@ service cloud.firestore {
 
     // USER DATA: Users can manage their own data. Admins/Staff can read/update any profile.
     match /users/{userId} {
-      allow get: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-      allow list: if isStaffOrAdmin(request.auth.uid); 
       allow create: if isOwner(userId);
+      allow read, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
+      allow list: if isStaffOrAdmin(request.auth.uid); 
       
-      // Allow user to update their own username or coins (for tourney entry).
-      // Admins/staff can update anything.
-      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'coins']))
-                    || isStaffOrAdmin(request.auth.uid);
-
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
         allow read, write: if isOwner(userId);
       }
+
       match /wonTournaments/{tournamentId} {
         allow read, list: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
         allow write, create, delete: if isStaffOrAdmin(request.auth.uid);
@@ -74,7 +70,7 @@ service cloud.firestore {
       match /registrations/{registrationId} {
         allow read, list: if isStaffOrAdmin(request.auth.uid);
         // A user can create a registration for themselves, using their UID as the doc ID.
-        allow create: if isSignedIn() && request.auth.uid == registrationId;
+        allow create: if isOwner(registrationId);
         allow update, delete: if isStaffOrAdmin(request.auth.uid);
       }
     }
