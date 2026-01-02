@@ -16,19 +16,17 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
     
-    function isAdmin(userId) {
-      // Check role in user document OR a specific super-admin email
-      let userRole = getUserRole(userId);
+    function isAdmin() {
+      let userRole = getUserRole(request.auth.uid);
       return userRole == 'admin' || request.auth.token.email == 'admin@dps.in';
     }
 
-    function isStaff(userId) {
-      return getUserRole(userId) == 'staff';
+    function isStaff() {
+      return getUserRole(request.auth.uid) == 'staff';
     }
     
-    function isStaffOrAdmin(userId) {
-      // Check role in user document OR the specific super-admin email
-      let role = getUserRole(userId);
+    function isStaffOrAdmin() {
+      let role = getUserRole(request.auth.uid);
       return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
 
@@ -36,77 +34,78 @@ service cloud.firestore {
 
     // USER DATA: Users can manage their own data. Admins/Staff can read any profile.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-      allow list: if isStaffOrAdmin(request.auth.uid); 
+      allow read: if isOwner(userId) || isStaffOrAdmin();
+      allow list: if isStaffOrAdmin(); 
       allow create: if isOwner(userId);
       
       // Allow user to update their own username.
       // Allow 'coins' to be updated (by admin or via transaction).
       // Allow admins/staff to update any user profile fully.
       allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
-                    || isStaffOrAdmin(request.auth.uid);
+                    || isStaffOrAdmin();
 
       // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
         allow read, list, create, update, delete: if isOwner(userId);
       }
       match /wonTournaments/{tournamentId} {
-        allow read, list: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-        allow write, create, delete: if isStaffOrAdmin(request.auth.uid);
+        allow read, list: if isOwner(userId) || isStaffOrAdmin();
+        allow write, create, delete: if isStaffOrAdmin();
       }
       
       match /addCoinRequests/{requestId} {
-        allow read, list, create, update, delete: if isOwner(userId);
+        allow read, list, create: if isOwner(userId);
+        allow update: if isOwner(userId) || isStaffOrAdmin(); // Allow staff/admin to update status
       }
       match /withdrawCoinRequests/{requestId} {
-        allow read, list, create, update, delete: if isOwner(userId);
+        allow read, list, create: if isOwner(userId);
+        allow update: if isOwner(userId) || isStaffOrAdmin();
       }
     }
 
     // TOURNAMENTS: Publicly readable. Modifiable by staff/admins.
     match /tournaments/{tournamentId} {
       allow get, list: if isSignedIn();
-      allow create, delete: if isStaffOrAdmin(request.auth.uid);
+      allow create, update, delete: if isStaffOrAdmin();
 
-      // Allow staff/admins to update anything.
       // Allow any signed-in user to ONLY update 'registeredCount' (for joining).
-      allow update: if isStaffOrAdmin(request.auth.uid) || 
+      allow update: if isStaffOrAdmin() || 
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
-        allow read, list: if isStaffOrAdmin(request.auth.uid);
+        allow read, list: if isStaffOrAdmin();
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isStaffOrAdmin(request.auth.uid);
+        allow update, delete: if isStaffOrAdmin();
       }
     }
 
     match /categories/{categoryId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
+      allow create, update, delete: if isStaffOrAdmin();
     }
 
     // ANNOUNCEMENTS & HIGHLIGHTS: Publicly readable, modifiable by staff/admins.
     match /announcements/{announcementId} {
       allow get, list: if true;
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
+      allow create, update, delete: if isStaffOrAdmin();
     }
 
     match /highlights/{highlightId} {
       allow get, list: if true;
-      allow create, update, delete: if isStaffOrAdmin(request.auth.uid);
+      allow create, update, delete: if isStaffOrAdmin();
     }
     
     // GLOBAL COIN REQUESTS (for Admin/Staff review)
     match /addCoinRequests/{requestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       // Admins and Staff can read, list, update, and delete requests.
-      allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
+      allow read, list, update, delete: if isStaffOrAdmin();
     }
 
     match /withdrawCoinRequests/{requestId} {
        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
        // Admins and Staff can read, list, update, and delete requests.
-       allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
+       allow read, list, update, delete: if isStaffOrAdmin();
     }
   }
 }

@@ -86,20 +86,19 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
+        const path: string =
+          memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+
         if (error.code === 'permission-denied') {
           console.warn(
-            `Firestore Permission Denied on collection query. Path: ${(memoizedTargetRefOrQuery as any).path}. Returning empty array.`,
+            `Firestore Permission Denied on collection query. Path: ${path}. Returning empty array to prevent app crash.`,
             error
           );
           setData([]); // Return empty array on permission error to prevent crash
           setError(error); // Still set the error state for optional UI feedback
         } else {
-           // This logic extracts the path from either a ref or a query
-            const path: string =
-            memoizedTargetRefOrQuery.type === 'collection'
-                ? (memoizedTargetRefOrQuery as CollectionReference).path
-                : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
-
             const contextualError = new FirestorePermissionError({
             operation: 'list',
             path,
