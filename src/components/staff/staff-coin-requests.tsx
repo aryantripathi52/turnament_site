@@ -29,8 +29,7 @@ export function StaffCoinRequests() {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      where('status', '==', 'pending')
     );
   }, [firestore, profile]);
 
@@ -38,8 +37,7 @@ export function StaffCoinRequests() {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      where('status', '==', 'pending')
     );
   }, [firestore, profile]);
 
@@ -50,7 +48,7 @@ export function StaffCoinRequests() {
     const adds = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const withdraws = withdrawRequests?.map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
     const combined = [...adds, ...withdraws];
-    // Sort client-side since we removed orderBy from the query
+    // Sort client-side
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
