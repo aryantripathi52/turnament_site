@@ -1,49 +1,4 @@
 
-/**
- * Core Philosophy:
- * This ruleset is designed for a public-facing tournament platform. The primary goal is to
- * make informational content (tournaments, announcements, highlights) publicly readable
- * by anyone, including anonymous users. Write operations are strictly controlled. Content
- * creation and modification for public collections are disabled by default, intended to be
- * managed by an admin role that the developer must implement.
- *
- * User-specific actions, such as creating a user profile or registering for a tournament,
- * require authentication. A user can only manage their own profile and can only interact
- * with tournament registrations they are a part of.
- *
- * Data Structure:
- * The data is organized into several top-level collections:
- * - /users/{userId}: Private user profile data.
- * - /tournaments/{tournamentId}: Public tournament information.
- * - /announcements/{announcementId}: Public platform announcements.
- * - /highlights/{highlightId}: Public match highlights.
- * - /coinRequests/{coinRequestId}: Requests for adding/withdrawing coins.
- *
- * A key subcollection exists for managing participation:
- * - /tournaments/{tournamentId}/registrations/{registrationId}: Stores team registrations,
- *   with access restricted to the players on the team.
- *
- * Key Security Decisions:
- * - Public Read, Admin Write: To ensure data integrity, top-level public collections like
- *   `tournaments`, `announcements`, and `highlights` are read-only for all users. Write
- *   access is now controlled by custom claims on the user's auth token.
- * - Strict User Ownership: The /users/{userId} path is strictly locked down. A user can only
- *   access their own document, and user listing is disabled (except for admins) to protect user privacy.
- * - Shared Access for Registrations: Access to a registration document is granted if the
- *   requesting user's UID is in the `playerIds` array within that document.
- * - Default Deny: If a rule is not explicitly defined, access is denied. All write
- *   operations require authentication.
- *
- * Denormalization for Authorization:
- * The security model for `/registrations` relies on denormalization. Each registration
- * document contains a `playerIds` array. This avoids the need for slow and costly `get`
- * calls to other documents, allowing for a fast and secure check directly on the resource.
- *
- * Structural Segregation:
- * The separation of public data (e.g., `/tournaments`) from user-specific data
- * (e.g., `/users` and `/registrations`) provides a clear and secure boundary. This prevents
- * accidental exposure of private information in public queries.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -55,58 +10,33 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    function isAdmin() {
+      return isSignedIn() && getRole(request.auth.uid) == 'admin';
+    }
+    function isStaff() {
+      return isSignedIn() && (getRole(request.auth.uid) == 'staff' || isAdmin());
+    }
     function isExistingDoc() {
       return resource != null;
     }
-    // Check for custom claims on the auth token.
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-    function isStaff() {
-        return isSignedIn() && (request.auth.token.staff == true || isAdmin());
-    }
 
-
-    /**
-     * @description Manages user profiles. A user can create their own profile,
-     *              and can only read or write their own data. Admins can manage any user.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user with UID 'user_abc' creates their document at /users/user_abc.
-     * @deny (get) User 'user_xyz' tries to read the document at /users/user_abc.
-     * @deny (list) Any user except an admin tries to list all documents in the /users collection.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      allow get, list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isOwner(userId);
     }
 
-    /**
-     * @description Defines rules for the public 'tournaments' collection.
-     * @path /tournaments/{tournamentId}
-     * @allow (get) Any user, including anonymous ones, can read a tournament document.
-     * @deny (create) Any user attempts to create a new tournament.
-     * @principle Public Read with Owner-Only Writes. Writes are disabled pending schema update.
-     */
     match /tournaments/{tournamentId} {
       allow get: if true;
       allow list: if true;
       allow create, update, delete: if isStaff();
     }
 
-    /**
-     * @description Manages team registrations for a tournament.
-     * @path /tournaments/{tournamentId}/registrations/{registrationId}
-     * @allow (create) An authenticated user creates a registration where their UID is in the `playerIds` array.
-     * @deny (get) A user tries to read a registration for a team they are not a member of.
-     * @deny (list) A user tries to list all registrations for a tournament.
-     * @principle Shared Access (Closed Collaborators) based on the `playerIds` array.
-     */
     match /tournaments/{tournamentId}/registrations/{registrationId} {
-      // Helpers specific to registration access
       function isCreatingTeamMember() {
         return isSignedIn() && request.auth.uid in request.resource.data.playerIds;
       }
@@ -121,46 +51,27 @@ service cloud.firestore {
       allow delete: if isExistingTeamMember() || isStaff();
     }
 
-    /**
-     * @description Defines rules for the public 'announcements' collection.
-     * @path /announcements/{announcementId}
-     * @allow (list) Any user, including anonymous ones, can list all announcements.
-     * @deny (update) Any user attempts to update an existing announcement.
-     * @principle Public Read with Owner-Only Writes. Writes are disabled pending schema update.
-     */
     match /announcements/{announcementId} {
       allow get: if true;
       allow list: if true;
       allow create, update, delete: if isStaff();
     }
 
-    /**
-     * @description Defines rules for the public 'highlights' collection.
-     * @path /highlights/{highlightId}
-     * @allow (get) Any user, including anonymous ones, can view a specific highlight.
-     * @deny (delete) Any user attempts to delete a highlight.
-     * @principle Public Read with Owner-Only Writes. Writes are disabled pending schema update.
-     */
     match /highlights/{highlightId} {
       allow get: if true;
       allow list: if true;
       allow create, update, delete: if isStaff();
     }
-
-    /**
-     * @description Manages coin purchase and withdrawal requests.
-     * @path /coinRequests/{coinRequestId}
-     * @allow (create) An authenticated user can create their own coin request.
-     * @deny (get) A user tries to read a coin request that is not their own, unless they are an admin.
-     * @principle User can manage their own requests; admins can manage all requests.
-     */
+    
     match /coinRequests/{coinRequestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
       // Admins can list all requests. Players can only query for their own.
-      allow list: if isAdmin() || (isSignedIn() && request.query.where[0][2] == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.where.size() > 0 && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }
   }
 }
+
+    

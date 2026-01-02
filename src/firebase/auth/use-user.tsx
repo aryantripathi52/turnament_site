@@ -19,7 +19,6 @@ export interface UserProfile {
   role: 'admin' | 'staff' | 'player';
   registrationIds: string[];
   coins: number;
-  status: 'active' | 'blocked';
 }
 
 export interface UserHookResult {

@@ -46,9 +46,12 @@ const formSchema = z.object({
 
 // This is a simplified, client-side mapping.
 // In a real application, this logic should be securely handled on the backend.
-const getRoleFromKey = (key: string): 'admin' | 'player' | null => {
+const getRoleFromKey = (key: string): 'admin' | 'staff' | 'player' | null => {
   if (key === 'ADMIN_DPS#1') {
     return 'admin';
+  }
+  if (key === 'STAFF_DPS#1') {
+    return 'staff';
   }
   if (key === '') {
     return 'player';
@@ -88,7 +91,6 @@ export function RegisterForm() {
           role: role,
           registrationIds: [],
           coins: role === 'player' ? 100 : 0, // Starting coins for players
-          status: 'active', // Default status is active
         };
         const userDocRef = doc(firestore, 'users', user.uid);
         setDocumentNonBlocking(userDocRef, newUser, { merge: true });
@@ -195,7 +197,7 @@ export function RegisterForm() {
                   <FormLabel>Role Key (optional)</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Enter admin key if you have one"
+                      placeholder="Enter admin or staff key if you have one"
                       {...field}
                     />
                   </FormControl>
