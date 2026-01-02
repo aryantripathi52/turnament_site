@@ -8,6 +8,7 @@ export type Tournament = {
   prizePoolFirst: number;
   prizePoolSecond: number;
   prizePoolThird: number;
+  entryFee: number;
   description: string;
   rules: string;
   registrationLink: string;

@@ -59,6 +59,10 @@
           "type": "number",
           "description": "Prize for the 3rd place winner."
         },
+        "entryFee": {
+          "type": "number",
+          "description": "The entry fee for the tournament in coins."
+        },
         "description": {
           "type": "string",
           "description": "Detailed description of the tournament."
@@ -86,6 +90,7 @@
         "prizePoolFirst",
         "prizePoolSecond",
         "prizePoolThird",
+        "entryFee",
         "description",
         "rules",
         "registrationLink",

@@ -51,6 +51,7 @@ const formSchema = z.object({
   prizePoolFirst: z.coerce.number().positive({ message: '1st prize must be a positive number.' }),
   prizePoolSecond: z.coerce.number().positive({ message: '2nd prize must be a positive number.' }),
   prizePoolThird: z.coerce.number().positive({ message: '3rd prize must be a positive number.' }),
+  entryFee: z.coerce.number().min(0, { message: "Entry fee can't be negative." }),
   startDate: z.date({ required_error: 'A start date is required.' }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
   endDate: z.date({ required_error: 'An end date is required.' }),
@@ -67,7 +68,7 @@ const formSchema = z.object({
     return endDateTime > startDateTime;
 }, {
   message: "End date and time must be after start date and time.",
-  path: ["endDate"], // You can also put this on 'endTime'
+  path: ["endDate"], 
 });
 
 
@@ -96,6 +97,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       prizePoolFirst: 0,
       prizePoolSecond: 0,
       prizePoolThird: 0,
+      entryFee: 0,
       startTime: "12:00",
       endTime: "18:00",
     },
@@ -124,11 +126,12 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
         prizePoolFirst: values.prizePoolFirst,
         prizePoolSecond: values.prizePoolSecond,
         prizePoolThird: values.prizePoolThird,
+        entryFee: values.entryFee,
         startDate: startDateTime,
         endDate: endDateTime,
-        rules: "Standard tournament rules apply.",
-        registrationLink: "#",
-        contactEmail: "contact@example.com",
+        rules: "Standard tournament rules apply.", // Placeholder
+        registrationLink: "#", // Placeholder
+        contactEmail: "contact@example.com", // Placeholder
       });
 
       toast({
@@ -150,7 +153,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Tournament</DialogTitle>
           <DialogDescription>
@@ -158,201 +161,217 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-6 gap-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="col-span-6">
-                  <FormLabel>Tournament Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Summer Skirmish" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                     <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tournament Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Summer Skirmish" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Describe the tournament..." {...field} rows={12} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                </div>
+                <div className="space-y-6">
+                    <FormField
+                        control={form.control}
+                        name="categoryId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Game Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select a game"} />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {categories?.map((cat) => (
+                                    <SelectItem key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
 
-            <FormField
-              control={form.control}
-              name="categoryId"
-              render={({ field }) => (
-                <FormItem className="col-span-6">
-                  <FormLabel>Game Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select a game"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <div className="grid grid-cols-3 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="prizePoolFirst"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>1st Prize (INR)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="25000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="prizePoolSecond"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>2nd Prize (INR)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="15000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="prizePoolThird"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>3rd Prize (INR)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="10000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="entryFee"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Entry Fee (Coins)</FormLabel>
+                            <FormControl>
+                                <Input type="number" placeholder="e.g., 100" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="col-span-6">
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe the tournament..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="prizePoolFirst"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>1st Prize (INR)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 25000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="prizePoolSecond"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>2nd Prize (INR)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 15000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="prizePoolThird"
-              render={({ field }) => (
-                <FormItem className="col-span-2">
-                  <FormLabel>3rd Prize (INR)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 10000" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="startDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col col-span-4">
-                  <FormLabel>Start Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col col-span-2">
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                            <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-
-             <FormField
-              control={form.control}
-              name="endDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col col-span-4">
-                  <FormLabel>End Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < (form.getValues("startDate") || new Date())}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-                control={form.control}
-                name="endTime"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col col-span-2">
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                            <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
+                     <div className="grid grid-cols-2 gap-4">
+                         <FormField
+                            control={form.control}
+                            name="startDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>Start Date & Time</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "pl-3 text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                        >
+                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date < new Date()}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage className="pt-2"/>
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="startTime"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col justify-end">
+                                    <FormControl>
+                                        <Input type="time" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                         <FormField
+                            control={form.control}
+                            name="endDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>End Date & Time</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "pl-3 text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                        >
+                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => date < (form.getValues("startDate") || new Date())}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage className="pt-2"/>
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="endTime"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col justify-end">
+                                    <FormControl>
+                                        <Input type="time" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
+             </div>
             <DialogFooter className="col-span-6 pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">Cancel</Button>
