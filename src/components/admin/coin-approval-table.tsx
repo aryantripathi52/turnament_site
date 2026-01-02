@@ -132,12 +132,13 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead className="text-right">Coins</TableHead>
-                <TableHead className="text-right">Amount Paid</TableHead>
-                <TableHead>Transaction ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead className="text-right">Coins</TableHead>
+                    {requestType === 'add' && <TableHead className="text-right">Amount Paid</TableHead>}
+                    {requestType === 'add' && <TableHead>Transaction ID</TableHead>}
+                    {requestType === 'withdraw' && <TableHead>Withdrawal Details</TableHead>}
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,10 +146,9 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                 <TableRow key={req.id}>
                     <TableCell>{req.username}</TableCell>
                     <TableCell className="text-right font-medium">{req.amountCoins.toLocaleString()}</TableCell>
-                     <TableCell className="text-right">${req.amountPaid.toFixed(2)}</TableCell>
-                    <TableCell>
-                        <Badge variant="secondary">{req.transactionId}</Badge>
-                    </TableCell>
+                    {requestType === 'add' && <TableCell className="text-right">${(req.amountPaid ?? 0).toFixed(2)}</TableCell>}
+                    {requestType === 'add' && <TableCell><Badge variant="secondary">{req.transactionId}</Badge></TableCell>}
+                    {requestType === 'withdraw' && <TableCell className="text-sm">{req.withdrawalDetails}</TableCell>}
                     <TableCell>{new Date(req.requestDate.seconds * 1000).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">

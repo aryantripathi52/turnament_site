@@ -26,8 +26,9 @@ export type CoinRequest = {
   username: string;
   type: 'add' | 'withdraw';
   amountCoins: number;
-  amountPaid: number;
-  transactionId: string;
+  amountPaid?: number; // Optional for withdrawals
+  transactionId?: string; // Optional for withdrawals
+  withdrawalDetails?: string; // Optional for add requests
   status: 'pending' | 'approved' | 'denied';
   requestDate: Timestamp;
   decisionDate?: Timestamp;

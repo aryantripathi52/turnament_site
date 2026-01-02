@@ -12,9 +12,11 @@ import { DollarSign, Gem } from 'lucide-react';
 import { AddFundsForm } from './add-funds-form';
 import { useState } from 'react';
 import { Button } from '../ui/button';
+import { WithdrawFundsForm } from './withdraw-funds-form';
 
 export function Wallet() {
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+  const [isWithdrawFundsOpen, setIsWithdrawFundsOpen] = useState(false);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -36,20 +38,22 @@ export function Wallet() {
           </AddFundsForm>
         </CardFooter>
       </Card>
-      <Card>
+      <Card className="flex flex-col">
         <CardHeader>
           <CardTitle>Withdraw Coins</CardTitle>
           <CardDescription>
-            Enter the amount of coins to withdraw to your bank account.
+            Request to withdraw coins to your bank account (1 Coin = ₹1).
           </CardDescription>
         </CardHeader>
-        <CardContent>
-           <p className="text-sm text-muted-foreground">This feature is coming soon. You will be able to withdraw your coins to real money.</p>
+        <CardContent className="flex-grow">
+           <p className="text-sm text-muted-foreground">Submit a request to convert your coins to real money. Admins will review and process your request.</p>
         </CardContent>
         <CardFooter>
-          <Button className="w-full" variant="secondary" disabled>
-            <Gem className="mr-2 h-4 w-4" /> Withdraw (Coming Soon)
-          </Button>
+          <WithdrawFundsForm isOpen={isWithdrawFundsOpen} setIsOpen={setIsWithdrawFundsOpen}>
+            <Button className="w-full" onClick={() => setIsWithdrawFundsOpen(true)}>
+              <Gem className="mr-2 h-4 w-4" /> Withdraw Coins
+            </Button>
+          </WithdrawFundsForm>
         </CardFooter>
       </Card>
     </div>
