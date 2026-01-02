@@ -37,7 +37,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '../ui/textarea';
 import type { Category } from '@/lib/types';
-import { Calendar } from 'lucide-react';
 
 
 const formSchema = z.object({
@@ -88,7 +87,9 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       prizePoolSecond: 0,
       prizePoolThird: 0,
       entryFee: 0,
+      startDate: '',
       startTime: "12:00",
+      endDate: '',
       endTime: "18:00",
     },
   });
