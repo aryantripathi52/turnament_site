@@ -10,83 +10,93 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-    function isExistingDoc() {
-      return resource != null;
-    }
     
     function getRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+      // Use exists() to avoid errors on non-existent documents.
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
     function isAdmin() {
       return isSignedIn() && getRole(request.auth.uid) == 'admin';
     }
 
-
+    // Secure user data: Users can only see their own profile. Admins can see any.
     match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin(); // Only admins can list all users.
+      allow create: if isOwner(userId); // A user can create their own profile.
+      allow update: if isOwner(userId); // A user can update their own profile.
+      allow delete: if isOwner(userId) || isAdmin();
 
+      // Subcollections for user-specific tournament data.
       match /joinedTournaments/{tournamentId} {
-          allow read, list, write, delete: if isOwner(userId) || isAdmin();
+          // A user can fully manage their own joined tournament records.
+          // Admins can read them for management purposes.
+          allow read, write, delete: if isOwner(userId);
+          allow list: if isOwner(userId) || isAdmin();
       }
       match /wonTournaments/{tournamentId} {
-          allow list, read, write: if isOwner(userId) || isAdmin();
+          // A user can read the tournaments they have won.
+          // Admins can write to this collection to award prizes.
+          allow read, list: if isOwner(userId) || isAdmin();
+          allow write: if isAdmin();
       }
     }
 
+    // Tournaments are public to view, but only admins can modify them.
     match /tournaments/{tournamentId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create, update, delete: if isAdmin();
+
+      // Tournament Registrations subcollection
+      match /registrations/{registrationId} {
+        // Any signed-in user can read the list of registrations to see who has joined.
+        allow read, list: if isSignedIn();
+        // A player can create their own registration.
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        // Only an admin can delete a registration.
+        allow delete: if isAdmin();
+        // No updates allowed to prevent tampering.
+        allow update: if false;
+      }
     }
 
-    match /tournaments/{tournamentId}/registrations/{registrationId} {
-      function isCreatingTeamMember() {
-        return isSignedIn() && request.resource.data.userId == request.auth.uid;
-      }
-      function isExistingTeamMember() {
-        return isSignedIn() && isExistingDoc() && resource.data.userId == request.auth.uid;
-      }
-      
-      allow read, list: if isSignedIn() || isAdmin();
-
-      allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
-      allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
-      allow delete: if isExistingTeamMember() || isAdmin();
-    }
-
+    // Announcements are public to view, only admins can modify.
     match /announcements/{announcementId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
+    // Highlights are public to view, only admins can modify.
     match /highlights/{highlightId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
     
+    // Simplified rule for adding coin requests.
     match /addCoinRequests/{requestId} {
-      allow read, write: if isAdmin();
+      // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn() && (isAdmin() || request.query.where.userId == request.auth.uid);
+      // Players can only list/get their own requests.
+      allow get, list: if isOwner(request.resource.data.userId);
+      // Admins have full read/write access to all requests.
+      allow read, write, list: if isAdmin();
     }
 
+    // Simplified rule for withdrawing coin requests.
     match /withdrawCoinRequests/{requestId} {
-      allow read, write: if isAdmin();
+      // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow list: if isSignedIn() && (isAdmin() || request.query.where.userId == request.auth.uid);
+       // Players can only list/get their own requests.
+      allow get, list: if isOwner(request.resource.data.userId);
+      // Admins have full read/write access to all requests.
+      allow read, write, list: if isAdmin();
     }
 
+    // Categories are public to view, only admins can modify.
     match /categories/{categoryId} {
-      allow get: if true;
-      allow list: if true;
+      allow get, list: if true;
       allow create, update, delete: if isAdmin(); 
     }
   }
