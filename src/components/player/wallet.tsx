@@ -25,7 +25,7 @@ export function Wallet() {
         <Info className="h-4 w-4 text-primary" />
         <AlertTitle className="font-semibold text-primary">Please Note</AlertTitle>
         <AlertDescription className="text-primary/90">
-          Payment approvals can take up to 12 hours. Kindly wait for the review process to complete.
+          Payment approvals can take up to 12 hours. Kindly wait for the review process to complete. For a seamless tournament experience, please add coins at least 12 hours in advance.
         </AlertDescription>
       </Alert>
       <div className="grid gap-6 md:grid-cols-2">
