@@ -55,8 +55,15 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
   const { data: registrations, isLoading, error } = useCollection<Registration>(registrationsQuery);
 
   const players = useMemo(() => {
+    if (tournament.status === 'completed' && tournament.winners) {
+        const winnerList = [];
+        if (tournament.winners.first) winnerList.push({ id: tournament.winners.first.userId, name: tournament.winners.first.username });
+        if (tournament.winners.second) winnerList.push({ id: tournament.winners.second.userId, name: tournament.winners.second.username });
+        if (tournament.winners.third) winnerList.push({ id: tournament.winners.third.userId, name: tournament.winners.third.username });
+        return winnerList;
+    }
     return registrations?.map(reg => ({ id: reg.userId, name: reg.teamName })) || [];
-  }, [registrations]);
+  }, [registrations, tournament.status, tournament.winners]);
   
   const isCompleted = tournament.status === 'completed';
 
@@ -134,7 +141,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
   };
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && !isCompleted) {
       return (
         <div className="space-y-4">
           <Skeleton className="h-10 w-full" />
@@ -151,10 +158,6 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
           <AlertDescription>Could not load player registrations.</AlertDescription>
         </Alert>
       );
-    }
-
-    if (!registrations || registrations.length === 0) {
-      return <p className="text-center text-muted-foreground py-8">No players have joined this tournament yet.</p>;
     }
     
     if(isCompleted) {
@@ -201,6 +204,10 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                 </div>
             </div>
         )
+    }
+
+    if (!registrations || registrations.length === 0) {
+      return <p className="text-center text-muted-foreground py-8">No players have joined this tournament yet.</p>;
     }
 
     return (

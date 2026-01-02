@@ -14,9 +14,12 @@ service cloud.firestore {
 
     // Correctly and safely get the role of the currently signed-in user.
     function getUserRole() {
+        // Use exists() which is a safe, non-billable read in security rules.
         if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+            // Use get() which is also non-billable in security rules.
             return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
         }
+        // Return a default role or null if the user document doesn't exist.
         return null;
     }
     
@@ -38,18 +41,18 @@ service cloud.firestore {
     // USER DATA: Users can only manage their own data. Admins/Staff can read any user profile for management.
     match /users/{userId} {
       allow get: if isOwner(userId) || isStaffOrAdmin();
-      allow list: if isStaffOrAdmin(); 
-      allow create: if isOwner(userId); 
+      allow list: if isStaffOrAdmin(); // Admins can list users.
+      allow create: if isOwner(userId); // A user can create their own profile document.
       allow update, delete: if isOwner(userId) || isAdmin();
 
       // Denormalized data subcollections for users.
+      // A user should have full control over their own subcollections.
       match /joinedTournaments/{tournamentId} {
-        allow read, write: if isOwner(userId);
-        allow list: if isOwner(userId) || isStaffOrAdmin();
+        allow read, write, list: if isOwner(userId);
       }
       match /wonTournaments/{tournamentId} {
         allow read, list: if isOwner(userId) || isStaffOrAdmin();
-        allow write: if isStaffOrAdmin();
+        allow write: if isStaffOrAdmin(); // Only staff/admin can award a win
       }
       
       // Denormalized coin request history for the specific user.
@@ -68,11 +71,12 @@ service cloud.firestore {
       allow create, update, delete: if isStaffOrAdmin();
 
       // Registrations are readable by any signed-in user so they can see who has joined.
+      // A player can only create a registration for themselves. Staff can delete registrations if needed.
       match /registrations/{registrationId} {
         allow read, list: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow delete: if isStaffOrAdmin();
-        allow update: if false;
+        allow update: if false; // Registrations should not be updatable.
       }
     }
 
@@ -94,15 +98,21 @@ service cloud.firestore {
     
     // GLOBAL ADD COIN REQUESTS (for Admin/Staff review)
     match /addCoinRequests/{requestId} {
+      // A user can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // The user who owns the request OR an admin/staff can read it.
       allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
+      // Only admin/staff can list, update, or delete these requests.
       allow list, update, delete: if isStaffOrAdmin();
     }
 
     // GLOBAL WITHDRAW COIN REQUESTS (for Admin/Staff review)
     match /withdrawCoinRequests/{requestId} {
+      // A user can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+       // The user who owns the request OR an admin/staff can read it.
       allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
+      // Only admin/staff can list, update, or delete these requests.
       allow list, update, delete: if isStaffOrAdmin();
     }
   }
