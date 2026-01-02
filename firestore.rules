@@ -78,20 +78,24 @@ service cloud.firestore {
     match /addCoinRequests/{requestId} {
       // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Players can only list/get their own requests.
-      allow get, list: if isOwner(request.resource.data.userId);
-      // Admins have full read/write access to all requests.
-      allow read, write, list: if isAdmin();
+      // Players can read their own request. Admins can read any request.
+      allow get: if isOwner(request.resource.data.userId) || isAdmin();
+      // Players can list THEIR OWN requests. Admins can list ALL requests.
+      allow list: if (isSignedIn() && request.query.userId == request.auth.uid) || isAdmin();
+      // Admins have write access to all requests.
+      allow update, delete: if isAdmin();
     }
 
     // Simplified rule for withdrawing coin requests.
     match /withdrawCoinRequests/{requestId} {
       // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-       // Players can only list/get their own requests.
-      allow get, list: if isOwner(request.resource.data.userId);
-      // Admins have full read/write access to all requests.
-      allow read, write, list: if isAdmin();
+      // Players can read their own request. Admins can read any request.
+      allow get: if isOwner(request.resource.data.userId) || isAdmin();
+      // Players can list THEIR OWN requests. Admins can list ALL requests.
+      allow list: if (isSignedIn() && request.query.userId == request.auth.uid) || isAdmin();
+      // Admins have write access to all requests.
+      allow update, delete: if isAdmin();
     }
 
     // Categories are public to view, only admins can modify.
@@ -101,5 +105,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
