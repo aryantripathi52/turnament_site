@@ -25,13 +25,11 @@
  * Key Security Decisions:
  * - Public Read, Admin Write: To ensure data integrity, top-level public collections like
  *   `tournaments`, `announcements`, and `highlights` are read-only for all users. Write
- *   access is currently disabled and marked with a 'TODO', awaiting the implementation of a
- *   secure admin-check function.
+ *   access is now controlled by custom claims on the user's auth token.
  * - Strict User Ownership: The /users/{userId} path is strictly locked down. A user can only
- *   access their own document, and user listing is disabled to protect user privacy.
+ *   access their own document, and user listing is disabled (except for admins) to protect user privacy.
  * - Shared Access for Registrations: Access to a registration document is granted if the
- *   requesting user's UID is in the `playerIds` array within that document. This
- *   allows team members to view and manage their shared registration.
+ *   requesting user's UID is in the `playerIds` array within that document.
  * - Default Deny: If a rule is not explicitly defined, access is denied. All write
  *   operations require authentication.
  *
@@ -59,21 +57,12 @@ service cloud.firestore {
     function isExistingDoc() {
       return resource != null;
     }
-    function getRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    function getUser(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-    function isUserActive(userId) {
-        // Default to active if status is not set
-        return getUser(userId).status == null || getUser(userId).status == 'active';
-    }
+    // Check for custom claims on the auth token.
     function isAdmin() {
-        return isSignedIn() && getRole(request.auth.uid) == 'admin' && isUserActive(request.auth.uid);
+      return isSignedIn() && request.auth.token.admin == true;
     }
     function isStaff() {
-        return isSignedIn() && (getRole(request.auth.uid) == 'staff' || isAdmin()) && isUserActive(request.auth.uid);
+        return isSignedIn() && (request.auth.token.staff == true || isAdmin());
     }
 
 
@@ -118,10 +107,10 @@ service cloud.firestore {
     match /tournaments/{tournamentId}/registrations/{registrationId} {
       // Helpers specific to registration access
       function isCreatingTeamMember() {
-        return isSignedIn() && request.auth.uid in request.resource.data.playerIds && isUserActive(request.auth.uid);
+        return isSignedIn() && request.auth.uid in request.resource.data.playerIds;
       }
       function isExistingTeamMember() {
-        return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds && isUserActive(request.auth.uid);
+        return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
 
       allow get: if isExistingTeamMember() || isStaff();
@@ -165,9 +154,10 @@ service cloud.firestore {
      * @principle User can manage their own requests; admins can manage all requests.
      */
     match /coinRequests/{coinRequestId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && isUserActive(request.auth.uid);
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin()) && isUserActive(request.auth.uid);
-      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      // Admins can list/query all requests. Players can only query for their own.
+      allow list: if isAdmin() || (isSignedIn() && request.query.where.size() == 1 && request.query.where[0][0] == 'userId' && request.query.where[0][2] == request.auth.uid);
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }
