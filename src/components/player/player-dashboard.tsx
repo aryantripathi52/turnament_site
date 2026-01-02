@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
+import { RequestHistory } from './request-history';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -59,6 +60,10 @@ export function PlayerDashboard() {
                     <WalletIcon className="h-5 w-5" />
                     My Wallet
                 </TabsTrigger>
+                 <TabsTrigger value="history" className="w-full justify-start gap-2">
+                    <History className="h-5 w-5" />
+                    History
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -99,6 +104,9 @@ export function PlayerDashboard() {
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />
+            </TabsContent>
+            <TabsContent value="history" className="mt-0 flex-1">
+              <RequestHistory />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
