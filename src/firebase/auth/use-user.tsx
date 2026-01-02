@@ -56,7 +56,6 @@ export const useUser = (): UserHookResult => {
 
   // --- Fetch Joined Tournaments (Player-specific) ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
-    // This query now waits for the profile to load to check the role.
     if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
   }, [user, firestore, profile, isProfileLoading]);
@@ -71,7 +70,7 @@ export const useUser = (): UserHookResult => {
     profile,
     joinedTournaments,
     isUserLoading: combinedIsLoading,
-    isProfileLoading: combinedIsLoading, // Keep a single loading indicator for profile-related data
+    isProfileLoading: combinedIsLoading, 
     userError: combinedError,
   };
 };

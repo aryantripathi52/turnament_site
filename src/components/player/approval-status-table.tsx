@@ -43,35 +43,27 @@ const statusConfig = {
 
 const formatDate = (date: Timestamp | Date | undefined | null) => {
   if (!date) return 'N/A';
-  if (date instanceof Timestamp) {
-    return date.toDate().toLocaleDateString();
-  }
-  if (date instanceof Date) {
-    return date.toLocaleDateString();
-  }
-  if (typeof date === 'string') {
-    return new Date(date).toLocaleDateString();
-  }
-  return 'Invalid Date';
+  const jsDate = date instanceof Timestamp ? date.toDate() : new Date(date);
+  return jsDate.toLocaleDateString();
 };
 
 export function ApprovalStatusTable() {
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const [allRequests, setAllRequests] = useState<WithId<CoinRequest>[] | null>(null);
 
   // Fetch Add Coin Requests
   const addRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, "addCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore]);
+  }, [user, firestore, profile]);
   const { data: addRequests, isLoading: addLoading, error: addError } = useCollection<CoinRequest>(addRequestsQuery);
   
   // Fetch Withdraw Coin Requests
   const withdrawRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, "withdrawCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore]);
+  }, [user, firestore, profile]);
   const { data: withdrawRequests, isLoading: withdrawLoading, error: withdrawError } = useCollection<CoinRequest>(withdrawRequestsQuery);
 
   // Combine and sort requests when they are fetched
@@ -83,7 +75,7 @@ export function ApprovalStatusTable() {
     }
   }, [addRequests, withdrawRequests]);
 
-  const isLoading = isUserLoading || addLoading || withdrawLoading;
+  const isLoading = isUserLoading || isProfileLoading || addLoading || withdrawLoading;
   const error = addError || withdrawError;
 
   if (isLoading) {
