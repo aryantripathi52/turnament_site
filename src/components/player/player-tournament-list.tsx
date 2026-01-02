@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -70,7 +70,9 @@ export function PlayerTournamentList() {
     }
 
     const userRef = doc(firestore, 'users', user.uid);
-    const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', tournament.id);
+    const registrationCollectionRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
+    const newRegistrationRef = doc(registrationCollectionRef);
+
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -92,15 +94,13 @@ export function PlayerTournamentList() {
             coins: newCoinBalance
         });
 
-        // 2. Create a denormalized record of the joined tournament
-        const joinedTournamentData: JoinedTournament = {
-            id: tournament.id,
-            name: tournament.name,
-            startDate: tournament.startDate,
-            prizePoolFirst: tournament.prizePoolFirst,
-            entryFee: tournament.entryFee,
-        };
-        transaction.set(joinedTournamentRef, joinedTournamentData);
+        // 2. Create the new registration document
+        transaction.set(newRegistrationRef, {
+            tournamentId: tournament.id,
+            teamName: profile.username, // Using username as team name for solo entry
+            playerIds: [user.uid],
+            registrationDate: serverTimestamp(),
+        });
       });
 
       toast({

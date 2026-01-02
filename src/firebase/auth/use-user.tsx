@@ -17,7 +17,6 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'staff' | 'player';
   coins: number;
-  registrationIds?: string[];
 }
 
 export interface JoinedTournament extends WithId<Tournament> {
@@ -67,7 +66,7 @@ export const useUser = (): UserHookResult => {
 
 
   useEffect(() => {
-    if (!user || !firestore || !profile) {
+    if (!user || !firestore) {
       setDataLoading(false);
       return;
     }
@@ -87,26 +86,11 @@ export const useUser = (): UserHookResult => {
         setCoinRequests(requests);
 
         // --- Fetch Joined Tournaments ---
-        if (profile.registrationIds && profile.registrationIds.length > 0) {
-            const registrationGroupQuery = query(
-              collectionGroup(firestore, 'registrations'),
-              where('__name__', 'in', profile.registrationIds.map(id => `tournaments/${id.split('/')[1]}/registrations/${id.split('/')[3]}`))
-            );
-            
-            const registrationPromises = profile.registrationIds.map(async (regPath) => {
-                // regPath is not the full path, it's just the ID, we need to find it
-                // This is inefficient, but will work for now to fix the bug.
-                // A better solution would be to store the full path.
-                 const q = query(collectionGroup(firestore, 'registrations'), where('__name__', '==', regPath));
-            });
+        const registrationsQuery = query(collectionGroup(firestore, 'registrations'), where('playerIds', 'array-contains', user.uid));
+        const registrationSnapshot = await getDocs(registrationsQuery);
+        const userRegistrations = registrationSnapshot.docs.map(d => ({id: d.id, ...d.data()} as WithId<Registration>));
 
-            // The correct way would be to get the full path, but for now we have to scan.
-            // THIS IS INEFFICIENT and SHOULD BE REPLACED
-            const allRegsSnapshot = await getDocs(collectionGroup(firestore, 'registrations'));
-            const userRegistrations = allRegsSnapshot.docs
-              .map(d => ({id: d.id, ...d.data()} as WithId<Registration>))
-              .filter(d => profile.registrationIds?.includes(d.id));
-
+        if (userRegistrations.length > 0) {
             const tournamentPromises = userRegistrations.map(async (reg) => {
                 const tournamentRef = doc(firestore, 'tournaments', reg.tournamentId);
                 const tournamentSnap = await getDoc(tournamentRef);
@@ -138,7 +122,7 @@ export const useUser = (): UserHookResult => {
     };
     
     fetchUserData();
-  }, [user, firestore, profile]); 
+  }, [user, firestore]); 
 
 
   const combinedIsLoading = isUserLoading || isProfileLoading || dataLoading;
@@ -154,5 +138,3 @@ export const useUser = (): UserHookResult => {
     userError: combinedError,
   };
 };
-
-    
