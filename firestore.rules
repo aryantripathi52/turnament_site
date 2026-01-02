@@ -1,103 +1,113 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to improve readability and reuse of logic.
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    function getRole(userId) {
-      // Use exists() to avoid errors on non-existent documents.
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
 
+    // Safely get the role of a user. Returns null if user or role doesn't exist.
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    // Check if the signed-in user is an Admin.
     function isAdmin() {
       return isSignedIn() && getRole(request.auth.uid) == 'admin';
     }
 
-    // Secure user data: Users can only see their own profile. Admins can see any.
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin(); // Only admins can list all users.
-      allow create: if isOwner(userId); // A user can create their own profile.
-      allow update: if isOwner(userId); // A user can update their own profile.
-      allow delete: if isOwner(userId) || isAdmin();
+    // Check if the signed-in user is a Staff member.
+    function isStaff() {
+      return isSignedIn() && getRole(request.auth.uid) == 'staff';
+    }
+    
+    // Check if the signed-in user is an Admin or Staff.
+    function isStaffOrAdmin() {
+      return isAdmin() || isStaff();
+    }
 
-      // Subcollections for user-specific tournament data.
+    // --- Collection Rules ---
+
+    // USER DATA: Users can only manage their own data. Admins can read any user profile.
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isStaffOrAdmin();
+      allow list: if isStaffOrAdmin(); // Only admins/staff can list all users.
+      allow create: if isOwner(userId); // A user can create their own profile.
+      allow update, delete: if isOwner(userId) || isAdmin(); // Only user or admin can modify/delete.
+
+      // Denormalized data subcollections for users.
       match /joinedTournaments/{tournamentId} {
-          // A user can fully manage their own joined tournament records.
-          // Admins can read them for management purposes.
-          allow read, write, delete: if isOwner(userId);
-          allow list: if isOwner(userId) || isAdmin();
+        // A user can fully manage their own records of joined tournaments.
+        allow read, write: if isOwner(userId);
+        // Admins/Staff can view for management.
+        allow list: if isOwner(userId) || isStaffOrAdmin();
       }
       match /wonTournaments/{tournamentId} {
-          // A user can read the tournaments they have won.
-          // Admins can write to this collection to award prizes.
-          allow read, list: if isOwner(userId) || isAdmin();
-          allow write: if isAdmin();
+        // A user can read the tournaments they have won.
+        allow read, list: if isOwner(userId) || isStaffOrAdmin();
+        // Only Admin/Staff can write to this collection to award prizes.
+        allow write: if isStaffOrAdmin();
       }
     }
 
-    // Tournaments are public to view, but only admins can modify them.
+    // TOURNAMENTS & CATEGORIES: Publicly readable, but only modifiable by staff/admins.
     match /tournaments/{tournamentId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isStaffOrAdmin();
 
-      // Tournament Registrations subcollection
+      // Registrations are publicly readable so users can see who has joined.
       match /registrations/{registrationId} {
-        // Any signed-in user can read the list of registrations to see who has joined.
         allow read, list: if isSignedIn();
         // A player can create their own registration.
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        // Only an admin can delete a registration.
-        allow delete: if isAdmin();
-        // No updates allowed to prevent tampering.
+        // Only an admin/staff can delete a registration.
+        allow delete: if isStaffOrAdmin();
+        // Updates are disallowed to prevent tampering.
         allow update: if false;
       }
     }
 
-    // Announcements are public to view, only admins can modify.
-    match /announcements/{announcementId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Highlights are public to view, only admins can modify.
-    match /highlights/{highlightId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Simplified rule for adding coin requests.
-    match /addCoinRequests/{requestId} {
-      // Players can only create requests for themselves.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Admins have full read/write access to all requests.
-      // Players can read THEIR OWN requests using a 'get' rule.
-      allow get: if isOwner(request.resource.data.userId) || isAdmin();
-      allow list, update, delete: if isAdmin();
-    }
-
-    // Simplified rule for withdrawing coin requests.
-    match /withdrawCoinRequests/{requestId} {
-      // Players can only create requests for themselves.
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Admins have full read/write access to all requests.
-      // Players can read THEIR OWN requests using a 'get' rule.
-      allow get: if isOwner(request.resource.data.userId) || isAdmin();
-      allow list, update, delete: if isAdmin();
-    }
-
-    // Categories are public to view, only admins can modify.
     match /categories/{categoryId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin(); 
+      allow create, update, delete: if isStaffOrAdmin();
+    }
+
+    // ANNOUNCEMENTS & HIGHLIGHTS: Publicly readable, modifiable by staff/admins.
+    match /announcements/{announcementId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStaffOrAdmin();
+    }
+
+    match /highlights/{highlightId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStaffOrAdmin();
+    }
+    
+    // ADD COIN REQUESTS: Players create for themselves. Staff/Admins manage.
+    match /addCoinRequests/{requestId} {
+      // A player can create a request for themselves.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Admins/Staff have full read/write access to all requests.
+      allow list, update, delete: if isStaffOrAdmin();
+      // Players can read THEIR OWN requests to check status.
+      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
+    }
+
+    // WITHDRAW COIN REQUESTS: Players create for themselves. Staff/Admins manage.
+    match /withdrawCoinRequests/{requestId} {
+      // A player can create a request for themselves.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Admins/Staff have full read/write access to all requests.
+      allow list, update, delete: if isStaffOrAdmin();
+      // Players can read THEIR OWN requests to check status.
+      allow get: if isOwner(request.resource.data.userId) || isStaffOrAdmin();
     }
   }
 }
