@@ -17,7 +17,7 @@ service cloud.firestore {
     match /users/{userId} {
       // A user can create their own profile upon registration.
       allow create: if request.auth != null && request.auth.uid == userId;
-      // A user can read/update their own profile. Admins can read/update any profile.
+      // A user can read/update their own profile. Admins/Staff can read/update any profile.
       allow read, update: if (request.auth != null && request.auth.uid == userId) || isStaffOrAdmin() || isSuperAdmin();
 
       // Rules for user sub-collections
@@ -59,17 +59,21 @@ service cloud.firestore {
     // --- GLOBAL ADMIN COLLECTIONS ---
     
     match /addCoinRequests/{requestId} {
-        // Players can create requests.
+        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Admins/Staff can read, list, and write (approve/deny).
-        allow list, read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins can read individual requests and perform writes (approve/deny).
+        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins are explicitly allowed to query the entire collection.
+        allow list: if isStaffOrAdmin() || isSuperAdmin();
     }
     
     match /withdrawCoinRequests/{requestId} {
-        // Players can create requests.
+        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Admins/Staff can read, list, and write.
-        allow list, read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins can read individual requests and perform writes.
+        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins are explicitly allowed to query the entire collection.
+        allow list: if isStaffOrAdmin() || isSuperAdmin();
     }
 
     // Rule: Public, read-only collections
