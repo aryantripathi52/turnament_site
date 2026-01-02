@@ -97,11 +97,11 @@ export function RequestHistory() {
 
   return (
     <div className="space-y-4">
-      {allRequests.map((request) => {
+      {allRequests.map((request, index) => {
         const isAddRequest = request.type === 'add';
         const statusInfo = statusConfig[request.status];
         return (
-          <Card key={request.id}>
+          <Card key={`${request.id}-${index}`}>
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <p className="font-semibold">

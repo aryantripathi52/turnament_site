@@ -456,5 +456,3 @@
     "reasoning": "The 'coinRequests' collection has been split into 'addCoinRequests' and 'withdrawCoinRequests' to simplify security rules. This avoids complex rules for querying based on the 'type' field, which was causing permission errors for admin users trying to list all pending requests. Each new collection now has a simple, direct rule allowing admins full access, while players can only create and read their own requests. This is a more robust and secure data model."
   }
 }
-
-    
