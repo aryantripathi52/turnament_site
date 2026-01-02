@@ -6,16 +6,13 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { HireStaffForm } from './hire-staff-form';
-import { Gem, LayoutDashboard, User as UserIcon, UserPlus, Stamp, Shield, Users } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Stamp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CoinApprovalTable } from './coin-approval-table';
-import { StaffManagementTable } from './staff-management-table';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isHireDialogOpen, setIsHireDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -46,14 +43,6 @@ export function AdminDashboard() {
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
                 </TabsTrigger>
-                <TabsTrigger value="hire" className="w-full justify-start gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Hire Staff
-                </TabsTrigger>
-                 <TabsTrigger value="manage-staff" className="w-full justify-start gap-2">
-                    <Users className="h-5 w-5" />
-                    Manage Staff
-                </TabsTrigger>
                 <TabsTrigger value="approval" className="w-full justify-start gap-2">
                     <Stamp className="h-5 w-5" />
                     Coin Approval
@@ -76,30 +65,6 @@ export function AdminDashboard() {
                     </CardContent>
                     </Card>
                 </div>
-            </TabsContent>
-            <TabsContent value="hire" className="mt-0 flex-1">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Hire Staff</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Register a new staff member for the platform.</p>
-                        <HireStaffForm isOpen={isHireDialogOpen} setIsOpen={setIsHireDialogOpen}>
-                            <Button className="mt-4" onClick={() => setIsHireDialogOpen(true)}>Hire Staff</Button>
-                        </HireStaffForm>
-                    </CardContent>
-                    </Card>
-            </TabsContent>
-            <TabsContent value="manage-staff" className="mt-0 flex-1">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Manage Staff</CardTitle>
-                         <p className="pt-2 text-muted-foreground">Block or unblock staff members from accessing staff privileges.</p>
-                    </CardHeader>
-                    <CardContent>
-                       <StaffManagementTable />
-                    </CardContent>
-                    </Card>
             </TabsContent>
             <TabsContent value="approval" className="mt-0 flex-1 space-y-6">
                 <div>
@@ -150,5 +115,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
