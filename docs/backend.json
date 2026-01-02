@@ -234,13 +234,6 @@
           "description": "Email address of the user.",
           "format": "email"
         },
-        "registrationIds": {
-          "type": "array",
-          "description": "References to Registrations. (Relationship: User 1:N Registration)",
-          "items": {
-            "type": "string"
-          }
-        },
         "role": {
           "type": "string",
           "description": "The role of the user."

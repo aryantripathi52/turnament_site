@@ -16,7 +16,6 @@ export interface UserProfile {
   username: string;
   email: string;
   role: 'admin' | 'staff' | 'player';
-  registrationIds: string[];
   coins: number;
 }
 
@@ -61,7 +60,7 @@ export const useUser = (): UserHookResult => {
 
   useEffect(() => {
     const fetchRequests = async () => {
-      if (!user || !firestore || profile?.role !== 'player') {
+      if (!user || !firestore) {
         setCoinRequests(null);
         return;
       }
@@ -70,7 +69,11 @@ export const useUser = (): UserHookResult => {
         const q = query(collection(firestore, "coinRequests"), where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithId<CoinRequest>));
-        requests.sort((a, b) => b.requestDate.toMillis() - a.requestDate.toMillis());
+        requests.sort((a, b) => {
+            const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
+            const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
+            return dateB - dateA;
+        });
         setCoinRequests(requests);
       } catch (e: any) {
         setRequestsError(e);
@@ -79,7 +82,7 @@ export const useUser = (): UserHookResult => {
       }
     };
     fetchRequests();
-  }, [user, firestore, profile]);
+  }, [user, firestore]);
 
 
   const combinedIsLoading = isUserLoading || isProfileLoading || requestsLoading;

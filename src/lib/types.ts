@@ -16,6 +16,15 @@ export type Tournament = {
   categoryId: string;
 };
 
+export type Registration = {
+    id: string;
+    tournamentId: string;
+    teamName: string;
+    playerIds: string[];
+    registrationDate: Timestamp;
+};
+
+
 export type Announcement = {
   id: string;
   title: string;
@@ -24,7 +33,7 @@ export type Announcement = {
 };
 
 export type CoinRequest = {
-  id: string;
+  id:string;
   userId: string;
   username: string;
   type: 'add' | 'withdraw';
