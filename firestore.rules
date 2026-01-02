@@ -160,7 +160,7 @@ service cloud.firestore {
     match /coinRequests/{coinRequestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
-      allow list: if isAdmin() || (isSignedIn() && request.query.where.userId == request.auth.uid);
+      allow list: if isAdmin();
       allow update: if isAdmin(); // Admins can approve/deny requests
       allow delete: if isAdmin();
     }

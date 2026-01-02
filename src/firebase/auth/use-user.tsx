@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFirebase, useMemoFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { CoinRequest } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
+
 
 // Define the shape of the user profile document in Firestore
 export interface UserProfile {
@@ -41,6 +41,11 @@ export const useUser = (): UserHookResult => {
     firestore,
   } = useFirebase();
 
+  const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
+  const [areCoinRequestsLoading, setAreCoinRequestsLoading] = useState(true);
+  const [coinRequestsError, setCoinRequestsError] = useState<Error | null>(null);
+
+
   // Memoize the document reference to prevent re-renders
   const userProfileRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -53,26 +58,39 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
-  // Create a memoized query for the user's coin requests
-  const coinRequestsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return query(collection(firestore, 'coinRequests'), where('userId', '==', user.uid));
+  useEffect(() => {
+    if (!user || !firestore) {
+      setCoinRequests(null);
+      setAreCoinRequestsLoading(false);
+      return;
+    }
+
+    const fetchCoinRequests = async () => {
+      setAreCoinRequestsLoading(true);
+      try {
+        const q = query(collection(firestore, 'coinRequests'), where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+        const requests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WithId<CoinRequest>));
+        
+        requests.sort((a, b) => {
+            const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
+            const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
+            return dateB - dateA;
+        });
+
+        setCoinRequests(requests);
+        setCoinRequestsError(null);
+      } catch (err: any) {
+        console.error("Error fetching coin requests:", err);
+        setCoinRequestsError(err);
+      } finally {
+        setAreCoinRequestsLoading(false);
+      }
+    };
+
+    fetchCoinRequests();
   }, [user, firestore]);
-
-  const {
-    data: rawCoinRequests,
-    isLoading: areCoinRequestsLoading,
-    error: coinRequestsError,
-  } = useCollection<CoinRequest>(coinRequestsQuery);
-
-  const coinRequests = useMemo(() => {
-    if (!rawCoinRequests) return null;
-    return [...rawCoinRequests].sort((a, b) => {
-      const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
-      const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
-      return dateB - dateA;
-    });
-  }, [rawCoinRequests]);
+  
 
   return {
     user,
