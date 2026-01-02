@@ -25,34 +25,35 @@ export function StaffCoinRequests() {
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Log admin status for debugging
+  const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
+
   useEffect(() => {
     if (profile) {
-      console.log("Admin/Staff Status Check:", {
+      console.log("Current User Status:", {
         role: profile.role,
-        isStaffOrAdmin: profile.role === 'admin' || profile.role === 'staff',
+        isStaffOrAdmin: isStaffOrAdmin,
         UID: user?.uid,
       });
     }
-  }, [profile, user]);
+  }, [profile, user, isStaffOrAdmin]);
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
-    if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
-    // Simple query for admins to list all pending requests
+    if (!firestore || !isStaffOrAdmin) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      orderBy('requestDate', 'asc')
     );
-  }, [firestore, profile]);
+  }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
-     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
-    // Simple query for admins to list all pending requests
+     if (!firestore || !isStaffOrAdmin) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      orderBy('requestDate', 'asc')
     );
-  }, [firestore, profile]);
+  }, [firestore, isStaffOrAdmin]);
 
   const { data: addRequests, setData: setAddRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
@@ -61,7 +62,6 @@ export function StaffCoinRequests() {
     const adds = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const withdraws = withdrawRequests?.map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
     const combined = [...adds, ...withdraws];
-    // Sort client-side
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
@@ -93,23 +93,19 @@ export function StaffCoinRequests() {
             
             const userProfile = userDoc.data() as UserProfile;
 
-            // If withdrawing, check for sufficient funds
             if (decision === 'approved' && request.type === 'withdraw' && userProfile.coins < request.amountCoins) {
                 throw new Error("User has insufficient coins for this withdrawal.");
             }
             
-            // Update the main request document
             transaction.update(requestRef, {
                 status: decision,
                 decisionDate: serverTimestamp(),
             });
             
-            // Update the player's private copy of the request
             transaction.update(playerRequestRef, {
                 status: decision
             });
 
-            // If approved, adjust the user's coin balance
             if (decision === 'approved') {
                 const coinChange = request.type === 'add' ? request.amountCoins : -request.amountCoins;
                 transaction.update(userRef, { coins: increment(coinChange) });
@@ -117,7 +113,6 @@ export function StaffCoinRequests() {
         });
 
 
-        // If transaction is successful, remove the processed request from the local state
         if (request.collectionName === 'addCoinRequests') {
             setAddRequests(prev => prev?.filter(r => r.id !== request.id) || null);
         } else {
@@ -143,8 +138,7 @@ export function StaffCoinRequests() {
 
 
   const renderRequests = () => {
-    // Explicitly check for admin/staff role
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+    if (!isStaffOrAdmin && !isLoading) {
        return (
         <Alert variant="destructive">
           <Ban className="h-4 w-4" />
@@ -172,8 +166,8 @@ export function StaffCoinRequests() {
           <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
              {error.message.includes('index')
-              ? 'Database indexes are building. This should resolve in a few minutes. Please wait and refresh.'
-              : 'Could not load requests. Check browser console for details and verify Firestore rules allow "list" operations for admins.'
+              ? 'The database needs an index to perform this query. Please check the browser console (F12) for a link to create it, then wait a few minutes.'
+              : `Could not load requests. Firestore error: ${error.message}`
             }
           </AlertDescription>
         </Alert>
