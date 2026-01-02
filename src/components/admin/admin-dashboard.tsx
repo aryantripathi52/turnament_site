@@ -13,6 +13,7 @@ import { CoinRequestHistoryTable } from './coin-request-history-table';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
 import { CreateTournamentForm } from './create-tournament-form';
+import { TournamentList } from './tournament-list';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -48,6 +49,10 @@ export function AdminDashboard() {
                 <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                    <Gamepad2 className="h-5 w-5" />
+                    Tournaments
                 </TabsTrigger>
                 <TabsTrigger value="approval" className="w-full justify-start gap-2">
                     <Stamp className="h-5 w-5" />
@@ -91,6 +96,13 @@ export function AdminDashboard() {
                 <div className="mt-8">
                   <h3 className="text-xl font-semibold mb-4">Existing Categories</h3>
                   <CategoryList />
+                </div>
+            </TabsContent>
+            <TabsContent value="tournaments" className="mt-0 flex-1 space-y-6">
+                <div>
+                    <h3 className="text-xl font-semibold mb-2">All Tournaments</h3>
+                    <p className="mb-4 text-muted-foreground">View and manage all active and upcoming tournaments.</p>
+                    <TournamentList />
                 </div>
             </TabsContent>
             <TabsContent value="approval" className="mt-0 flex-1 space-y-6">
