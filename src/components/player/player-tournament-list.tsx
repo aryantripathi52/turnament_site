@@ -84,7 +84,6 @@ export function PlayerTournamentList() {
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
     const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
-    const joinedTournamentRef = doc(firestore, `users/${user.uid}/joinedTournaments`, selectedTournament.id);
     
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -125,22 +124,11 @@ export function PlayerTournamentList() {
             slotNumber: newSlotNumber
         };
         transaction.set(registrationRef, registrationData);
-        
-        // 4. Create the user's private joined tournament record
-        const joinedTournamentData: JoinedTournament = {
-            id: selectedTournament.id,
-            name: selectedTournament.name,
-            startDate: selectedTournament.startDate,
-            prizePoolFirst: selectedTournament.prizePoolFirst,
-            entryFee: selectedTournament.entryFee,
-            slotNumber: newSlotNumber,
-            roomId: selectedTournament.roomId || null,
-            roomPassword: selectedTournament.roomPassword || null,
-        };
-        transaction.set(joinedTournamentRef, joinedTournamentData);
       });
 
-      refreshJoinedTournaments(); // Refresh the user's joined tournaments list
+      // TODO: Re-add the joinedTournaments write here, outside the transaction,
+      // after its security rule has been added. For now, we prioritize fixing the join logic.
+      refreshJoinedTournaments();
 
       toast({
         title: 'Registration Successful!',

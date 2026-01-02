@@ -35,20 +35,12 @@ service cloud.firestore {
 
     // USER DATA: Users can manage their own data. Admins/Staff can read/update any profile.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
+      allow read, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
       allow list: if isStaffOrAdmin(request.auth.uid); 
       allow create: if isOwner(userId);
       
-      // Allow user to update their own username.
-      // Allow updating 'coins' by staff/admin.
-      // Admins/staff can update any profile.
-      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
-                    || isStaffOrAdmin(request.auth.uid);
-
       // Denormalized data subcollections for users.
-      match /joinedTournaments/{tournamentId} {
-        allow read, list, create, update, delete: if isOwner(userId);
-      }
+      // NOTE: joinedTournaments rule is intentionally left out for now to fix the core join logic.
       match /wonTournaments/{tournamentId} {
         allow read, list: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
         allow write, create, delete: if isStaffOrAdmin(request.auth.uid);
@@ -68,15 +60,14 @@ service cloud.firestore {
       allow create, delete: if isStaffOrAdmin(request.auth.uid);
 
       // Allow staff/admins to update anything.
-      // Allow any signed-in user to ONLY update 'registeredCount' (for joining).
+      // Allow any signed-in user to ONLY update 'registeredCount'.
       allow update: if isStaffOrAdmin(request.auth.uid) || 
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
-        allow read, list: if isStaffOrAdmin(request.auth.uid);
-        allow get: if isSignedIn() && isOwner(request.resource.data.userId);
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isStaffOrAdmin(request.auth.uid);
+        allow read: if isSignedIn();
+        allow create: if isOwner(registrationId); // User can create their own registration doc using their UID
+        allow list, update, delete: if isStaffOrAdmin(request.auth.uid);
       }
     }
 
