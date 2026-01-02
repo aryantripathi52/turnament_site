@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment, getDoc } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment, getDoc, Timestamp } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,13 +18,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users, Info } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Tournament, Category, JoinedTournament, Registration } from '@/lib/types';
+import type { Tournament, Category, JoinedTournament, Registration, UserProfile } from '@/lib/types';
 import { Button } from '../ui/button';
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile } from '@/firebase/auth/use-user';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -35,6 +34,9 @@ const formatDate = (date: any) => {
   }
   if (date instanceof Date) {
     return format(date, 'PPp');
+  }
+  if (date instanceof Timestamp) {
+    return format(date.toDate(), 'PPp');
   }
   return 'Invalid Date';
 };
@@ -85,16 +87,19 @@ export function PlayerTournamentList() {
     const userId = auth.currentUser.uid;
     const tournamentId = selectedTournament.id;
     
-    // This alert is for final verification as requested.
-    alert("Sending to Project: " + db.app.options.projectId + "\nUser: " + auth.currentUser?.uid);
-
     console.log("UserID:", userId, "TournamentID:", tournamentId);
-
+    if (!userId || !tournamentId) {
+      console.error("Missing userId or tournamentId");
+      toast({ variant: "destructive", title: "Error", description: "User or Tournament ID is missing."});
+      return;
+    }
 
     try {
         await runTransaction(db, async (transaction) => {
             const userRef = doc(db, "users", userId);
             const tournamentRef = doc(db, "tournaments", tournamentId);
+            const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
+            const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
 
             // 1. Get current state of documents
             const userSnap = await transaction.get(userRef);
@@ -127,9 +132,12 @@ export function PlayerTournamentList() {
             const newSlotNumber = (tournamentData.registeredCount || 0) + 1;
 
             // 3. Perform all writes atomically
+            // Update 1: Deduct coins from user
             transaction.update(userRef, { coins: increment(-entryFee) });
+            // Update 2: Increment registered count on tournament
             transaction.update(tournamentRef, { registeredCount: increment(1) });
 
+            // Set 3: Create public registration document
             const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
                 userId: userId,
                 tournamentId: tournamentId,
@@ -137,11 +145,12 @@ export function PlayerTournamentList() {
                 playerIds: [userId],
                 slotNumber: newSlotNumber,
             };
-            transaction.set(doc(db, "tournaments", tournamentId, "registrations", userId), {
+            transaction.set(registrationRef, {
                 ...registrationData,
                 registrationDate: serverTimestamp(),
             });
 
+            // Set 4: Create user's private record of the joined tournament
             const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
                 name: selectedTournament.name,
                 startDate: selectedTournament.startDate,
@@ -151,7 +160,7 @@ export function PlayerTournamentList() {
                 roomId: selectedTournament.roomId || null,
                 roomPassword: selectedTournament.roomPassword || null
             };
-            transaction.set(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
+            transaction.set(joinedTournamentRef, joinedTournamentData);
         });
 
         refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
