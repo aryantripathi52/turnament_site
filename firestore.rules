@@ -13,26 +13,29 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Safely get the role of a user. Returns null if user or role doesn't exist.
-    function getRole(userId) {
-      let userDoc = get(/databases/$(database)/documents/users/$(userId));
-      // Check if the user document and the role field exist before accessing.
-      return userDoc.data.keys().has('role') ? userDoc.data.role : null;
+    // Safely get the role of the currently signed-in user.
+    function getUserRole() {
+        let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+        if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+            return userDoc.data.role;
+        }
+        return null;
     }
     
     // Check if the signed-in user is an Admin.
     function isAdmin() {
-      return isSignedIn() && getRole(request.auth.uid) == 'admin';
+      return isSignedIn() && getUserRole() == 'admin';
     }
 
     // Check if the signed-in user is a Staff member.
     function isStaff() {
-      return isSignedIn() && getRole(request.auth.uid) == 'staff';
+      return isSignedIn() && getUserRole() == 'staff';
     }
     
     // Check if the signed-in user is an Admin or Staff.
     function isStaffOrAdmin() {
-      return isAdmin() || isStaff();
+      let role = getUserRole();
+      return isSignedIn() && (role == 'admin' || role == 'staff');
     }
 
     // --- Collection Rules ---
