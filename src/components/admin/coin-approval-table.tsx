@@ -2,7 +2,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, getDoc, runTransaction } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import {
   Table,
@@ -20,6 +20,9 @@ import { Skeleton } from '../ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import type { UserProfile } from '@/firebase/auth/use-user';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 interface CoinApprovalTableProps {
   requestType: 'add' | 'withdraw';
@@ -38,10 +41,10 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
     );
   }, [firestore, requestType]);
 
-  const { data: requests, isLoading, error } = useCollection<CoinRequest>(requestsQuery);
+  const { data: requests, isLoading, error, setData: setRequests } = useCollection<CoinRequest>(requestsQuery);
 
    const onDecision = async (
-    requestId: string,
+    request: CoinRequest,
     decision: 'approved' | 'denied'
   ) => {
      if (!firestore) {
@@ -52,17 +55,51 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
         });
         return;
     }
+    
+    const requestRef = doc(firestore, 'coinRequests', request.id);
+    const userRef = doc(firestore, 'users', request.userId);
+
     try {
-        const requestRef = doc(firestore, 'coinRequests', requestId);
-        await updateDoc(requestRef, {
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User not found.");
+        }
+
+        const userProfile = userDoc.data() as UserProfile;
+        let newCoinBalance = userProfile.coins;
+
+        if (decision === 'approved') {
+          if (request.type === 'add') {
+            newCoinBalance += request.amountCoins;
+          } else { // withdraw
+            if (userProfile.coins < request.amountCoins) {
+              throw new Error("Insufficient user funds for withdrawal.");
+            }
+            newCoinBalance -= request.amountCoins;
+          }
+        }
+        
+        // Update user's coin balance if approved
+        if (decision === 'approved') {
+          transaction.update(userRef, { coins: newCoinBalance });
+        }
+
+        // Finally, update the request status
+        transaction.update(requestRef, {
             status: decision,
             decisionDate: new Date(),
         });
+      });
+      
+      // Optimistically update the UI by removing the processed request
+      setRequests((prevRequests) => prevRequests?.filter(r => r.id !== request.id) || null);
 
-        toast({
-            title: `Request ${decision}`,
-            description: `The coin request has been successfully ${decision}. The user's balance will be updated shortly.`,
-        });
+      toast({
+          title: `Request ${decision}`,
+          description: `The coin request has been successfully ${decision}.`,
+      });
+
     } catch (e: any) {
         console.error(`Failed to ${decision} request:`, e);
         toast({
@@ -132,7 +169,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                         <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onDecision(req.id, 'approved')}
+                        onClick={() => onDecision(req, 'approved')}
                         className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
                         >
                         <CheckCircle className="mr-2 h-4 w-4" />
@@ -141,7 +178,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
                         <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onDecision(req.id, 'denied')}
+                        onClick={() => onDecision(req, 'denied')}
                         className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
                         >
                         <XCircle className="mr-2 h-4 w-4" />
