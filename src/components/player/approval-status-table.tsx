@@ -1,6 +1,7 @@
 'use client';
 
-import { useUser } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import {
   Table,
   TableBody,
@@ -21,22 +22,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, query, where, orderBy } from 'firebase/firestore';
+import type { CoinRequest } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 const statusConfig = {
   pending: {
     icon: Clock,
-    color: 'bg-yellow-500',
     label: 'Pending',
   },
   approved: {
     icon: CheckCircle,
-    color: 'bg-green-500',
     label: 'Approved',
   },
   denied: {
     icon: XCircle,
-    color: 'bg-red-500',
     label: 'Denied',
   },
 };
@@ -53,9 +53,37 @@ const formatDate = (date: Timestamp | Date | undefined | null) => {
 };
 
 export function ApprovalStatusTable() {
-  const { coinRequests, isProfileLoading, userError } = useUser();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const [allRequests, setAllRequests] = useState<WithId<CoinRequest>[] | null>(null);
 
-  if (isProfileLoading) {
+  // Fetch Add Coin Requests
+  const addRequestsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, "addCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
+  }, [user, firestore]);
+  const { data: addRequests, isLoading: addLoading, error: addError } = useCollection<CoinRequest>(addRequestsQuery);
+  
+  // Fetch Withdraw Coin Requests
+  const withdrawRequestsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, "withdrawCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
+  }, [user, firestore]);
+  const { data: withdrawRequests, isLoading: withdrawLoading, error: withdrawError } = useCollection<CoinRequest>(withdrawRequestsQuery);
+
+  // Combine and sort requests when they are fetched
+  useEffect(() => {
+    if (addRequests || withdrawRequests) {
+      const combined = [...(addRequests || []), ...(withdrawRequests || [])];
+      combined.sort((a, b) => (b.requestDate?.seconds || 0) - (a.requestDate?.seconds || 0));
+      setAllRequests(combined);
+    }
+  }, [addRequests, withdrawRequests]);
+
+  const isLoading = isUserLoading || addLoading || withdrawLoading;
+  const error = addError || withdrawError;
+
+  if (isLoading) {
     return (
       <div className="space-y-2">
         <Skeleton className="h-12 w-full" />
@@ -65,7 +93,7 @@ export function ApprovalStatusTable() {
     );
   }
 
-  if (userError) {
+  if (error) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
@@ -77,7 +105,7 @@ export function ApprovalStatusTable() {
     );
   }
 
-  if (!coinRequests || coinRequests.length === 0) {
+  if (!allRequests || allRequests.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-8 border rounded-md">
         You have not made any coin requests yet.
@@ -105,7 +133,7 @@ export function ApprovalStatusTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {coinRequests.map((req) => {
+            {allRequests.map((req) => {
               const statusInfo = statusConfig[req.status];
               return (
                 <TableRow key={req.id}>

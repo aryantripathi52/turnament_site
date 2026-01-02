@@ -19,14 +19,16 @@ export interface UserProfile {
   coins: number;
 }
 
+// This hook result is now simplified. Components will fetch their own specific data.
 export interface UserHookResult {
   user: FirebaseUser | null;
   profile: WithId<UserProfile> | null;
-  coinRequests: WithId<CoinRequest>[] | null;
-  joinedTournaments: WithId<JoinedTournament>[] | null;
   isUserLoading: boolean;
   isProfileLoading: boolean;
   userError: Error | null;
+  // Role-specific data has been removed from here.
+  coinRequests: null; // Kept for type consistency, but will always be null.
+  joinedTournaments: WithId<JoinedTournament>[] | null; 
 }
 
 /**
@@ -54,51 +56,23 @@ export const useUser = (): UserHookResult => {
     error: profileError,
   } = useDoc<UserProfile>(userProfileRef);
 
-  // --- Fetch Coin Requests (only for players) ---
-  const addCoinRequestsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
-    return query(collection(firestore, "addCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore, profile, isProfileLoading]);
-
-  const withdrawCoinRequestsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
-    return query(collection(firestore, "withdrawCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
-  }, [user, firestore, profile, isProfileLoading]);
-
-  const {data: addCoinRequests, isLoading: isAddLoading, error: addError } = useCollection<CoinRequest>(addCoinRequestsQuery);
-  const {data: withdrawCoinRequests, isLoading: isWithdrawLoading, error: withdrawError } = useCollection<CoinRequest>(withdrawCoinRequestsQuery);
-  const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
-
-  useEffect(() => {
-    // Only combine requests if the user is a player
-    if (profile?.role !== 'player') {
-      setCoinRequests(null);
-      return;
-    }
-    if (addCoinRequests || withdrawCoinRequests) {
-        const combined = [...(addCoinRequests || []), ...(withdrawCoinRequests || [])];
-        combined.sort((a, b) => (b.requestDate?.seconds || 0) - (a.requestDate?.seconds || 0));
-        setCoinRequests(combined);
-    }
-  }, [addCoinRequests, withdrawCoinRequests, profile]);
-
-
-  // --- Fetch Joined Tournaments ---
+  // --- Fetch Joined Tournaments (Player-specific) ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
+    // This query now waits for the profile to load to check the role.
     if (isProfileLoading || !user || !firestore || profile?.role !== 'player') return null;
     return query(collection(firestore, 'users', user.uid, 'joinedTournaments'), orderBy('startDate', 'desc'));
   }, [user, firestore, profile, isProfileLoading]);
 
   const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
-
-  const combinedIsLoading = isUserLoading || isProfileLoading || isAddLoading || isWithdrawLoading || isTournamentsLoading;
-  const combinedError = userError || profileError || addError || withdrawError || tournamentsError;
+  const combinedIsLoading = isUserLoading || isProfileLoading || isTournamentsLoading;
+  const combinedError = userError || profileError || tournamentsError;
 
   return {
     user,
     profile,
-    coinRequests,
+    // The hook no longer fetches coin requests.
+    coinRequests: null, 
     joinedTournaments,
     isUserLoading: combinedIsLoading,
     isProfileLoading: combinedIsLoading,
