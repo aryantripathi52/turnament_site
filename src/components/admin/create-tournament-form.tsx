@@ -35,11 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Textarea } from '../ui/textarea';
 import type { Category } from '@/lib/types';
 
@@ -52,19 +47,13 @@ const formSchema = z.object({
   prizePoolSecond: z.coerce.number().positive({ message: '2nd prize must be a positive number.' }),
   prizePoolThird: z.coerce.number().positive({ message: '3rd prize must be a positive number.' }),
   entryFee: z.coerce.number().min(0, { message: "Entry fee can't be negative." }),
-  startDate: z.date({ required_error: 'A start date is required.' }),
+  startDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format' }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
-  endDate: z.date({ required_error: 'An end date is required.' }),
+  endDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format' }),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
 }).refine((data) => {
-    const startDateTime = new Date(data.startDate);
-    const [startHours, startMinutes] = data.startTime.split(':').map(Number);
-    startDateTime.setHours(startHours, startMinutes);
-
-    const endDateTime = new Date(data.endDate);
-    const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-    endDateTime.setHours(endHours, endMinutes);
-
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}`);
+    const endDateTime = new Date(`${data.endDate}T${data.endTime}`);
     return endDateTime > startDateTime;
 }, {
   message: "End date and time must be after start date and time.",
@@ -81,8 +70,6 @@ interface CreateTournamentFormProps {
 export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTournamentFormProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isStartOpen, setIsStartOpen] = React.useState(false);
-  const [isEndOpen, setIsEndOpen] = React.useState(false);
 
   const categoriesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -112,13 +99,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
     }
 
     try {
-        const startDateTime = new Date(values.startDate);
-        const [startHours, startMinutes] = values.startTime.split(':').map(Number);
-        startDateTime.setHours(startHours, startMinutes);
-
-        const endDateTime = new Date(values.endDate);
-        const [endHours, endMinutes] = values.endTime.split(':').map(Number);
-        endDateTime.setHours(endHours, endMinutes);
+        const startDateTime = new Date(`${values.startDate}T${values.startTime}`);
+        const endDateTime = new Date(`${values.endDate}T${values.endTime}`);
 
       const tournamentCollection = collection(firestore, 'tournaments');
       await addDoc(tournamentCollection, {
@@ -279,37 +261,12 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             control={form.control}
                             name="startDate"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Start Date & Time</FormLabel>
-                                <Popover open={isStartOpen} onOpenChange={setIsStartOpen}>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={(date) => {
-                                            field.onChange(date);
-                                            setIsStartOpen(false);
-                                        }}
-                                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage className="pt-2"/>
+                                <FormItem>
+                                <FormLabel>Start Date</FormLabel>
+                                <FormControl>
+                                    <Input type="date" {...field} />
+                                </FormControl>
+                                <FormMessage />
                                 </FormItem>
                             )}
                             />
@@ -317,7 +274,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             control={form.control}
                             name="startTime"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col justify-end">
+                                <FormItem>
+                                    <FormLabel>Start Time</FormLabel>
                                     <FormControl>
                                         <Input type="time" {...field} />
                                     </FormControl>
@@ -331,37 +289,12 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             control={form.control}
                             name="endDate"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>End Date & Time</FormLabel>
-                                <Popover open={isEndOpen} onOpenChange={setIsEndOpen}>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={(date) => {
-                                            field.onChange(date);
-                                            setIsEndOpen(false);
-                                        }}
-                                        disabled={(date) => date < (form.getValues("startDate") || new Date(new Date().setHours(0,0,0,0)))}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage className="pt-2"/>
+                                <FormItem>
+                                <FormLabel>End Date</FormLabel>
+                                <FormControl>
+                                    <Input type="date" {...field} />
+                                </FormControl>
+                                <FormMessage />
                                 </FormItem>
                             )}
                             />
@@ -369,7 +302,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             control={form.control}
                             name="endTime"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col justify-end">
+                                <FormItem>
+                                    <FormLabel>End Time</FormLabel>
                                     <FormControl>
                                         <Input type="time" {...field} />
                                     </FormControl>
