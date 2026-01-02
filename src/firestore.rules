@@ -17,7 +17,9 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
-      return getUserRole(userId) == 'admin';
+      let userRole = getUserRole(userId);
+      // Also allow the specific admin email as a fallback
+      return userRole == 'admin' || request.auth.token.email == 'admin@dps.in';
     }
 
     function isStaff(userId) {
@@ -26,7 +28,7 @@ service cloud.firestore {
     
     function isStaffOrAdmin(userId) {
       let role = getUserRole(userId);
-      return role == 'admin' || role == 'staff';
+      return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
 
     // --- Collection Rules ---

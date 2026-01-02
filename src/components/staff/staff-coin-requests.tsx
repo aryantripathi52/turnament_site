@@ -1,20 +1,19 @@
 'use client';
 
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Timestamp, doc, writeBatch, serverTimestamp, increment } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, orderBy, Timestamp, doc, writeBatch, serverTimestamp, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import type { AddCoinRequest, WithdrawCoinRequest } from '@/lib/types';
+import type { AddCoinRequest, WithdrawCoinRequest, UserProfile } from '@/lib/types';
 import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & { collectionName: 'addCoinRequests' | 'withdrawCoinRequests'};
@@ -22,26 +21,27 @@ type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & 
 
 export function StaffCoinRequests() {
   const firestore = useFirestore();
+  const { profile } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
       where('status', '==', 'pending'),
       orderBy('requestDate', 'asc')
     );
-  }, [firestore]);
+  }, [firestore, profile]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
       where('status', '==', 'pending'),
       orderBy('requestDate', 'asc')
     );
-  }, [firestore]);
+  }, [firestore, profile]);
 
   const { data: addRequests, setData: setAddRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
@@ -66,33 +66,40 @@ export function StaffCoinRequests() {
     const userRef = doc(firestore, 'users', request.userId);
 
     try {
-        const batch = writeBatch(firestore);
-
-        // Update the request status and decision date
-        batch.update(requestRef, {
-            status: decision,
-            decisionDate: serverTimestamp(),
-        });
-        
-        // Also update the player's private copy of the request
-        const playerRequestRef = doc(firestore, `users/${request.userId}/${request.collectionName}`, request.id);
-        batch.update(playerRequestRef, {
-            status: decision
-        });
-
-
-        // If approved, adjust the user's coin balance
-        if (decision === 'approved') {
-            if (request.type === 'add') {
-                batch.update(userRef, { coins: increment(request.amountCoins) });
-            } else { // 'withdraw'
-                batch.update(userRef, { coins: increment(-request.amountCoins) });
+        await runTransaction(firestore, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) {
+                throw new Error("User profile not found.");
             }
-        }
+            
+            const userProfile = userDoc.data() as UserProfile;
 
-        await batch.commit();
+            // If withdrawing, check for sufficient funds
+            if (decision === 'approved' && request.type === 'withdraw' && userProfile.coins < request.amountCoins) {
+                throw new Error("User has insufficient coins for this withdrawal.");
+            }
+            
+            // Update the main request document
+            transaction.update(requestRef, {
+                status: decision,
+                decisionDate: serverTimestamp(),
+            });
+            
+            // Update the player's private copy of the request
+            const playerRequestRef = doc(firestore, `users/${request.userId}/${request.collectionName}`, request.id);
+            transaction.update(playerRequestRef, {
+                status: decision
+            });
 
-        // Remove the processed request from the local state
+            // If approved, adjust the user's coin balance
+            if (decision === 'approved') {
+                const coinChange = request.type === 'add' ? request.amountCoins : -request.amountCoins;
+                transaction.update(userRef, { coins: increment(coinChange) });
+            }
+        });
+
+
+        // If transaction is successful, remove the processed request from the local state
         if (request.collectionName === 'addCoinRequests') {
             setAddRequests(prev => prev?.filter(r => r.id !== request.id) || null);
         } else {
