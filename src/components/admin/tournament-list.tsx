@@ -5,7 +5,7 @@ import { collection, orderBy, query, doc, deleteDoc, updateDoc } from 'firebase/
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock } from 'lucide-react';
+import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -36,6 +36,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ManageTournamentDialog } from './manage-tournament-dialog';
+import { SetRoomInfoDialog } from './set-room-info-dialog';
+
 
 const formatDate = (date: any) => {
   if (!date) return 'N/A';
@@ -62,6 +64,7 @@ export function TournamentList() {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState<WithId<Tournament> | null>(null);
   const [manageTournament, setManageTournament] = useState<WithId<Tournament> | null>(null);
+  const [roomInfoTournament, setRoomInfoTournament] = useState<WithId<Tournament> | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -98,17 +101,34 @@ export function TournamentList() {
       setTournamentToDelete(null);
     }
   };
+  
+  const handleUpdate = (updatedTournament: WithId<Tournament>) => {
+    setTournaments(prev => prev?.map(t => t.id === updatedTournament.id ? updatedTournament : t) || null);
+  };
 
   const handleUpdateStatus = async (tournamentId: string, status: Tournament['status']) => {
     if (!firestore) return;
     try {
       const tournamentRef = doc(firestore, 'tournaments', tournamentId);
       await updateDoc(tournamentRef, { status });
-      setTournaments(prev => prev?.map(t => t.id === tournamentId ? { ...t, status } : t) || null);
+      handleUpdate({ ...tournaments!.find(t => t.id === tournamentId)!, status });
       toast({ title: 'Success', description: 'Tournament status has been updated.' });
     } catch (e) {
       console.error("Error updating status: ", e);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update status.' });
+    }
+  };
+  
+  const handleClearRoomInfo = async (tournamentId: string) => {
+    if (!firestore) return;
+    try {
+      const tournamentRef = doc(firestore, 'tournaments', tournamentId);
+      await updateDoc(tournamentRef, { roomId: null, roomPassword: null });
+      handleUpdate({ ...tournaments!.find(t => t.id === tournamentId)!, roomId: undefined, roomPassword: undefined });
+      toast({ title: 'Success', description: 'Room info has been cleared.' });
+    } catch (e) {
+      console.error("Error clearing room info: ", e);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not clear room info.' });
     }
   };
 
@@ -202,6 +222,10 @@ export function TournamentList() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                     <DropdownMenuItem onClick={() => setRoomInfoTournament(tournament)}>
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      <span>Set Room ID & Pass</span>
+                    </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
@@ -214,6 +238,12 @@ export function TournamentList() {
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleClearRoomInfo(tournament.id)}
+                      disabled={!tournament.roomId && !tournament.roomPassword}
+                    >
+                      Clear Room Info
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"
                       onClick={() => {
@@ -255,11 +285,18 @@ export function TournamentList() {
           tournament={manageTournament} 
           isOpen={!!manageTournament} 
           setIsOpen={(isOpen) => !isOpen && setManageTournament(null)}
-          onTournamentUpdate={(updatedTournament) => {
-            setTournaments(prev => prev?.map(t => t.id === updatedTournament.id ? updatedTournament : t) || null);
-          }}
+          onTournamentUpdate={handleUpdate}
         />
       )}
+      
+       {roomInfoTournament && (
+        <SetRoomInfoDialog 
+          tournament={roomInfoTournament}
+          isOpen={!!roomInfoTournament}
+          setIsOpen={(isOpen) => !isOpen && setRoomInfoTournament(null)}
+          onTournamentUpdate={handleUpdate}
+        />
+       )}
     </>
   );
 }
