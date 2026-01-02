@@ -18,6 +18,7 @@ service cloud.firestore {
     
     function isAdmin() {
       let userRole = getUserRole(request.auth.uid);
+      // Hardcoded admin email for superuser access
       return userRole == 'admin' || request.auth.token.email == 'admin@dps.in';
     }
 
@@ -27,6 +28,7 @@ service cloud.firestore {
     
     function isStaffOrAdmin() {
       let role = getUserRole(request.auth.uid);
+      // Hardcoded admin email for superuser access
       return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
 
@@ -39,7 +41,7 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       
       // Allow user to update their own username.
-      // Allow 'coins' to be updated (by admin or via transaction).
+      // Allow 'coins' to be updated by staff/admin (via transactions for coin requests)
       // Allow admins/staff to update any user profile fully.
       allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
                     || isStaffOrAdmin();
@@ -73,7 +75,7 @@ service cloud.firestore {
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
-        allow read, list: if isStaffOrAdmin();
+        allow read, list: if isStaffOrAdmin(); // Only staff/admin can see full registration list
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isStaffOrAdmin();
       }
@@ -87,7 +89,7 @@ service cloud.firestore {
     // ANNOUNCEMENTS & HIGHLIGHTS: Publicly readable, modifiable by staff/admins.
     match /announcements/{announcementId} {
       allow get, list: if true;
-      allow create, update, delete: if isStaffOrAdmin();
+      allow create, update, delete: if isStaffOrDAdmin();
     }
 
     match /highlights/{highlightId} {

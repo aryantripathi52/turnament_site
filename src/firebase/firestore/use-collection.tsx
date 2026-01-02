@@ -9,8 +9,6 @@ import {
   QuerySnapshot,
   CollectionReference,
 } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -86,29 +84,15 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-              ? (memoizedTargetRefOrQuery as CollectionReference).path
-              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
-
         if (error.code === 'permission-denied') {
-          console.warn(
-            `Firestore Permission Denied on collection query. Path: ${path}. Returning empty array to prevent app crash.`,
-            error
-          );
+          console.warn('Silent Permission Denied: Returning empty array. Check Firestore rules.');
           setData([]); // Return empty array on permission error to prevent crash
           setError(error); // Still set the error state for optional UI feedback
         } else {
-            const contextualError = new FirestorePermissionError({
-            operation: 'list',
-            path,
-            })
-
-            setError(contextualError)
-            setData(null)
-
-            // trigger global error propagation for non-permission-denied errors if needed
-            errorEmitter.emit('permission-error', contextualError);
+          // For other errors, log them and set state appropriately
+          console.error("useCollection Firestore Error:", error);
+          setError(error);
+          setData(null);
         }
         setIsLoading(false);
       }
@@ -116,8 +100,10 @@ export function useCollection<T = any>(
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+    throw new Error('A query passed to useCollection was not properly memoized using useMemoFirebase. This will cause infinite loops.');
   }
+
   return { data, isLoading, error, setData };
 }

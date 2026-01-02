@@ -132,7 +132,7 @@ export function StaffCoinRequests() {
           <Ban className="h-4 w-4" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
-            You do not have permission to view this section.
+            You do not have permission to view this section. Please contact an administrator.
           </AlertDescription>
         </Alert>
       );
@@ -151,9 +151,9 @@ export function StaffCoinRequests() {
       return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Requests</AlertTitle>
+          <AlertTitle>Access Denied or Error</AlertTitle>
           <AlertDescription>
-            There was a problem loading coin requests. The permissions might be incorrect.
+            Could not load coin requests. You may not have the required permissions, or an error occurred.
           </AlertDescription>
         </Alert>
       );
@@ -164,7 +164,7 @@ export function StaffCoinRequests() {
         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-md">
           <CheckCircle className="mx-auto h-12 w-12" />
           <h3 className="mt-4 text-lg font-medium">All Caught Up</h3>
-          <p className="mt-1 text-sm">There are no pending coin requests to review.</p>
+          <p className="mt-1 text-sm">No pending coin requests found or access denied.</p>
         </div>
       );
     }
