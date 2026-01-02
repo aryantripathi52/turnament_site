@@ -63,5 +63,13 @@ service cloud.firestore {
       // A user can create a request for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
+
+    match /categories/{categoryId} {
+      allow get: if true;
+      allow list: if true;
+      allow create, update, delete: if isSignedIn(); // For now, any signed-in user can manage categories
+    }
   }
 }
+
+    

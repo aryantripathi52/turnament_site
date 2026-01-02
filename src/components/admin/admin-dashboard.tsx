@@ -10,10 +10,13 @@ import { Gem, LayoutDashboard, User as UserIcon, Stamp, History, Gamepad2 } from
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CoinApprovalTable } from './coin-approval-table';
 import { CoinRequestHistoryTable } from './coin-request-history-table';
+import { CreateCategoryForm } from './create-category-form';
+import { CategoryList } from './category-list';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -70,14 +73,20 @@ export function AdminDashboard() {
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardHeader>
-                          <CardTitle>Create Category</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                          <p>Add and manage game categories.</p>
-                          <Button className="mt-4" disabled>Coming Soon</Button>
-                      </CardContent>
+                        <CardHeader>
+                            <CardTitle>Create Category</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Add and manage game categories.</p>
+                             <CreateCategoryForm isOpen={isCategoryDialogOpen} setIsOpen={setIsCategoryDialogOpen}>
+                                <Button className="mt-4" onClick={() => setIsCategoryDialogOpen(true)}>Add Category</Button>
+                            </CreateCategoryForm>
+                        </CardContent>
                     </Card>
+                </div>
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold mb-4">Existing Categories</h3>
+                  <CategoryList />
                 </div>
             </TabsContent>
             <TabsContent value="approval" className="mt-0 flex-1 space-y-6">
@@ -136,3 +145,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    

@@ -33,3 +33,11 @@ export type CoinRequest = {
   requestDate: Timestamp;
   decisionDate?: Timestamp;
 };
+
+export type Category = {
+  id: string;
+  name: string;
+  imageUrl: string;
+};
+
+    
