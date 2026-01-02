@@ -29,12 +29,8 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
-     <div className={cn("flip-card h-[250px]")} onClick={(event) => {
-        // Prevent flipping when clicking buttons inside
-        if (event.target instanceof HTMLButtonElement || (event.target as HTMLElement).closest('button')) return;
-        setIsFlipped(!isFlipped)
-    }}>
-      <div className={cn("flip-card-inner", isFlipped && "[transform:rotateY(180deg)]")}>
+     <div className="flip-card h-[250px]" >
+      <div className={cn("flip-card-inner", isFlipped && "flipped")}>
         <div className="flip-card-front">
           <Card className="h-full flex flex-col">
             <CardHeader>
@@ -75,11 +71,11 @@ function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) 
                 <CardTitle className="text-xl">Room Details</CardTitle>
              </CardHeader>
              <CardContent className="flex-grow space-y-4">
-                <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+                <div className="flex items-center gap-3 bg-primary/10 p-3 rounded-md border border-primary/20">
                    <Hash className="h-5 w-5 text-primary" />
                    <div>
                      <p className="text-xs text-muted-foreground">Your Slot</p>
-                     <p className="font-bold text-lg">#{tournament.slotNumber}</p>
+                     <p className="font-bold text-lg text-primary">#{tournament.slotNumber}</p>
                    </div>
                 </div>
                 {tournament.roomId && tournament.roomPassword ? (
