@@ -28,11 +28,6 @@ service cloud.firestore {
       allow list: if true;
       allow create, update, delete: if isSignedIn();
     }
-    
-    // This allows a cross-collection query on the 'registrations' group
-     match /registrations/{registrationId} {
-      allow list, get: if isSignedIn() && request.query.where.playerIds[1] == request.auth.uid;
-    }
 
     match /tournaments/{tournamentId}/registrations/{registrationId} {
       function isCreatingTeamMember() {
@@ -42,8 +37,12 @@ service cloud.firestore {
         return isSignedIn() && isExistingDoc() && request.auth.uid in resource.data.playerIds;
       }
 
-      allow get: if isExistingTeamMember() || isSignedIn();
+      // A user can list their own registrations.
       allow list: if isSignedIn() && request.query.where.playerIds[0] == 'array-contains' && request.query.where.playerIds[1] == request.auth.uid;
+      
+      // A user can get a registration if they are a team member.
+      allow get: if isExistingTeamMember() || isSignedIn();
+
       allow create: if isCreatingTeamMember() && request.resource.data.tournamentId == tournamentId;
       allow update: if isExistingTeamMember() && request.resource.data.tournamentId == resource.data.tournamentId;
       allow delete: if isExistingTeamMember() || isSignedIn();
@@ -76,3 +75,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

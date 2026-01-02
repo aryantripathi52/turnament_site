@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, getDocs, Timestamp, getDoc } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, Timestamp, getDoc, collectionGroup } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { CoinRequest, Registration, Tournament } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
@@ -17,6 +17,7 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'staff' | 'player';
   coins: number;
+  registrationIds?: string[];
 }
 
 export interface JoinedTournament extends WithId<Tournament> {
@@ -86,10 +87,11 @@ export const useUser = (): UserHookResult => {
         setCoinRequests(requests);
 
         // --- Fetch Joined Tournaments ---
-        const registrationsQuery = query(collection(firestore, 'registrations'), where('playerIds', 'array-contains', user.uid));
+        const registrationsQuery = query(collectionGroup(firestore, 'registrations'), where('playerIds', 'array-contains', user.uid));
+
         const registrationsSnapshot = await getDocs(registrationsQuery);
         const registrations = registrationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as WithId<Registration>);
-
+        
         const tournamentPromises = registrations.map(async (reg) => {
             const tournamentRef = doc(firestore, 'tournaments', reg.tournamentId);
             const tournamentSnap = await getDoc(tournamentRef);
@@ -113,7 +115,7 @@ export const useUser = (): UserHookResult => {
       }
     };
     fetchUserData();
-  }, [user, firestore]);
+  }, [user, firestore, profile]); // Rerun when profile changes (e.g., registrationIds get updated)
 
 
   const combinedIsLoading = isUserLoading || isProfileLoading || dataLoading;
@@ -129,3 +131,5 @@ export const useUser = (): UserHookResult => {
     userError: combinedError,
   };
 };
+
+    
