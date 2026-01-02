@@ -223,7 +223,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                         name="prizePoolFirst"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>1st Prize (INR)</FormLabel>
+                            <FormLabel>1st Prize (Coins)</FormLabel>
                             <FormControl>
                                 <Input type="number" placeholder="25000" {...field} />
                             </FormControl>
@@ -236,7 +236,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                         name="prizePoolSecond"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>2nd Prize (INR)</FormLabel>
+                            <FormLabel>2nd Prize (Coins)</FormLabel>
                             <FormControl>
                                 <Input type="number" placeholder="15000" {...field} />
                             </FormControl>
@@ -249,7 +249,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                         name="prizePoolThird"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>3rd Prize (INR)</FormLabel>
+                            <FormLabel>3rd Prize (Coins)</FormLabel>
                             <FormControl>
                                 <Input type="number" placeholder="10000" {...field} />
                             </FormControl>
