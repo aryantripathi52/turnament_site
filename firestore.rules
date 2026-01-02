@@ -17,7 +17,8 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
-      return getUserRole(userId) == 'admin';
+      // Hardcoded admin email for superuser access
+      return getUserRole(userId) == 'admin' || request.auth.token.email == 'admin@dps.in';
     }
 
     function isStaff(userId) {
@@ -26,21 +27,22 @@ service cloud.firestore {
     
     function isStaffOrAdmin(userId) {
       let role = getUserRole(userId);
-      return role == 'admin' || role == 'staff';
+      // Hardcoded admin email for superuser access
+      return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
 
     // --- Collection Rules ---
 
-    // USER DATA: Users can manage their own data. Admins/Staff can read any profile.
+    // USER DATA: Users can manage their own data. Admins/Staff can read/update any profile.
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
       allow list: if isStaffOrAdmin(request.auth.uid); 
       allow create: if isOwner(userId);
       
       // Allow user to update their own username.
-      // Allow updating 'coins' if it's part of a transaction.
-      // Admins can update any profile.
-      allow update: if (isOwner(userId) && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coins'])))
+      // Allow updating 'coins' by staff/admin.
+      // Admins/staff can update any profile.
+      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
                     || isStaffOrAdmin(request.auth.uid);
 
       // Denormalized data subcollections for users.
@@ -49,14 +51,14 @@ service cloud.firestore {
       }
       match /wonTournaments/{tournamentId} {
         allow read, list: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-        allow write, create, delete: if isStaffOrAdmin(request.auth.uid); // Only staff/admin can award a win
+        allow write, create, delete: if isStaffOrAdmin(request.auth.uid);
       }
       
       match /addCoinRequests/{requestId} {
-        allow read, list, create, update, delete: if isOwner(userId);
+        allow read, list, create, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
       }
       match /withdrawCoinRequests/{requestId} {
-        allow read, list, create, update, delete: if isOwner(userId);
+        allow read, list, create, update: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
       }
     }
 
@@ -71,7 +73,8 @@ service cloud.firestore {
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
-        allow read, list: if isSignedIn();
+        allow read, list: if isStaffOrAdmin(request.auth.uid);
+        allow get: if isSignedIn() && isOwner(request.resource.data.userId);
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isStaffOrAdmin(request.auth.uid);
       }

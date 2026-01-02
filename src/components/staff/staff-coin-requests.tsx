@@ -29,8 +29,7 @@ export function StaffCoinRequests() {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      where('status', '==', 'pending')
     );
   }, [firestore, profile]);
 
@@ -38,8 +37,7 @@ export function StaffCoinRequests() {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
-      where('status', '==', 'pending'),
-      orderBy('requestDate', 'asc')
+      where('status', '==', 'pending')
     );
   }, [firestore, profile]);
 
@@ -114,8 +112,8 @@ export function StaffCoinRequests() {
         }
 
         toast({
-            title: 'Success',
-            description: `Request has been ${decision}.`,
+            title: `Request ${decision.charAt(0).toUpperCase() + decision.slice(1)}`,
+            description: `The request for ${request.amountCoins.toLocaleString()} coins has been processed.`,
         });
 
     } catch (e: any) {
