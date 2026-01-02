@@ -43,7 +43,6 @@ export function PlayerTournamentList() {
   const firestore = useFirestore();
   const { user, profile, joinedTournaments } = useUser();
   const { toast } = useToast();
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -76,7 +75,7 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = async () => {
+  const handleConfirmEntry = async (selectedTournament: Tournament) => {
     if (!firestore || !user || !profile || !selectedTournament) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process entry. Please try again.' });
       return;
@@ -144,8 +143,6 @@ export function PlayerTournamentList() {
         title: 'Registration Failed',
         description: e.message || 'An unexpected error occurred.',
       });
-    } finally {
-        setSelectedTournament(null);
     }
   };
 
@@ -188,81 +185,80 @@ export function PlayerTournamentList() {
          const isRegistrationClosed = tournament.status !== 'upcoming';
 
         return (
-          <Card key={tournament.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl">{tournament.name}</CardTitle>
-                  <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-4">
-               <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
-               <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-primary" />
+          <AlertDialog key={tournament.id}>
+            <Card className="flex flex-col">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                    <CardTitle className="text-xl">{tournament.name}</CardTitle>
+                    <Badge variant="secondary">{categoriesMap.get(tournament.categoryId) || 'Unknown'}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow space-y-4">
+                 <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
+                 <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span>
+                            Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span> (1st)
+                        </span>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Gem className="h-4 w-4 text-muted-foreground" />
+                        <span>
+                            Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
                       <span>
-                          Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span> (1st)
+                        Slots: <span className={cn("font-semibold", isFull && "text-destructive")}>{tournament.registeredCount} / {tournament.maxPlayers}</span>
                       </span>
-                  </div>
-                   <div className="flex items-center gap-2">
-                      <Gem className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                          Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
-                      </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      Slots: <span className={cn("font-semibold", isFull && "text-destructive")}>{tournament.registeredCount} / {tournament.maxPlayers}</span>
-                    </span>
-                  </div>
-                   <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>
-                          Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
-                      </span>
-                  </div>
-               </div>
-            </CardContent>
-            <CardFooter>
-            {isFull ? (
-                 <Button size="sm" className="w-full" disabled>
-                    Tournament Full
-                </Button>
-            ) : isRegistrationClosed ? (
-                <Button size="sm" className="w-full" disabled>
-                    Registration Closed
-                </Button>
-            ) : (
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" className="w-full" onClick={() => setSelectedTournament(tournament)}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Enter Tournament
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>
+                            Starts: <span className="font-semibold">{formatDate(tournament.startDate)}</span>
+                        </span>
+                    </div>
+                 </div>
+              </CardContent>
+              <CardFooter>
+              {isFull ? (
+                   <Button size="sm" className="w-full" disabled>
+                      Tournament Full
                   </Button>
-                </AlertDialogTrigger>
-            )}
-            </CardFooter>
-          </Card>
+              ) : isRegistrationClosed ? (
+                  <Button size="sm" className="w-full" disabled>
+                      Registration Closed
+                  </Button>
+              ) : (
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" className="w-full">
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Enter Tournament
+                    </Button>
+                  </AlertDialogTrigger>
+              )}
+              </CardFooter>
+            </Card>
+
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to enter the <span className="font-semibold text-foreground">"{tournament?.name}"</span>? 
+                    The entry fee of <span className="font-semibold text-foreground">{tournament?.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleConfirmEntry(tournament)}>Confirm Entry</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )
       })}
     </div>
-
-    <AlertDialog open={!!selectedTournament} onOpenChange={(isOpen) => !isOpen && setSelectedTournament(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Tournament Entry</AlertDialogTitle>
-            <AlertDialogDescription>
-                Are you sure you want to enter the <span className="font-semibold text-foreground">"{selectedTournament?.name}"</span>? 
-                The entry fee of <span className="font-semibold text-foreground">{selectedTournament?.entryFee.toLocaleString()} coins</span> will be deducted from your wallet. This action cannot be undone.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmEntry}>Confirm Entry</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-
     </>
   );
 }
