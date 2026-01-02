@@ -35,7 +35,7 @@ service cloud.firestore {
           allow read, write, delete: if isOwner(userId);
       }
       match /wonTournaments/{tournamentId} {
-          allow read, write: if isOwner(userId) || isAdmin();
+          allow list, read, write: if isOwner(userId) || isAdmin();
       }
     }
 
