@@ -24,7 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useMemo } from 'react';
 
 const statusConfig = {
   approved: {
@@ -60,19 +59,15 @@ export function CoinRequestHistoryTable() {
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Query for all requests and sort by date. Filtering will happen on the client.
+    // Query for all requests that are either 'approved' or 'denied'
     return query(
       collection(firestore, 'coinRequests'),
+      where('status', 'in', ['approved', 'denied']),
       orderBy('requestDate', 'desc')
     );
   }, [firestore]);
 
-  const { data: allRequests, isLoading, error } = useCollection<CoinRequest>(requestsQuery);
-
-  const requests = useMemo(() => {
-    // Filter for only 'approved' or 'denied' requests on the client side.
-    return allRequests?.filter(req => req.status === 'approved' || req.status === 'denied') || null;
-  }, [allRequests]);
+  const { data: requests, isLoading, error } = useCollection<CoinRequest>(requestsQuery);
 
 
   if (isLoading) {

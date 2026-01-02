@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
-import { doc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, Timestamp, orderBy } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { CoinRequest, JoinedTournament } from '@/lib/types';
 import { useMemoFirebase } from '../provider';
