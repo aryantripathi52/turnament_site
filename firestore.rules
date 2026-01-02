@@ -28,6 +28,11 @@ service cloud.firestore {
       allow list: if true;
       allow create, update, delete: if isSignedIn();
     }
+    
+    // This allows a cross-collection query on the 'registrations' group
+     match /registrations/{registrationId} {
+      allow list, get: if isSignedIn() && request.query.where.playerIds[1] == request.auth.uid;
+    }
 
     match /tournaments/{tournamentId}/registrations/{registrationId} {
       function isCreatingTeamMember() {
