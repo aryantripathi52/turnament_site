@@ -3,14 +3,16 @@ import { Timestamp } from 'firebase/firestore';
 export type Tournament = {
   id: string;
   name: string;
-  date: string;
-  prizePool: string;
-  region: string;
-  rules: string[];
-  registrationDeadline: string;
-  contact: string;
-  imageUrl: string;
-  imageHint: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  prizePoolFirst: number;
+  prizePoolSecond: number;
+  prizePoolThird: number;
+  description: string;
+  rules: string;
+  registrationLink: string;
+  contactEmail: string;
+  categoryId: string;
 };
 
 export type Announcement = {
@@ -39,5 +41,3 @@ export type Category = {
   name: string;
   imageUrl: string;
 };
-
-    

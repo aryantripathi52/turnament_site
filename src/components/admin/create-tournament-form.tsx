@@ -48,7 +48,9 @@ const formSchema = z.object({
   name: z.string().min(3, { message: 'Tournament name must be at least 3 characters.' }),
   categoryId: z.string({ required_error: 'Please select a game category.' }),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
-  prizePool: z.coerce.number().positive({ message: 'Prize pool must be a positive number.' }),
+  prizePoolFirst: z.coerce.number().positive({ message: '1st prize must be a positive number.' }),
+  prizePoolSecond: z.coerce.number().positive({ message: '2nd prize must be a positive number.' }),
+  prizePoolThird: z.coerce.number().positive({ message: '3rd prize must be a positive number.' }),
   startDate: z.date({ required_error: 'A start date is required.' }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
   endDate: z.date({ required_error: 'An end date is required.' }),
@@ -91,7 +93,9 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
     defaultValues: {
       name: '',
       description: '',
-      prizePool: 0,
+      prizePoolFirst: 0,
+      prizePoolSecond: 0,
+      prizePoolThird: 0,
       startTime: "12:00",
       endTime: "18:00",
     },
@@ -117,7 +121,9 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
         name: values.name,
         categoryId: values.categoryId,
         description: values.description,
-        prizePool: values.prizePool,
+        prizePoolFirst: values.prizePoolFirst,
+        prizePoolSecond: values.prizePoolSecond,
+        prizePoolThird: values.prizePoolThird,
         startDate: startDateTime,
         endDate: endDateTime,
         rules: "Standard tournament rules apply.",
@@ -152,12 +158,12 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-4 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-6 gap-4">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem className="col-span-4">
+                <FormItem className="col-span-6">
                   <FormLabel>Tournament Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Summer Skirmish" {...field} />
@@ -171,7 +177,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="categoryId"
               render={({ field }) => (
-                <FormItem className="col-span-4">
+                <FormItem className="col-span-6">
                   <FormLabel>Game Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories}>
                     <FormControl>
@@ -196,7 +202,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem className="col-span-4">
+                <FormItem className="col-span-6">
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Describe the tournament..." {...field} />
@@ -208,12 +214,38 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
             
             <FormField
               control={form.control}
-              name="prizePool"
+              name="prizePoolFirst"
               render={({ field }) => (
-                <FormItem className="col-span-4">
-                  <FormLabel>Prize Pool (INR)</FormLabel>
+                <FormItem className="col-span-2">
+                  <FormLabel>1st Prize (INR)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 50000" {...field} />
+                    <Input type="number" placeholder="e.g., 25000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="prizePoolSecond"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>2nd Prize (INR)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 15000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="prizePoolThird"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>3rd Prize (INR)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 10000" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,7 +256,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="startDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col col-span-3">
+                <FormItem className="flex flex-col col-span-4">
                   <FormLabel>Start Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -260,7 +292,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                 control={form.control}
                 name="startTime"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col col-span-1">
+                    <FormItem className="flex flex-col col-span-2">
                         <FormLabel>Start Time</FormLabel>
                         <FormControl>
                             <Input type="time" {...field} />
@@ -275,7 +307,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
               control={form.control}
               name="endDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col col-span-3">
+                <FormItem className="flex flex-col col-span-4">
                   <FormLabel>End Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -311,7 +343,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                 control={form.control}
                 name="endTime"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col col-span-1">
+                    <FormItem className="flex flex-col col-span-2">
                         <FormLabel>End Time</FormLabel>
                         <FormControl>
                             <Input type="time" {...field} />
@@ -321,7 +353,7 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                 )}
             />
 
-            <DialogFooter className="col-span-4 pt-4">
+            <DialogFooter className="col-span-6 pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">Cancel</Button>
               </DialogClose>
@@ -335,5 +367,3 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
     </Dialog>
   );
 }
-
-    

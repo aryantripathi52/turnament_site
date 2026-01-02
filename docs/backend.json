@@ -47,9 +47,17 @@
           "description": "Date and time when the tournament ends.",
           "format": "date-time"
         },
-        "prizePool": {
+        "prizePoolFirst": {
           "type": "number",
-          "description": "Total prize pool for the tournament."
+          "description": "Prize for the 1st place winner."
+        },
+        "prizePoolSecond": {
+          "type": "number",
+          "description": "Prize for the 2nd place winner."
+        },
+        "prizePoolThird": {
+          "type": "number",
+          "description": "Prize for the 3rd place winner."
         },
         "description": {
           "type": "string",
@@ -75,7 +83,9 @@
         "name",
         "startDate",
         "endDate",
-        "prizePool",
+        "prizePoolFirst",
+        "prizePoolSecond",
+        "prizePoolThird",
         "description",
         "rules",
         "registrationLink",
