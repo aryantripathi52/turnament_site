@@ -45,7 +45,7 @@ export function PlayerTournamentList() {
   const { user, profile, joinedTournaments, refreshJoinedTournaments } = useUser();
   const { toast } = useToast();
 
-  console.log("Current User UID:", auth.currentUser?.uid);
+  console.log("Current User UID:", auth?.currentUser?.uid);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -84,12 +84,22 @@ export function PlayerTournamentList() {
       return;
     }
 
-    console.log("UserID:", user.uid, "TournamentID:", selectedTournament.id);
+    const userId = user.uid;
+    const tournamentId = selectedTournament.id;
+
+    // Deep Audit Step: Ensure doc() functions do not receive undefined variables.
+    if (!userId || !tournamentId) {
+      alert("Error: User ID or Tournament ID is missing. Cannot proceed.");
+      return;
+    }
+    
+    console.log("UserID:", userId, "TournamentID:", tournamentId);
+
 
     try {
       await runTransaction(firestore, async (transaction) => {
-        const userRef = doc(firestore, 'users', user.uid);
-        const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
+        const userRef = doc(firestore, 'users', userId);
+        const tournamentRef = doc(firestore, 'tournaments', tournamentId);
         
         const userDoc = await transaction.get(userRef);
         const tournamentDoc = await transaction.get(tournamentRef);
@@ -117,12 +127,12 @@ export function PlayerTournamentList() {
         transaction.update(tournamentRef, { registeredCount: increment(1) });
         
         // 3. Create the public registration document
-        const registrationRef = doc(firestore, `tournaments/${selectedTournament.id}/registrations`, user.uid);
+        const registrationRef = doc(firestore, `tournaments/${tournamentId}/registrations`, userId);
         const registrationData: Omit<Registration, 'id'> = {
-            tournamentId: selectedTournament.id,
-            userId: user.uid,
+            tournamentId: tournamentId,
+            userId: userId,
             teamName: profile.username,
-            playerIds: [user.uid],
+            playerIds: [userId],
             registrationDate: serverTimestamp(),
             slotNumber: currentTournament.registeredCount + 1
         };
@@ -138,6 +148,7 @@ export function PlayerTournamentList() {
 
     } catch (error: any) {
         console.error("FULL TRANSACTION ERROR:", error.code, error.message);
+        console.dir(error); // Deep Audit Step: Log the full error object
         toast({
             variant: 'destructive',
             title: 'Registration Failed',
