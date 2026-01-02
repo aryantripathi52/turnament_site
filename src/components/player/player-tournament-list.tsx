@@ -83,6 +83,7 @@ export function PlayerTournamentList() {
 
     const userRef = doc(firestore, 'users', user.uid);
     const tournamentRef = doc(firestore, 'tournaments', selectedTournament.id);
+    let slotNumber = 0;
     
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -105,6 +106,8 @@ export function PlayerTournamentList() {
           throw new Error('Registrations for this tournament are closed.');
         }
 
+        slotNumber = currentTournament.registeredCount + 1;
+
         // Perform the updates within the transaction
         transaction.update(userRef, { coins: userProfile.coins - currentTournament.entryFee });
         transaction.update(tournamentRef, { registeredCount: increment(1) });
@@ -121,17 +124,20 @@ export function PlayerTournamentList() {
         teamName: profile.username,
         playerIds: [user.uid],
         registrationDate: serverTimestamp(),
+        slotNumber: slotNumber
       };
       batch.set(registrationRef, registrationData);
 
       // 2. Add tournament to the user's private joinedTournaments subcollection
       const joinedTournamentRef = doc(firestore, 'users', user.uid, 'joinedTournaments', selectedTournament.id);
-      const joinedTournamentData: Omit<JoinedTournament, 'id'> & {id: string} = {
-        id: selectedTournament.id,
+      const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
         name: selectedTournament.name,
         startDate: selectedTournament.startDate,
         prizePoolFirst: selectedTournament.prizePoolFirst,
         entryFee: selectedTournament.entryFee,
+        slotNumber: slotNumber,
+        roomId: selectedTournament.roomId || null,
+        roomPassword: selectedTournament.roomPassword || null,
       };
       batch.set(joinedTournamentRef, joinedTournamentData);
       

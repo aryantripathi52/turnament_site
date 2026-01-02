@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Gem, Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -9,6 +9,9 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { JoinedTournament, WonTournament } from '@/lib/types';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '../ui/button';
 
 
 const formatDate = (date: any) => {
@@ -22,6 +25,104 @@ const formatDate = (date: any) => {
   return 'Invalid Date';
 };
 
+function JoinedTournamentCard({ tournament }: { tournament: JoinedTournament }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+     <div className={cn("flip-card h-[250px]")} onClick={() => {
+        // Prevent flipping when clicking buttons inside
+        if (event?.target instanceof HTMLButtonElement) return;
+        setIsFlipped(!isFlipped)
+    }}>
+      <div className={cn("flip-card-inner", isFlipped && "[transform:rotateY(180deg)]")}>
+        <div className="flip-card-front">
+          <Card className="h-full flex flex-col">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-xl">{tournament.name}</CardTitle>
+                <Badge variant="outline">Joined</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm flex-grow">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-primary" />
+                <span>
+                  1st Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Gem className="h-4 w-4" />
+                <span>
+                  Entry Fee: <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  Starts: <span className="font-semibold text-foreground">{formatDate(tournament.startDate)}</span>
+                </span>
+              </div>
+            </CardContent>
+            <CardFooter>
+                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(true)}>See Details</Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <div className="flip-card-back">
+          <Card className="h-full flex flex-col">
+             <CardHeader>
+                <CardTitle className="text-xl">Room Details</CardTitle>
+             </CardHeader>
+             <CardContent className="flex-grow space-y-4">
+                {tournament.roomId && tournament.roomPassword ? (
+                    <>
+                        <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+                           <Hash className="h-5 w-5 text-primary" />
+                           <div>
+                             <p className="text-xs text-muted-foreground">Your Slot</p>
+                             <p className="font-bold text-lg">#{tournament.slotNumber}</p>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+                           <Ticket className="h-5 w-5 text-primary" />
+                           <div>
+                             <p className="text-xs text-muted-foreground">Room ID</p>
+                             <p className="font-mono font-bold text-lg">{tournament.roomId}</p>
+                           </div>
+                        </div>
+                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
+                           <KeyRound className="h-5 w-5 text-primary" />
+                           <div>
+                             <p className="text-xs text-muted-foreground">Password</p>
+                             <p className="font-mono font-bold text-lg">{tournament.roomPassword}</p>
+                           </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex items-center text-center justify-center h-full">
+                       <p className="text-muted-foreground text-sm">
+                           Room details will be shared 15 minutes before the match.
+                           <br />
+                           Your Slot: <span className="font-bold text-foreground">#{tournament.slotNumber}</span>
+                       </p>
+                    </div>
+                )}
+             </CardContent>
+             <CardFooter>
+                <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+             </CardFooter>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export function MyTournaments() {
   const { joinedTournaments, wonTournaments, isUserLoading, userError } = useUser();
 
@@ -29,8 +130,8 @@ export function MyTournaments() {
     if (isUserLoading) {
         return (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-[250px] w-full" />
+                <Skeleton className="h-[250px] w-full" />
             </div>
         );
     }
@@ -57,34 +158,7 @@ export function MyTournaments() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {joinedTournaments.map((tournament) => (
-                <Card key={tournament.id}>
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <CardTitle className="text-xl">{tournament.name}</CardTitle>
-                             <Badge variant="outline">Joined</Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                         <div className="flex items-center gap-2">
-                            <Trophy className="h-4 w-4 text-primary" />
-                            <span>
-                                1st Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span>
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Gem className="h-4 w-4" />
-                            <span>
-                                Entry Fee: <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span>
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span>
-                                Starts: <span className="font-semibold text-foreground">{formatDate(tournament.startDate)}</span>
-                            </span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <JoinedTournamentCard key={tournament.id} tournament={tournament} />
             ))}
         </div>
     )

@@ -94,6 +94,14 @@
             "type": "number",
             "description": "Number of players currently registered for the tournament."
         },
+         "roomId": {
+          "type": "string",
+          "description": "The in-game room ID for the tournament match."
+        },
+        "roomPassword": {
+          "type": "string",
+          "description": "The password for the in-game room."
+        },
         "winners": {
             "type": "object",
             "properties": {
@@ -173,7 +181,11 @@
           "description": "Date and time when the team registered.",
           "format": "date-time"
         },
-        "userId": {"type": "string"}
+        "userId": {"type": "string"},
+        "slotNumber": {
+          "type": "number",
+          "description": "The slot number assigned to the player upon registration."
+        }
       },
       "required": [
         "id",
@@ -181,7 +193,8 @@
         "teamName",
         "playerIds",
         "registrationDate",
-        "userId"
+        "userId",
+        "slotNumber"
       ]
     },
     "Announcement": {
@@ -360,9 +373,12 @@
         "name": { "type": "string", "description": "Name of the tournament." },
         "startDate": { "type": "string", "format": "date-time", "description": "When the tournament starts." },
         "prizePoolFirst": { "type": "number", "description": "Prize for 1st place." },
-        "entryFee": { "type": "number", "description": "The entry fee paid." }
+        "entryFee": { "type": "number", "description": "The entry fee paid." },
+        "slotNumber": { "type": "number", "description": "The slot number assigned to the user." },
+        "roomId": { "type": "string", "description": "The in-game room ID, if available." },
+        "roomPassword": { "type": "string", "description": "The in-game room password, if available." }
       },
-      "required": ["id", "name", "startDate", "prizePoolFirst", "entryFee"]
+      "required": ["id", "name", "startDate", "prizePoolFirst", "entryFee", "slotNumber"]
     },
     "WonTournament": {
       "title": "Won Tournament",

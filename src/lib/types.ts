@@ -17,6 +17,8 @@ export type Tournament = {
   status: 'upcoming' | 'live' | 'completed' | 'cancelled';
   maxPlayers: number;
   registeredCount: number;
+  roomId?: string;
+  roomPassword?: string;
   winners?: {
     first?: { userId: string; username: string };
     second?: { userId: string; username: string };
@@ -31,6 +33,7 @@ export type Registration = {
     playerIds: string[]; // This is an array with just the user's ID
     registrationDate: any;
     userId: string;
+    slotNumber: number;
 };
 
 export type JoinedTournament = {
@@ -39,6 +42,9 @@ export type JoinedTournament = {
   startDate: Timestamp;
   prizePoolFirst: number;
   entryFee: number;
+  slotNumber: number;
+  roomId: string | null;
+  roomPassword: string | null;
 };
 
 export type WonTournament = {

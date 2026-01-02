@@ -52,6 +52,8 @@ const formSchema = z.object({
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
   endDate: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format' }),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Invalid time format (HH:MM)." }),
+  roomId: z.string().optional(),
+  roomPassword: z.string().optional(),
 }).refine((data) => {
     const startDateTime = new Date(`${data.startDate}T${data.startTime}`);
     const endDateTime = new Date(`${data.endDate}T${data.endTime}`);
@@ -93,6 +95,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
       startTime: "12:00",
       endDate: '',
       endTime: "18:00",
+      roomId: '',
+      roomPassword: '',
     },
   });
 
@@ -123,6 +127,8 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
         rules: "Standard tournament rules apply.", // Placeholder
         registrationLink: "#", // Placeholder
         contactEmail: "contact@example.com", // Placeholder
+        roomId: values.roomId || null,
+        roomPassword: values.roomPassword || null,
       });
 
       toast({
@@ -175,12 +181,40 @@ export function CreateTournamentForm({ children, isOpen, setIsOpen }: CreateTour
                             <FormItem>
                             <FormLabel>Description</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="Describe the tournament..." {...field} rows={12} />
+                                <Textarea placeholder="Describe the tournament..." {...field} rows={8} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
                         />
+                     <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="roomId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Room ID (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., 123456" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="roomPassword"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Room Password (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., roompass" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                 </div>
                 <div className="space-y-6">
                     <FormField
