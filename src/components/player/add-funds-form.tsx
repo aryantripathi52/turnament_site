@@ -83,7 +83,7 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
 
       toast({
         title: 'Request Submitted',
-        description: 'Your request to add coins has been sent for approval.',
+        description: 'Your request to add coins has been sent for approval. Please allow up to 12 hours for the review.',
       });
       setIsOpen(false);
       form.reset();
