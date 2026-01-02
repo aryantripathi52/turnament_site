@@ -9,7 +9,6 @@ import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
-import { ApprovalStatusTable } from './approval-status-table';
 import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
 
@@ -60,10 +59,6 @@ export function PlayerDashboard() {
                     <WalletIcon className="h-5 w-5" />
                     My Wallet
                 </TabsTrigger>
-                 <TabsTrigger value="approval-status" className="w-full justify-start gap-2">
-                    <History className="h-5 w-5" />
-                    Approval Status
-                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -104,9 +99,6 @@ export function PlayerDashboard() {
             </TabsContent>
              <TabsContent value="wallet" className="mt-0 flex-1">
                 <Wallet />
-            </TabsContent>
-            <TabsContent value="approval-status" className="mt-0 flex-1">
-                <ApprovalStatusTable />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
