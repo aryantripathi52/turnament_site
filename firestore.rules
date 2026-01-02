@@ -15,7 +15,9 @@ service cloud.firestore {
 
     // Safely get the role of a user. Returns null if user or role doesn't exist.
     function getRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+      let userDoc = get(/databases/$(database)/documents/users/$(userId));
+      // Check if the user document and the role field exist before accessing.
+      return userDoc.data.keys().has('role') ? userDoc.data.role : null;
     }
     
     // Check if the signed-in user is an Admin.
@@ -35,7 +37,7 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // USER DATA: Users can only manage their own data. Admins can read any user profile.
+    // USER DATA: Users can only manage their own data. Admins/Staff can read any user profile.
     match /users/{userId} {
       allow get: if isOwner(userId) || isStaffOrAdmin();
       allow list: if isStaffOrAdmin(); // Only admins/staff can list all users.
