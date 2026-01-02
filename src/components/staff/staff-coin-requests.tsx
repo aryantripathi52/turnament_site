@@ -5,7 +5,7 @@ import { collection, query, where, orderBy, Timestamp, doc, writeBatch, serverTi
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, User } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, User, Ban } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import type { AddCoinRequest, WithdrawCoinRequest, UserProfile } from '@/lib/types';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & 
 
 export function StaffCoinRequests() {
   const firestore = useFirestore();
-  const { profile } = useUser();
+  const { user, profile } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -125,6 +125,19 @@ export function StaffCoinRequests() {
 
 
   const renderRequests = () => {
+    // Explicitly check for admin/staff role
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+       return (
+        <Alert variant="destructive">
+          <Ban className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You do not have permission to view this section.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
     if (isLoading) {
       return (
         <div className="grid md:grid-cols-2 gap-4">
@@ -138,9 +151,9 @@ export function StaffCoinRequests() {
       return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Access Denied: Admin or Staff Only</AlertTitle>
+          <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
-            You do not have the required permissions to view coin requests. Please contact an administrator if you believe this is an error.
+            There was a problem loading coin requests. The permissions might be incorrect.
           </AlertDescription>
         </Alert>
       );

@@ -17,8 +17,8 @@ service cloud.firestore {
     }
     
     function isAdmin(userId) {
+      // Check role in user document OR a specific super-admin email
       let userRole = getUserRole(userId);
-      // Also allow the specific admin email as a fallback
       return userRole == 'admin' || request.auth.token.email == 'admin@dps.in';
     }
 
@@ -27,6 +27,7 @@ service cloud.firestore {
     }
     
     function isStaffOrAdmin(userId) {
+      // Check role in user document OR the specific super-admin email
       let role = getUserRole(userId);
       return role == 'admin' || role == 'staff' || request.auth.token.email == 'admin@dps.in';
     }
@@ -40,9 +41,9 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       
       // Allow user to update their own username.
-      // Allow updating 'coins' if it's part of a transaction.
-      // Admins can update any profile.
-      allow update: if (isOwner(userId) && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coins'])))
+      // Allow 'coins' to be updated (by admin or via transaction).
+      // Allow admins/staff to update any user profile fully.
+      allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username']))
                     || isStaffOrAdmin(request.auth.uid);
 
       // Denormalized data subcollections for users.
@@ -51,7 +52,7 @@ service cloud.firestore {
       }
       match /wonTournaments/{tournamentId} {
         allow read, list: if isOwner(userId) || isStaffOrAdmin(request.auth.uid);
-        allow write, create, delete: if isStaffOrAdmin(request.auth.uid); // Only staff/admin can award a win
+        allow write, create, delete: if isStaffOrAdmin(request.auth.uid);
       }
       
       match /addCoinRequests/{requestId} {
@@ -73,7 +74,7 @@ service cloud.firestore {
                       (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
 
       match /registrations/{registrationId} {
-        allow read, list: if isSignedIn();
+        allow read, list: if isStaffOrAdmin(request.auth.uid);
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if isStaffOrAdmin(request.auth.uid);
       }
@@ -98,11 +99,13 @@ service cloud.firestore {
     // GLOBAL COIN REQUESTS (for Admin/Staff review)
     match /addCoinRequests/{requestId} {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Admins and Staff can read, list, update, and delete requests.
       allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
     }
 
     match /withdrawCoinRequests/{requestId} {
        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+       // Admins and Staff can read, list, update, and delete requests.
        allow read, list, update, delete: if isStaffOrAdmin(request.auth.uid);
     }
   }
