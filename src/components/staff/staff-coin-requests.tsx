@@ -25,23 +25,21 @@ export function StaffCoinRequests() {
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Temporarily removed orderBy to allow loading while indexes are created.
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'addCoinRequests'),
       where('status', '==', 'pending'),
-      // orderBy('requestDate', 'asc') // This will be re-enabled after index is built
+      orderBy('requestDate', 'asc')
     );
   }, [firestore, profile]);
 
-  // Temporarily removed orderBy to allow loading while indexes are created.
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !profile || (profile.role !== 'admin' && profile.role !== 'staff')) return null;
     return query(
       collection(firestore, 'withdrawCoinRequests'),
       where('status', '==', 'pending'),
-      // orderBy('requestDate', 'asc') // This will be re-enabled after index is built
+      orderBy('requestDate', 'asc')
     );
   }, [firestore, profile]);
 
@@ -156,25 +154,16 @@ export function StaffCoinRequests() {
       );
     }
     
-    if (error?.message.includes('requires an index')) {
-      return (
+    if (error) {
+       return (
         <Alert>
           <Clock className="h-4 w-4" />
           <AlertTitle>Database is preparing</AlertTitle>
           <AlertDescription>
-            Database indexes are currently building to speed up queries. This page will update automatically. Please wait a few minutes.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (error) {
-      return (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Access Denied or Error</AlertTitle>
-          <AlertDescription>
-            Could not load coin requests. You may not have the required permissions, or an error occurred.
+            {error.message.includes('index')
+              ? 'Database indexes are building to speed up queries. This will resolve in a few minutes.'
+              : 'Could not load requests due to a database error.'
+            }
           </AlertDescription>
         </Alert>
       );

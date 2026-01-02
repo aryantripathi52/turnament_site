@@ -34,7 +34,7 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // USER DATA: Users can manage their own data. Admins/Staff can read any profile.
+    // USER DATA: Users can manage their own data. Admins/Staff can read/update any profile.
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaffOrAdmin();
       allow list: if isStaffOrAdmin(); 
@@ -89,7 +89,7 @@ service cloud.firestore {
     // ANNOUNCEMENTS & HIGHLIGHTS: Publicly readable, modifiable by staff/admins.
     match /announcements/{announcementId} {
       allow get, list: if true;
-      allow create, update, delete: if isStaffOrDAdmin();
+      allow create, update, delete: if isStaffOrAdmin();
     }
 
     match /highlights/{highlightId} {
