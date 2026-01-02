@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 
 const formatDate = (date: any) => {
@@ -27,36 +28,65 @@ const formatDate = (date: any) => {
 };
 
 const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, label: string, color: string, description: string } } = {
-  upcoming: { icon: Clock, label: 'Upcoming', color: 'bg-blue-500', description: 'Registration open. Get ready!' },
-  live: { icon: PlayCircle, label: 'Live', color: 'bg-green-500 animate-pulse', description: 'The tournament is live! Join now!' },
-  completed: { icon: CheckCircle, label: 'Completed', color: 'bg-gray-500', description: 'This tournament has finished.' },
-  cancelled: { icon: XCircle, label: 'Cancelled', color: 'bg-red-500', description: 'Cancelled. Your entry fee has been refunded.' },
+  upcoming: { icon: Clock, label: 'Upcoming', color: 'text-blue-500', description: 'Registration open. Get ready!' },
+  live: { icon: PlayCircle, label: 'Live', color: 'text-green-500 animate-pulse', description: 'The tournament is live! Join now!' },
+  completed: { icon: CheckCircle, label: 'Completed', color: 'text-gray-500', description: 'This tournament has finished.' },
+  cancelled: { icon: XCircle, label: 'Cancelled', color: 'text-red-500', description: 'Cancelled. Your entry fee has been refunded.' },
 };
 
 function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [liveTournamentData, setLiveTournamentData] = useState<Tournament | null>(null);
+  const [mySlot, setMySlot] = useState<number | null>(null);
   const firestore = useFirestore();
-  
+  const { toast } = useToast();
+
   const statusInfo = statusConfig[liveTournamentData?.status || 'upcoming'];
+  const isLive = liveTournamentData?.status === 'live';
 
   useEffect(() => {
-    if (!firestore || !tournament.id) return;
+    if (!firestore || !tournament.id || !userId) return;
 
+    // Listener for live tournament data (status, room id, etc.)
     const tournamentRef = doc(firestore, 'tournaments', tournament.id);
-    const unsubscribe = onSnapshot(tournamentRef, (docSnap) => {
+    const unsubscribeTournament = onSnapshot(tournamentRef, (docSnap) => {
       if (docSnap.exists()) {
         setLiveTournamentData(docSnap.data() as Tournament);
       }
     });
 
-    // Cleanup listener on component unmount
-    return () => unsubscribe();
-  }, [firestore, tournament.id]);
+    // Direct fetch for the user's slot number from their private record
+    const fetchSlotNumber = async () => {
+        const joinRecordRef = doc(firestore, 'users', userId, 'joinedTournaments', tournament.id);
+        const docSnap = await getDoc(joinRecordRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log('FETCHED SLOT:', data);
+            setMySlot(data.slotNumber);
+        } else {
+             // Fallback for safety, though it should exist
+            setMySlot(tournament.slotNumber || 1);
+        }
+    };
+    fetchSlotNumber();
+    
+    // Cleanup listeners on component unmount
+    return () => {
+        unsubscribeTournament();
+    };
+  }, [firestore, tournament.id, userId, tournament.slotNumber]);
 
+  const handleCopy = (text: string | undefined | null) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Copied!',
+      description: 'The details have been copied to your clipboard.',
+    });
+  };
 
   return (
-     <div className="flip-card h-[280px]" >
+     <div className="flip-card h-[320px]" >
       <div className={cn("flip-card-inner", isFlipped && "flipped")}>
         <div className="flip-card-front">
           <Card className="h-full flex flex-col">
@@ -95,57 +125,72 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
         <div className="flip-card-back">
           <Card className="h-full flex flex-col">
              <CardHeader>
-                <CardTitle className="text-xl">Match Status</CardTitle>
-                <div className="flex items-center gap-2 pt-2">
-                    <statusInfo.icon className={cn("h-4 w-4", statusInfo.color.includes('green') && 'text-green-500', statusInfo.color.includes('red') && 'text-red-500')} />
-                    <span className={cn("font-semibold", statusInfo.color.includes('green') && 'text-green-500', statusInfo.color.includes('red') && 'text-red-500')}>{statusInfo.label}</span>
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                        <statusInfo.icon className={cn("h-4 w-4", statusInfo.color)} />
+                        <span className={cn("font-semibold", isLive && 'font-bold text-green-500')}>{statusInfo.label}</span>
+                    </div>
+                    <div className={cn("flex items-center gap-2 text-sm", isLive && 'font-bold text-green-500')}>
+                        <Hash className="h-4 w-4"/>
+                        <span>Slot #{mySlot?.toString().padStart(2, '0') || '01'}</span>
+                    </div>
                 </div>
              </CardHeader>
              <CardContent className="flex-grow space-y-4">
-                {liveTournamentData?.status === 'live' && (
-                    <div className='space-y-4'>
-                        <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
-                           <Ticket className="h-5 w-5 text-primary" />
-                           <div>
-                             <p className="text-xs text-muted-foreground">Room ID</p>
-                             <p className="font-mono font-bold text-lg">{liveTournamentData.roomId || 'Pending'}</p>
+                {isLive ? (
+                    <div className='space-y-3'>
+                        <div className="flex items-center gap-3 bg-muted p-3 rounded-md justify-between">
+                           <div className="flex items-center gap-3">
+                             <Ticket className="h-5 w-5 text-primary" />
+                             <div>
+                               <p className="text-xs text-muted-foreground">Room ID</p>
+                               <p className="font-mono font-bold text-lg">{liveTournamentData?.roomId || 'Pending'}</p>
+                             </div>
                            </div>
+                           <Button variant="ghost" size="icon" onClick={() => handleCopy(liveTournamentData?.roomId)}>
+                             <Copy className="h-4 w-4"/>
+                           </Button>
                         </div>
-                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md">
-                           <KeyRound className="h-5 w-5 text-primary" />
-                           <div>
-                             <p className="text-xs text-muted-foreground">Password</p>
-                             <p className="font-mono font-bold text-lg">{liveTournamentData.roomPassword || 'Pending'}</p>
+                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md justify-between">
+                           <div className="flex items-center gap-3">
+                             <KeyRound className="h-5 w-5 text-primary" />
+                             <div>
+                               <p className="text-xs text-muted-foreground">Password</p>
+                               <p className="font-mono font-bold text-lg">{liveTournamentData?.roomPassword || 'Pending'}</p>
+                             </div>
                            </div>
+                           <Button variant="ghost" size="icon" onClick={() => handleCopy(liveTournamentData?.roomPassword)}>
+                             <Copy className="h-4 w-4"/>
+                           </Button>
                         </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center text-center justify-center h-full">
+                        {liveTournamentData?.status === 'upcoming' && (
+                            <p className="text-muted-foreground text-sm p-4">
+                                Room details will be shared 15 minutes before the match starts. Good luck!
+                            </p>
+                        )}
+                        {liveTournamentData?.status === 'completed' && (
+                            <>
+                                <CheckCircle className="h-10 w-10 text-green-500 mb-2"/>
+                                <p className="text-muted-foreground text-sm p-4">
+                                    The tournament has ended. Check the "Tournament Wins" section for results!
+                                </p>
+                            </>
+                        )}
+                        {liveTournamentData?.status === 'cancelled' && (
+                            <>
+                                <XCircle className="h-10 w-10 text-red-500 mb-2"/>
+                                <p className="text-muted-foreground text-sm p-4">
+                                    This tournament was cancelled. Your entry fee has been refunded.
+                                </p>
+                            </>
+                        )}
                     </div>
                 )}
-                 {liveTournamentData?.status === 'upcoming' && (
-                    <div className="flex items-center text-center justify-center h-full">
-                       <p className="text-muted-foreground text-sm">
-                           Room details will be shared 15 minutes before the match starts.
-                       </p>
-                    </div>
-                 )}
-                 {liveTournamentData?.status === 'completed' && (
-                     <div className="flex flex-col items-center text-center justify-center h-full">
-                       <CheckCircle className="h-10 w-10 text-green-500 mb-2"/>
-                       <p className="text-muted-foreground text-sm">
-                           The tournament has ended. Check the "Tournament Wins" section for results!
-                       </p>
-                    </div>
-                 )}
-                 {liveTournamentData?.status === 'cancelled' && (
-                     <div className="flex flex-col items-center text-center justify-center h-full">
-                       <XCircle className="h-10 w-10 text-red-500 mb-2"/>
-                       <p className="text-muted-foreground text-sm">
-                           This tournament was cancelled. Your entry fee has been refunded.
-                       </p>
-                    </div>
-                 )}
              </CardContent>
              <CardFooter className='flex-col gap-2'>
-                 {liveTournamentData?.status === 'live' && <Button className="w-full">Join Room</Button>}
                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
@@ -166,8 +211,8 @@ export function MyTournaments() {
     if (isUserLoading) {
         return (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="h-[280px] w-full" />
-                <Skeleton className="h-[280px] w-full" />
+                <Skeleton className="h-[320px] w-full" />
+                <Skeleton className="h-[320px] w-full" />
             </div>
         );
     }
