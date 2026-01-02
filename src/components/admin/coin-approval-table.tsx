@@ -29,14 +29,15 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const collectionName = requestType === 'add' ? 'addCoinRequests' : 'withdrawCoinRequests';
+
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-      collection(firestore, 'coinRequests'),
-      where('type', '==', requestType),
+      collection(firestore, collectionName),
       where('status', '==', 'pending')
     );
-  }, [firestore, requestType]);
+  }, [firestore, collectionName]);
 
   const { data: requests, isLoading, error, setData: setRequests } = useCollection<CoinRequest>(requestsQuery);
 
@@ -53,7 +54,7 @@ export function CoinApprovalTable({ requestType }: CoinApprovalTableProps) {
         return;
     }
     
-    const requestRef = doc(firestore, 'coinRequests', request.id);
+    const requestRef = doc(firestore, collectionName, request.id);
     const userRef = doc(firestore, 'users', request.userId);
 
     try {

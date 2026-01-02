@@ -74,7 +74,7 @@ export function WithdrawFundsForm({ children, isOpen, setIsOpen }: WithdrawFunds
 
 
     try {
-      const coinRequestCollection = collection(firestore, 'coinRequests');
+      const coinRequestCollection = collection(firestore, 'withdrawCoinRequests');
       await addDoc(coinRequestCollection, {
         userId: user.uid,
         username: profile.username,

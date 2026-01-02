@@ -24,6 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useEffect, useState } from 'react';
 
 const statusConfig = {
   approved: {
@@ -57,17 +58,36 @@ const formatDate = (date: Timestamp | Date | undefined | null) => {
 export function CoinRequestHistoryTable() {
   const firestore = useFirestore();
 
-  const requestsQuery = useMemoFirebase(() => {
+  const addRequestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Query for all requests that are either 'approved' or 'denied'
     return query(
-      collection(firestore, 'coinRequests'),
+      collection(firestore, 'addCoinRequests'),
       where('status', 'in', ['approved', 'denied']),
       orderBy('requestDate', 'desc')
     );
   }, [firestore]);
 
-  const { data: requests, isLoading, error } = useCollection<CoinRequest>(requestsQuery);
+  const withdrawRequestsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'withdrawCoinRequests'),
+      where('status', 'in', ['approved', 'denied']),
+      orderBy('requestDate', 'desc')
+    );
+  }, [firestore]);
+
+  const { data: addRequests, isLoading: isLoadingAdd, error: addError } = useCollection<CoinRequest>(addRequestsQuery);
+  const { data: withdrawRequests, isLoading: isLoadingWithdraw, error: withdrawError } = useCollection<CoinRequest>(withdrawRequestsQuery);
+  
+  const [requests, setRequests] = useState<CoinRequest[]>([]);
+  const isLoading = isLoadingAdd || isLoadingWithdraw;
+  const error = addError || withdrawError;
+
+  useEffect(() => {
+    const combined = [...(addRequests || []), ...(withdrawRequests || [])];
+    combined.sort((a, b) => (b.requestDate?.seconds || 0) - (a.requestDate?.seconds || 0));
+    setRequests(combined);
+  }, [addRequests, withdrawRequests]);
 
 
   if (isLoading) {

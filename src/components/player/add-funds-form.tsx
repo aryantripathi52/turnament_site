@@ -68,7 +68,7 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
     }
 
     try {
-      const coinRequestCollection = collection(firestore, 'coinRequests');
+      const coinRequestCollection = collection(firestore, 'addCoinRequests');
       await addDoc(coinRequestCollection, {
         userId: user.uid,
         username: profile.username,
@@ -180,4 +180,3 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
     </Dialog>
   );
 }
-    

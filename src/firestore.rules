@@ -69,18 +69,16 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
-    match /coinRequests/{coinRequestId} {
-      // Admins can list all requests. Players can only query for their own.
-      allow list: if isAdmin() || (isSignedIn() && request.query.where.userId == request.auth.uid);
-      
-      // Admins and the user who made the request can get it.
-      allow get: if isAdmin() || isOwner(resource.data.userId);
-      
-      // Admins can update/delete any request.
-      allow update, delete: if isAdmin();
-      
-      // A user can create a request for themselves.
+    match /addCoinRequests/{requestId} {
+      allow read, list, write: if isAdmin();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isOwner(request.resource.data.userId);
+    }
+
+    match /withdrawCoinRequests/{requestId} {
+      allow read, list, write: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isOwner(request.resource.data.userId);
     }
 
     match /categories/{categoryId} {

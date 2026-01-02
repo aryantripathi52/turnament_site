@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFirebase } from '@/firebase/provider';
 import { useDoc, type WithId } from '@/firebase/firestore/use-doc';
 import { doc, collection, query, where, Timestamp, orderBy } from 'firebase/firestore';
@@ -55,13 +55,28 @@ export const useUser = (): UserHookResult => {
   } = useDoc<UserProfile>(userProfileRef);
 
   // --- Fetch Coin Requests (only for players) ---
-  const coinRequestsQuery = useMemoFirebase(() => {
-    // Only fetch if the user is a player. Admins/staff don't need their own requests in this global hook.
+  const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!user || !firestore || profile?.role !== 'player') return null;
-    return query(collection(firestore, "coinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
+    return query(collection(firestore, "addCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
   }, [user, firestore, profile]);
 
-  const {data: coinRequests, isLoading: isCoinRequestsLoading, error: coinRequestsError } = useCollection<CoinRequest>(coinRequestsQuery);
+  const withdrawCoinRequestsQuery = useMemoFirebase(() => {
+    if (!user || !firestore || profile?.role !== 'player') return null;
+    return query(collection(firestore, "withdrawCoinRequests"), where("userId", "==", user.uid), orderBy("requestDate", "desc"));
+  }, [user, firestore, profile]);
+
+  const {data: addCoinRequests, isLoading: isAddLoading, error: addError } = useCollection<CoinRequest>(addCoinRequestsQuery);
+  const {data: withdrawCoinRequests, isLoading: isWithdrawLoading, error: withdrawError } = useCollection<CoinRequest>(withdrawCoinRequestsQuery);
+  const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
+
+  useEffect(() => {
+    if (addCoinRequests || withdrawCoinRequests) {
+        const combined = [...(addCoinRequests || []), ...(withdrawCoinRequests || [])];
+        combined.sort((a, b) => (b.requestDate?.seconds || 0) - (a.requestDate?.seconds || 0));
+        setCoinRequests(combined);
+    }
+  }, [addCoinRequests, withdrawCoinRequests]);
+
 
   // --- Fetch Joined Tournaments ---
   const joinedTournamentsQuery = useMemoFirebase(() => {
@@ -72,8 +87,8 @@ export const useUser = (): UserHookResult => {
   const { data: joinedTournaments, isLoading: isTournamentsLoading, error: tournamentsError } = useCollection<JoinedTournament>(joinedTournamentsQuery);
 
 
-  const combinedIsLoading = isUserLoading || isProfileLoading || isCoinRequestsLoading || isTournamentsLoading;
-  const combinedError = userError || profileError || coinRequestsError || tournamentsError;
+  const combinedIsLoading = isUserLoading || isProfileLoading || isAddLoading || isWithdrawLoading || isTournamentsLoading;
+  const combinedError = userError || profileError || addError || withdrawError || tournamentsError;
 
   return {
     user,
