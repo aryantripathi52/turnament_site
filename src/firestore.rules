@@ -33,8 +33,8 @@ service cloud.firestore {
       match /joinedTournaments/{tournamentId} {
           // A user can fully manage their own joined tournament records.
           // Admins can read them for management purposes.
-          allow read, list: if isOwner(userId) || isAdmin();
-          allow write, delete: if isOwner(userId);
+          allow read, write, delete: if isOwner(userId);
+          allow list: if isOwner(userId) || isAdmin();
       }
       match /wonTournaments/{tournamentId} {
           // A user can read the tournaments they have won.
@@ -78,24 +78,22 @@ service cloud.firestore {
     match /addCoinRequests/{requestId} {
       // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // A player can get their own request.
-      allow get: if isOwner(request.resource.data.userId);
-      // A player can only list THEIR OWN requests. The query must have a where clause.
-      allow list: if isSignedIn() && request.query.where.userId == request.auth.uid;
-      // Admins have full read/write access to all requests for management.
-      allow read, write, list: if isAdmin();
+      // Players can only list/get their own requests. Admins can read/list any.
+      allow get: if isOwner(request.resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && request.query.userId == request.auth.uid) || isAdmin();
+      // Admins have full write access to all requests.
+      allow update, delete: if isAdmin();
     }
 
     // Simplified rule for withdrawing coin requests.
     match /withdrawCoinRequests/{requestId} {
       // Players can only create requests for themselves.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // A player can get their own request.
-      allow get: if isOwner(request.resource.data.userId);
-       // A player can only list THEIR OWN requests. The query must have a where clause.
-      allow list: if isSignedIn() && request.query.where.userId == request.auth.uid;
-      // Admins have full read/write access to all requests for management.
-      allow read, write, list: if isAdmin();
+       // Players can only list/get their own requests. Admins can read/list any.
+      allow get: if isOwner(request.resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && request.query.userId == request.auth.uid) || isAdmin();
+      // Admins have full write access to all requests.
+      allow update, delete: if isAdmin();
     }
 
     // Categories are public to view, only admins can modify.
