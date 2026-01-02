@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc, arrayUnion, updateDoc } from 'firebase/firestore';
+import { collection, orderBy, query, runTransaction, doc, serverTimestamp, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -75,8 +75,6 @@ export function PlayerTournamentList() {
     const registrationColRef = collection(firestore, 'tournaments', tournament.id, 'registrations');
 
     try {
-       const newRegistrationRef = doc(registrationColRef); // Create a ref with a new ID
-
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) {
@@ -91,20 +89,21 @@ export function PlayerTournamentList() {
 
         const newCoinBalance = userProfile.coins - tournament.entryFee;
         
-        // 1. Update user's coin balance and registrationIds array
-        transaction.update(userRef, { 
-            coins: newCoinBalance,
-            registrationIds: arrayUnion(newRegistrationRef.id)
-        });
-        
-        // 2. Create the new registration document
-        const newRegistration: Omit<Registration, 'id'> = {
+        // 1. Create the new registration document
+        const newRegistrationData: Omit<Registration, 'id'> = {
           tournamentId: tournament.id,
           teamName: profile.username, // Using username as team name for now
           playerIds: [user.uid],
           registrationDate: serverTimestamp(),
         };
-        transaction.set(newRegistrationRef, newRegistration);
+        // We add the document inside the transaction to get its ID.
+        const newRegistrationRef = doc(registrationColRef);
+        transaction.set(newRegistrationRef, newRegistrationData);
+        
+        // 2. Update user's coin balance
+        transaction.update(userRef, { 
+            coins: newCoinBalance,
+        });
       });
 
       toast({
@@ -214,5 +213,3 @@ export function PlayerTournamentList() {
     </div>
   );
 }
-
-    

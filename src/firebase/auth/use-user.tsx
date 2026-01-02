@@ -17,7 +17,6 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'staff' | 'player';
   coins: number;
-  registrationIds?: string[];
 }
 
 export interface JoinedTournament extends WithId<Tournament> {
@@ -62,17 +61,19 @@ export const useUser = (): UserHookResult => {
   // --- State for combined data ---
   const [coinRequests, setCoinRequests] = useState<WithId<CoinRequest>[] | null>(null);
   const [joinedTournaments, setJoinedTournaments] = useState<JoinedTournament[] | null>(null);
-  const [dataLoading, setDataLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<Error | null>(null);
 
 
   useEffect(() => {
+    if (!user || !firestore) {
+      setCoinRequests(null);
+      setJoinedTournaments(null);
+      setDataLoading(false);
+      return;
+    }
+
     const fetchUserData = async () => {
-      if (!user || !firestore) {
-        setCoinRequests(null);
-        setJoinedTournaments(null);
-        return;
-      }
       setDataLoading(true);
       try {
         // --- Fetch Coin Requests ---
@@ -107,15 +108,20 @@ export const useUser = (): UserHookResult => {
 
         const tournaments = (await Promise.all(tournamentPromises)).filter(t => t !== null) as JoinedTournament[];
         setJoinedTournaments(tournaments);
+        setDataError(null);
 
       } catch (e: any) {
+        console.error("Error fetching user data:", e);
         setDataError(e);
+        setJoinedTournaments(null); // Clear data on error
+        setCoinRequests(null);
       } finally {
         setDataLoading(false);
       }
     };
+    
     fetchUserData();
-  }, [user, firestore, profile]); // Rerun when profile changes (e.g., registrationIds get updated)
+  }, [user, firestore]); 
 
 
   const combinedIsLoading = isUserLoading || isProfileLoading || dataLoading;
@@ -126,10 +132,8 @@ export const useUser = (): UserHookResult => {
     profile,
     coinRequests,
     joinedTournaments,
-    isUserLoading,
+    isUserLoading: combinedIsLoading, // Use a single loading state for simplicity in UI
     isProfileLoading: combinedIsLoading,
     userError: combinedError,
   };
 };
-
-    
