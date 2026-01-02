@@ -73,6 +73,13 @@ export function StaffCoinRequests() {
             status: decision,
             decisionDate: serverTimestamp(),
         });
+        
+        // Also update the player's private copy of the request
+        const playerRequestRef = doc(firestore, `users/${request.userId}/${request.collectionName}`, request.id);
+        batch.update(playerRequestRef, {
+            status: decision
+        });
+
 
         // If approved, adjust the user's coin balance
         if (decision === 'approved') {
@@ -124,9 +131,9 @@ export function StaffCoinRequests() {
       return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Requests</AlertTitle>
+          <AlertTitle>Access Denied: Admin or Staff Only</AlertTitle>
           <AlertDescription>
-            There was a problem loading pending requests. Please check your permissions and try again.
+            You do not have the required permissions to view coin requests. Please contact an administrator if you believe this is an error.
           </AlertDescription>
         </Alert>
       );
