@@ -59,8 +59,8 @@ service cloud.firestore {
     function isExistingDoc() {
       return resource != null;
     }
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function getRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
     function getUser(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
@@ -70,10 +70,10 @@ service cloud.firestore {
         return getUser(userId).status == null || getUser(userId).status == 'active';
     }
     function isAdmin() {
-        return isSignedIn() && getRole() == 'admin' && isUserActive(request.auth.uid);
+        return isSignedIn() && getRole(request.auth.uid) == 'admin' && isUserActive(request.auth.uid);
     }
     function isStaff() {
-        return isSignedIn() && (getRole() == 'staff' || isAdmin()) && isUserActive(request.auth.uid);
+        return isSignedIn() && (getRole(request.auth.uid) == 'staff' || isAdmin()) && isUserActive(request.auth.uid);
     }
 
 
@@ -87,11 +87,11 @@ service cloud.firestore {
      * @principle Restricts access to a user's own data tree and prevents user enumeration.
      */
     match /users/{userId} {
-      allow get: if (isOwner(userId) || isAdmin()) && isUserActive(request.auth.uid);
+      allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if ((isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id) || isAdmin()) && isUserActive(request.auth.uid);
-      allow delete: if isOwner(userId) && isExistingDoc() && isUserActive(request.auth.uid);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId);
     }
 
     /**
@@ -173,5 +173,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
