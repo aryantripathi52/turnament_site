@@ -8,54 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { DollarSign, Gem } from 'lucide-react';
 import { AddFundsForm } from './add-funds-form';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '../ui/button';
-import { useUser } from '@/firebase';
-import { Timestamp } from 'firebase/firestore';
-import type { CoinRequest as CoinRequestType } from '@/lib/types';
-import { format } from 'date-fns';
 
 export function Wallet() {
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
-  const { coinRequests, isProfileLoading: isLoading } = useUser();
-
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'default';
-      case 'pending':
-        return 'secondary';
-      case 'denied':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
-  
-  const formatDate = (timestamp: Timestamp | Date | undefined) => {
-    if (!timestamp) return 'N/A';
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return format(date, 'MMM d, yyyy');
-  }
-
-  const sortedRequests = coinRequests 
-    ? [...coinRequests].sort((a, b) => {
-        const dateA = a.requestDate instanceof Timestamp ? a.requestDate.toMillis() : 0;
-        const dateB = b.requestDate instanceof Timestamp ? b.requestDate.toMillis() : 0;
-        return dateB - dateA;
-      })
-    : [];
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -67,43 +26,7 @@ export function Wallet() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">
-          <div className="space-y-4">
-             <h4 className="text-sm font-medium">Request History</h4>
-             <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading && (
-                            <TableRow>
-                                <TableCell colSpan={3} className="text-center">Loading requests...</TableCell>
-                            </TableRow>
-                        )}
-                        {!isLoading && sortedRequests.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={3} className="text-center">No requests found.</TableCell>
-                            </TableRow>
-                        )}
-                        {!isLoading && sortedRequests.map((request) => (
-                        <TableRow key={request.id}>
-                            <TableCell>{request.amountCoins} coins</TableCell>
-                            <TableCell>
-                            {formatDate(request.requestDate as any)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <Badge variant={getStatusVariant(request.status)} className="capitalize">{request.status}</Badge>
-                            </TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-             </div>
-          </div>
+          <p className="text-sm text-muted-foreground">Submit a request to add coins to your wallet. Admins will review your request after you have made a payment.</p>
         </CardContent>
         <CardFooter>
           <AddFundsForm isOpen={isAddFundsOpen} setIsOpen={setIsAddFundsOpen}>
