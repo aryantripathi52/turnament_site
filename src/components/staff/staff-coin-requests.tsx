@@ -27,18 +27,6 @@ export function StaffCoinRequests() {
 
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
-  useEffect(() => {
-    // --- FIREBASE TRUTH TRAP ---
-    if (profile) {
-        console.log('--- FIREBASE IDENTITY DEBUG ---');
-        console.log('1. Current User Role:', profile.role);
-        console.log('2. Current User Email:', auth.currentUser?.email);
-        console.log('3. Current Logged-in UID:', auth.currentUser?.uid);
-        console.log('-------------------------------');
-    }
-  }, [profile, auth.currentUser]);
-
-
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
     return query(collection(firestore, 'addCoinRequests'));
@@ -49,8 +37,20 @@ export function StaffCoinRequests() {
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
-  const { data: addRequests, setData: setAddRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
-  const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
+  const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
+  const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
+
+  const error = addError || withdrawError;
+
+  useEffect(() => {
+    if (error) {
+      console.error("--- DETAILED PERMISSION ERROR ---");
+      console.error("Error Code:", (error as any).code);
+      console.error("Error Message:", error.message);
+      console.error("Error Stack:", error.stack);
+      console.error("---------------------------------");
+    }
+  }, [error]);
 
   const allRequests = useMemo((): CombinedRequest[] => {
     if (!isStaffOrAdmin) return [];
@@ -60,20 +60,17 @@ export function StaffCoinRequests() {
 
     const combined = [...pendingAdds, ...pendingWithdraws];
 
-    // Sort in-memory (client-side)
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-        if (!dateB?.toMillis) return -1;
-        if (!dateA?.toMillis) return 1;
+        if (!dateA || !dateB) return 0;
         return dateB.toMillis() - dateA.toMillis();
     });
   }, [addRequests, withdrawRequests, isStaffOrAdmin]);
 
 
   const isLoading = loadingAdd || loadingWithdraw;
-  const error = addError || withdrawError;
-
+  
   const handleDecision = async (request: CombinedRequest, decision: 'approved' | 'denied') => {
     if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'Database connection not found.' });

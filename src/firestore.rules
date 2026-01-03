@@ -2,22 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions for Role Checks ---
-    function isStaffOrAdmin() {
-      // Check if the user making the request has a role of 'admin' or 'staff' in their user document.
-      // This requires that a user can always read their own profile.
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
-    }
-
     // --- User Profile Rules ---
     match /users/{userId} {
       // A user can create their own profile.
       allow create: if request.auth != null && request.auth.uid == userId;
-      // A user can always read their own profile. This is crucial for the role-check function to work.
-      // Admins/Staff can read any user's profile.
-      allow read: if (request.auth != null && request.auth.uid == userId) || isStaffOrAdmin();
-      // A user can update their own profile. Admins/Staff can update any user's profile.
-      allow update: if (request.auth != null && request.auth.uid == userId) || isStaffOrAdmin();
+      // A user can always read their own profile. This is crucial for role-checks.
+      // Admins can read any user's profile.
+      allow read: if (request.auth != null && request.auth.uid == userId) || (request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2');
+      // A user can update their own profile. Admins can update any user's profile.
+      allow update: if (request.auth != null && request.auth.uid == userId) || (request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2');
 
       // Rules for user sub-collections
       match /joinedTournaments/{tournamentId} {
@@ -36,16 +29,12 @@ service cloud.firestore {
 
     // --- Tournament Rules ---
     match /tournaments/{tournamentId} {
-      // Anyone can read tournament details.
       allow read: if true;
-      // Only Admins or Staff can create or delete tournaments.
-      allow create, delete: if isStaffOrAdmin();
+      allow create, delete: if request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
       
-      // Players can update 'registeredCount'. Admins/Staff can update anything.
       allow update: if (request.auth != null && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])) || isStaffOrAdmin();
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])) || request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
 
-      // Registrations sub-collection
       match /registrations/{registrationId} {
         allow read, list: if request.auth != null;
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
@@ -55,25 +44,18 @@ service cloud.firestore {
     // --- Game Category Rules ---
     match /categories/{categoryId} {
         allow read: if true;
-        // Only Admins or Staff can create/update/delete categories.
-        allow write: if isStaffOrAdmin();
+        allow write: if request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
 
     // --- GLOBAL ADMIN COLLECTIONS ---
-    // These collections are for administrative review.
-    
     match /addCoinRequests/{requestId} {
-        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Admins/Staff can read individual requests, update them, and list the entire collection.
-        allow read, write, list: if isStaffOrAdmin();
+        allow read, write, list: if request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
     
     match /withdrawCoinRequests/{requestId} {
-        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Admins/Staff can read individual requests, update them, and list the entire collection.
-        allow read, write, list: if isStaffOrAdmin();
+        allow read, write, list: if request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
 
     // --- Public, Read-Only Collections ---
