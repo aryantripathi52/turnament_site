@@ -81,10 +81,13 @@ export function PlayerDashboard() {
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-60 p-4">
-                      <div className="flex flex-col h-full">
-                          <h3 className="text-lg font-semibold mb-4">Menu</h3>
-                          <NavTabs />
-                      </div>
+                      {/* The TabsList for mobile must be inside a Tabs context */}
+                      <Tabs value={activeTab} onValueChange={handleTabChange} orientation="vertical">
+                        <div className="flex flex-col h-full">
+                            <h3 className="text-lg font-semibold mb-4">Menu</h3>
+                            <NavTabs />
+                        </div>
+                      </Tabs>
                   </SheetContent>
               </Sheet>
               <CardTitle>Welcome, {profile?.username || user?.email || 'Player'}</CardTitle>
