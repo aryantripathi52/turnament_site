@@ -1,10 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // --- Helper Functions for Role Checks ---
     function isStaffOrAdmin() {
-      // Check if the user making the request has a role of 'admin' or 'staff' in their own user document.
+      // Check if the user making the request has a role of 'admin' or 'staff' in their user document.
       // This requires that a user can always read their own profile.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
