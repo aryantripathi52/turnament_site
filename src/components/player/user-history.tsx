@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
+import { ScrollArea } from '../ui/scroll-area';
 
 type HistoryItemType = 'Deposit' | 'Withdrawal' | 'Tournament Entry' | 'Tournament Prize';
 
@@ -165,40 +166,42 @@ export function UserHistory() {
             <CardTitle>Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-            <div className="space-y-4">
-            {allHistory.map((item) => {
-                const isPositive = item.amount > 0;
-                const statusInfo = statusConfig[item.status];
-                const typeInfo = typeConfig[item.type];
-                return (
-                <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                        <div className={cn('p-2 rounded-full bg-muted', typeInfo.color)}>
-                            <typeInfo.icon className="h-5 w-5 text-white" />
+            <ScrollArea className="h-[70vh] pr-4">
+                <div className="space-y-4">
+                {allHistory.map((item) => {
+                    const isPositive = item.amount > 0;
+                    const statusInfo = statusConfig[item.status];
+                    const typeInfo = typeConfig[item.type];
+                    return (
+                    <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border">
+                        <div className="flex items-center gap-4">
+                            <div className={cn('p-2 rounded-full bg-muted', typeInfo.color)}>
+                                <typeInfo.icon className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <p className="font-semibold">{item.title || item.type}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDate(item.date)}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <p className="font-semibold">{item.title || item.type}</p>
-                            <p className="text-xs text-muted-foreground">
-                                {formatDate(item.date)}
+                        <div className="flex flex-col items-end gap-1">
+                            <p className={cn(
+                                "font-bold text-lg",
+                                isPositive ? 'text-green-500' : 'text-red-500'
+                            )}>
+                                {isPositive ? '+' : ''}{item.amount.toLocaleString()} Coins
                             </p>
+                            <Badge className={cn("capitalize text-white text-xs", statusInfo.color)}>
+                                <statusInfo.icon className="mr-1 h-3 w-3" />
+                                {item.status}
+                            </Badge>
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                         <p className={cn(
-                            "font-bold text-lg",
-                            isPositive ? 'text-green-500' : 'text-red-500'
-                         )}>
-                            {isPositive ? '+' : ''}{item.amount.toLocaleString()} Coins
-                        </p>
-                        <Badge className={cn("capitalize text-white text-xs", statusInfo.color)}>
-                            <statusInfo.icon className="mr-1 h-3 w-3" />
-                            {item.status}
-                        </Badge>
-                    </div>
+                    );
+                })}
                 </div>
-                );
-            })}
-            </div>
+            </ScrollArea>
         </CardContent>
     </Card>
   );
