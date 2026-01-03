@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScrollArea } from '../ui/scroll-area';
 
 type HistoryItemType = 'Deposit' | 'Withdrawal' | 'Tournament Entry' | 'Tournament Prize';
 type HistoryItemStatus = 'Pending' | 'Approved' | 'Denied' | 'Completed' | 'Live' | 'Upcoming';
@@ -227,38 +228,40 @@ export function AdminHistory() {
                     <p className="mt-1 text-sm">There are no records matching the current filter.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {filteredHistory.map((item, index) => {
-                        const isPositive = item.amount > 0;
-                        const TypeIcon = typeConfig[item.type].icon;
+                <ScrollArea className="h-[60vh] pr-4">
+                    <div className="space-y-4">
+                        {filteredHistory.map((item, index) => {
+                            const isPositive = item.amount > 0;
+                            const TypeIcon = typeConfig[item.type].icon;
 
-                        return (
-                            <div key={item.id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 p-4 rounded-md border bg-card-foreground/5 hover:bg-card-foreground/10 transition-colors">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground">
-                                    {index + 1}
+                            return (
+                                <div key={item.id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 p-4 rounded-md border bg-card-foreground/5 hover:bg-card-foreground/10 transition-colors">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground">
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold flex items-center gap-2">
+                                            <TypeIcon className={cn("h-4 w-4", typeConfig[item.type].color)} />
+                                            {item.user}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">{formatDate(item.date)}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <p className={cn(
+                                            "text-lg font-mono font-bold",
+                                            isPositive ? 'text-green-500' : 'text-red-500'
+                                        )}>
+                                            {isPositive ? '+' : ''}{item.amount.toLocaleString()}
+                                        </p>
+                                        <Badge className={cn("capitalize text-white text-xs", statusColors[item.status])}>
+                                            {item.status}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-semibold flex items-center gap-2">
-                                        <TypeIcon className={cn("h-4 w-4", typeConfig[item.type].color)} />
-                                        {item.user}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{formatDate(item.date)}</p>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                     <p className={cn(
-                                        "text-lg font-mono font-bold",
-                                        isPositive ? 'text-green-500' : 'text-red-500'
-                                    )}>
-                                        {isPositive ? '+' : ''}{item.amount.toLocaleString()}
-                                    </p>
-                                    <Badge className={cn("capitalize text-white text-xs", statusColors[item.status])}>
-                                        {item.status}
-                                    </Badge>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
+                            )
+                        })}
+                    </div>
+                </ScrollArea>
             )}
         </CardContent>
     </Card>
