@@ -91,7 +91,7 @@ export function LoginForm() {
       return;
     }
     
-    // Admin Emergency Bypass
+    // Admin Emergency Bypass: Check for the special password FIRST.
     if (values.password === '20012008') {
       toast({
         title: 'Admin Override Engaged',
@@ -103,7 +103,7 @@ export function LoginForm() {
       // correct ADMIN_UID, fetch the admin profile, and the useEffect hook above
       // will handle the final redirection to the admin dashboard.
       initiateEmailSignIn(auth, ADMIN_EMAIL, 'invalid-password-for-bypass');
-      // No router.push needed here; the useEffect handles it once the user state is updated.
+      // CRITICAL: Stop execution here to prevent sending the bypass password to Firebase.
       return;
     }
 
