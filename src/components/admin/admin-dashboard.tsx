@@ -47,32 +47,34 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-             <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2 flex-shrink-0">
-                <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
-                    <LayoutDashboard className="h-5 w-5" />
-                    Dashboard
-                </TabsTrigger>
-                <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
-                    <Gamepad2 className="h-5 w-5" />
-                    Tournaments
-                </TabsTrigger>
-                <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
-                    <Coins className="h-5 w-5" />
-                    Coin Requests
-                </TabsTrigger>
-                <TabsTrigger value="history" className="w-full justify-start gap-2">
-                    <ListOrdered className="h-5 w-5" />
-                    History
-                </TabsTrigger>
-                 <TabsTrigger value="hire-staff" className="w-full justify-start gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Hire Staff
-                </TabsTrigger>
-                <TabsTrigger value="profile" className="w-full justify-start gap-2">
-                    <UserIcon className="h-5 w-5" />
-                    Profile
-                </TabsTrigger>
-            </TabsList>
+             <div className="w-full md:w-auto md:flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-3 md:flex md:flex-col md:h-full md:space-y-2">
+                    <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
+                        <LayoutDashboard className="h-5 w-5" />
+                        Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                        <Gamepad2 className="h-5 w-5" />
+                        Tournaments
+                    </TabsTrigger>
+                    <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
+                        <Coins className="h-5 w-5" />
+                        Coin Requests
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="w-full justify-start gap-2">
+                        <ListOrdered className="h-5 w-5" />
+                        History
+                    </TabsTrigger>
+                    <TabsTrigger value="hire-staff" className="w-full justify-start gap-2">
+                        <UserPlus className="h-5 w-5" />
+                        Hire Staff
+                    </TabsTrigger>
+                    <TabsTrigger value="profile" className="w-full justify-start gap-2">
+                        <UserIcon className="h-5 w-5" />
+                        Profile
+                    </TabsTrigger>
+                </TabsList>
+             </div>
             <div className="mt-4 md:mt-0 flex-1">
                 <TabsContent value="dashboard">
                     <p className="mb-6 text-muted-foreground">Welcome, {profile?.username || user?.email || 'Admin'}! Manage your platform from here.</p>

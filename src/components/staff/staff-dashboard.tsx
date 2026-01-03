@@ -43,20 +43,22 @@ export function StaffDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2 flex-shrink-0">
-              <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
-                <LayoutDashboard className="h-5 w-5" />
-                Dashboard
-              </TabsTrigger>
-               <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
-                    <Gamepad2 className="h-5 w-5" />
-                    Tournaments
+            <div className="w-full md:w-auto md:flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-3 md:flex md:flex-col md:h-full md:space-y-2">
+                <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
                 </TabsTrigger>
-              <TabsTrigger value="profile" className="w-full justify-start gap-2">
-                <UserIcon className="h-5 w-5" />
-                Profile
-              </TabsTrigger>
-            </TabsList>
+                <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                        <Gamepad2 className="h-5 w-5" />
+                        Tournaments
+                    </TabsTrigger>
+                <TabsTrigger value="profile" className="w-full justify-start gap-2">
+                    <UserIcon className="h-5 w-5" />
+                    Profile
+                </TabsTrigger>
+                </TabsList>
+            </div>
             <div className="mt-4 md:mt-0 flex-1">
               <TabsContent value="dashboard">
                 <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments and player coin requests from here.</p>

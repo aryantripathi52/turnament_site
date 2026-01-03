@@ -44,36 +44,38 @@ export function PlayerDashboard() {
         </CardHeader>
         <CardContent>
            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2 flex-shrink-0">
-                <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
-                    <LayoutDashboard className="h-5 w-5" />
-                    Dashboard
-                </TabsTrigger>
-                 <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
-                    <Gamepad2 className="h-5 w-5" />
-                    Tournaments
-                </TabsTrigger>
-                 <TabsTrigger value="my-tournaments" className="w-full justify-start gap-2">
-                    <Trophy className="h-5 w-5" />
-                    My Tournaments
-                </TabsTrigger>
-                <TabsTrigger value="wallet" className="w-full justify-start gap-2">
-                    <WalletIcon className="h-5 w-5" />
-                    My Wallet
-                </TabsTrigger>
-                 <TabsTrigger value="history" className="w-full justify-start gap-2">
-                    <HistoryIcon className="h-5 w-5" />
-                    History
-                </TabsTrigger>
-                <TabsTrigger value="support" className="w-full justify-start gap-2">
-                    <LifeBuoy className="h-5 w-5" />
-                    Support
-                </TabsTrigger>
-                <TabsTrigger value="profile" className="w-full justify-start gap-2">
-                    <UserIcon className="h-5 w-5" />
-                    Profile
-                </TabsTrigger>
-            </TabsList>
+            <div className="w-full md:w-auto md:flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-4 md:flex md:flex-col md:h-full md:space-y-2">
+                    <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
+                        <LayoutDashboard className="h-5 w-5" />
+                        Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="tournaments" className="w-full justify-start gap-2">
+                        <Gamepad2 className="h-5 w-5" />
+                        Tournaments
+                    </TabsTrigger>
+                    <TabsTrigger value="my-tournaments" className="w-full justify-start gap-2">
+                        <Trophy className="h-5 w-5" />
+                        My Tournaments
+                    </TabsTrigger>
+                    <TabsTrigger value="wallet" className="w-full justify-start gap-2">
+                        <WalletIcon className="h-5 w-5" />
+                        My Wallet
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="w-full justify-start gap-2">
+                        <HistoryIcon className="h-5 w-5" />
+                        History
+                    </TabsTrigger>
+                    <TabsTrigger value="support" className="w-full justify-start gap-2">
+                        <LifeBuoy className="h-5 w-5" />
+                        Support
+                    </TabsTrigger>
+                    <TabsTrigger value="profile" className="w-full justify-start gap-2">
+                        <UserIcon className="h-5 w-5" />
+                        Profile
+                    </TabsTrigger>
+                </TabsList>
+            </div>
             <div className="mt-4 md:mt-0 flex-1">
               <TabsContent value="dashboard">
                   <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your wallet.</p>
