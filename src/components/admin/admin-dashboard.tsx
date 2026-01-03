@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins, UserPlus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
 import { CreateTournamentForm } from './create-tournament-form';
 import { TournamentList } from './tournament-list';
 import { StaffCoinRequests } from '../staff/staff-coin-requests';
+import { HireStaffForm } from './hire-staff-form';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -58,6 +59,10 @@ export function AdminDashboard() {
                     <Coins className="h-5 w-5" />
                     Coin Requests
                 </TabsTrigger>
+                 <TabsTrigger value="hire-staff" className="w-full justify-start gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    Hire Staff
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -88,6 +93,15 @@ export function AdminDashboard() {
                             </CreateCategoryForm>
                         </CardContent>
                     </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Hire Staff</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Create a new staff account.</p>
+                            <Button className="mt-4" onClick={() => setActiveTab('hire-staff')}>Hire Staff</Button>
+                        </CardContent>
+                    </Card>
                 </div>
                 <div className="mt-8">
                   <h3 className="text-xl font-semibold mb-4">Existing Categories</h3>
@@ -103,6 +117,9 @@ export function AdminDashboard() {
             </TabsContent>
             <TabsContent value="coin-requests" className="mt-0 flex-1">
                 <StaffCoinRequests />
+            </TabsContent>
+             <TabsContent value="hire-staff" className="mt-0 flex-1">
+                <HireStaffForm />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
