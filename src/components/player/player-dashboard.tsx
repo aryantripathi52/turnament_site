@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History as HistoryIcon, Gamepad2, Trophy } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History as HistoryIcon, Gamepad2, Trophy, LifeBuoy } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
@@ -12,6 +12,7 @@ import { EditProfileForm } from '../admin/edit-profile-form';
 import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
 import { UserHistory } from './user-history';
+import { SupportTab } from './support-tab';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -64,6 +65,10 @@ export function PlayerDashboard() {
                     <HistoryIcon className="h-5 w-5" />
                     History
                 </TabsTrigger>
+                <TabsTrigger value="support" className="w-full justify-start gap-2">
+                    <LifeBuoy className="h-5 w-5" />
+                    Support
+                </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
                     <UserIcon className="h-5 w-5" />
                     Profile
@@ -108,6 +113,9 @@ export function PlayerDashboard() {
               </TabsContent>
               <TabsContent value="history">
                 <UserHistory />
+              </TabsContent>
+               <TabsContent value="support">
+                <SupportTab />
               </TabsContent>
               <TabsContent value="profile">
                   <Card>
