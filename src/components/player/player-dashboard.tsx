@@ -13,7 +13,6 @@ import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
 import { UserHistory } from './user-history';
 import { SupportTab } from './support-tab';
-import { cn } from '@/lib/utils';
 
 
 export function PlayerDashboard() {
@@ -30,8 +29,7 @@ export function PlayerDashboard() {
     : 'N/A';
 
   return (
-    <Tabs defaultValue="dashboard" className="w-full">
-      <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6">
         <Card>
           <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -46,106 +44,107 @@ export function PlayerDashboard() {
             </div>
           </CardHeader>
         </Card>
-
-        <div className="sticky top-0 z-10 -mx-4 sm:mx-0 bg-background/80 backdrop-blur-md">
-            <div className="overflow-x-auto pb-2 scrollbar-hide">
-                <TabsList className="h-auto bg-transparent p-2 gap-2 flex-nowrap justify-start">
-                    <TabsTrigger value="dashboard">
-                        <LayoutDashboard className="mr-2"/> Dashboard
-                    </TabsTrigger>
-                    <TabsTrigger value="tournaments">
-                        <Gamepad2 className="mr-2"/> Tournaments
-                    </TabsTrigger>
-                    <TabsTrigger value="my-tournaments">
-                        <Trophy className="mr-2"/> My Tournaments
-                    </TabsTrigger>
-                    <TabsTrigger value="wallet">
-                        <WalletIcon className="mr-2"/> My Wallet
-                    </TabsTrigger>
-                    <TabsTrigger value="history">
-                        <HistoryIcon className="mr-2"/> History
-                    </TabsTrigger>
-                    <TabsTrigger value="support">
-                        <LifeBuoy className="mr-2"/> Support
-                    </TabsTrigger>
-                    <TabsTrigger value="profile">
-                        <UserIcon className="mr-2"/> Profile
-                    </TabsTrigger>
-                </TabsList>
+        <Tabs defaultValue="dashboard" className="w-full">
+            <div className="sticky top-14 md:top-0 z-10 -mx-4 sm:mx-0 bg-background/80 backdrop-blur-md border-b">
+                <div className="overflow-x-auto pb-2 scrollbar-hide px-4">
+                    <TabsList className="h-auto bg-transparent p-0 gap-4 flex-nowrap justify-start">
+                        <TabsTrigger value="dashboard">
+                            <LayoutDashboard className="mr-2"/> Dashboard
+                        </TabsTrigger>
+                        <TabsTrigger value="tournaments">
+                            <Gamepad2 className="mr-2"/> Tournaments
+                        </TabsTrigger>
+                        <TabsTrigger value="my-tournaments">
+                            <Trophy className="mr-2"/> My Tournaments
+                        </TabsTrigger>
+                        <TabsTrigger value="wallet">
+                            <WalletIcon className="mr-2"/> My Wallet
+                        </TabsTrigger>
+                        <TabsTrigger value="history">
+                            <HistoryIcon className="mr-2"/> History
+                        </TabsTrigger>
+                        <TabsTrigger value="support">
+                            <LifeBuoy className="mr-2"/> Support
+                        </TabsTrigger>
+                        <TabsTrigger value="profile">
+                            <UserIcon className="mr-2"/> Profile
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
             </div>
-        </div>
 
-        <TabsContent value="dashboard">
-            <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your wallet.</p>
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Find a Tournament</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Browse the list of available tournaments and join the battle.</p>
-                        {/* This button will not be visible, but if it was, this is how it would switch tabs */}
-                        {/* <Button className="mt-4" onClick={() => {}}>View Tournaments</Button> */}
-                    </CardContent>
-                </Card>
-                <Card>
-                <CardHeader>
-                    <CardTitle>Manage Your Wallet</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>Add funds to your wallet or withdraw your winnings.</p>
-                     {/* <Button className="mt-4" onClick={() => {}}>Go to My Wallet</Button> */}
-                </CardContent>
-                </Card>
-            </div>
-        </TabsContent>
-        <TabsContent value="tournaments">
-            <PlayerTournamentList />
-        </TabsContent>
-        <TabsContent value="my-tournaments">
-            <MyTournaments />
-        </TabsContent>
-        <TabsContent value="wallet">
-            <Wallet />
-        </TabsContent>
-        <TabsContent value="history">
-          <UserHistory />
-        </TabsContent>
-        <TabsContent value="support">
-          <SupportTab />
-        </TabsContent>
-        <TabsContent value="profile">
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Profile</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <p className="flex justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">Username</span>
-                            <span>{profile?.username || 'N/A'}</span>
-                        </p>
-                        <p className="flex justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">Email</span>
-                            <span>{user?.email || 'NA'}</span>
-                        </p>
-                        <p className="flex justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">Joined</span>
-                            <span>{creationDate}</span>
-                        </p>
+            <div className="mt-6">
+                <TabsContent value="dashboard">
+                    <p className="mb-6 text-muted-foreground">This is your player dashboard. Find tournaments to join and manage your wallet.</p>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Find a Tournament</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p>Browse the list of available tournaments and join the battle.</p>
+                                 <Button className="mt-4" disabled>View Tournaments</Button>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                        <CardHeader>
+                            <CardTitle>Manage Your Wallet</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Add funds to your wallet or withdraw your winnings.</p>
+                            <Button className="mt-4" disabled>Go to My Wallet</Button>
+                        </CardContent>
+                        </Card>
                     </div>
-                    <EditProfileForm
-                    user={user}
-                    profile={profile}
-                    isOpen={isEditDialogOpen}
-                    setIsOpen={setIsEditDialogOpen}
-                    >
-                    <Button className="mt-4 w-full" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
-                    </EditProfileForm>
-                </CardContent>
-            </Card>
-        </TabsContent>
-      </div>
-    </Tabs>
+                </TabsContent>
+                <TabsContent value="tournaments">
+                    <PlayerTournamentList />
+                </TabsContent>
+                <TabsContent value="my-tournaments">
+                    <MyTournaments />
+                </TabsContent>
+                <TabsContent value="wallet">
+                    <Wallet />
+                </TabsContent>
+                <TabsContent value="history">
+                <UserHistory />
+                </TabsContent>
+                <TabsContent value="support">
+                <SupportTab />
+                </TabsContent>
+                <TabsContent value="profile">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Profile</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <p className="flex justify-between">
+                                    <span className="text-sm font-medium text-muted-foreground">Username</span>
+                                    <span>{profile?.username || 'N/A'}</span>
+                                </p>
+                                <p className="flex justify-between">
+                                    <span className="text-sm font-medium text-muted-foreground">Email</span>
+                                    <span>{user?.email || 'NA'}</span>
+                                </p>
+                                <p className="flex justify-between">
+                                    <span className="text-sm font-medium text-muted-foreground">Joined</span>
+                                    <span>{creationDate}</span>
+                                </p>
+                            </div>
+                            <EditProfileForm
+                            user={user}
+                            profile={profile}
+                            isOpen={isEditDialogOpen}
+                            setIsOpen={setIsEditDialogOpen}
+                            >
+                            <Button className="mt-4 w-full" onClick={() => setIsEditDialogOpen(true)}>Edit Profile</Button>
+                            </EditProfileForm>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </div>
+        </Tabs>
+    </div>
   );
 }

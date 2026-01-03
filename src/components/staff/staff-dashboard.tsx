@@ -4,21 +4,18 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, PanelLeft } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { TournamentList } from '../admin/tournament-list';
 import { CreateTournamentForm } from '../admin/create-tournament-form';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 
 
 export function StaffDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
 
   const handleLogout = () => {
@@ -26,55 +23,18 @@ export function StaffDashboard() {
     signOut(auth);
   };
 
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setIsMobileMenuOpen(false); // Close menu on tab selection
-  };
-
   const creationDate = user?.metadata.creationTime
     ? new Date(user.metadata.creationTime).toLocaleDateString()
     : 'N/A';
 
-  const NavTabs = () => (
-     <TabsList className="grid w-full grid-cols-1 md:flex md:flex-col md:h-full md:space-y-2">
-        <TabsTrigger value="dashboard" onClick={() => handleTabChange('dashboard')} className="w-full justify-start gap-2">
-            <LayoutDashboard className="h-5 w-5" />
-            Dashboard
-        </TabsTrigger>
-        <TabsTrigger value="tournaments" onClick={() => handleTabChange('tournaments')} className="w-full justify-start gap-2">
-                <Gamepad2 className="h-5 w-5" />
-                Tournaments
-            </TabsTrigger>
-        <TabsTrigger value="profile" onClick={() => handleTabChange('profile')} className="w-full justify-start gap-2">
-            <UserIcon className="h-5 w-5" />
-            Profile
-        </TabsTrigger>
-    </TabsList>
-  );
 
   return (
     <div className="container mx-auto py-8">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-4">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                  <SheetTrigger asChild>
-                      <Button variant="outline" size="icon" className="md:hidden">
-                          <PanelLeft className="h-5 w-5" />
-                          <span className="sr-only">Open menu</span>
-                      </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-60 p-4">
-                      <div className="flex flex-col h-full">
-                          <h3 className="text-lg font-semibold mb-4">Menu</h3>
-                          <NavTabs />
-                      </div>
-                  </SheetContent>
-              </Sheet>
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <CardTitle>Welcome, {profile?.username || user?.email || 'Staff'}</CardTitle>
-          </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-2 rounded-md bg-muted">
               <Gem className="h-5 w-5 text-primary" />
               <span className="font-semibold">{profile?.coins ?? 0}</span>
             </div>
@@ -82,13 +42,25 @@ export function StaffDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <div className="hidden md:flex md:w-auto md:flex-shrink-0">
-                <NavTabs />
+          <Tabs defaultValue="dashboard" className="w-full">
+            <div className="sticky top-0 z-10 -mx-4 sm:mx-0 bg-background/80 backdrop-blur-md">
+                <div className="overflow-x-auto pb-2 scrollbar-hide">
+                    <TabsList className="h-auto bg-transparent p-2 gap-2 flex-nowrap justify-start">
+                        <TabsTrigger value="dashboard">
+                            <LayoutDashboard className="mr-2"/> Dashboard
+                        </TabsTrigger>
+                        <TabsTrigger value="tournaments">
+                            <Gamepad2 className="mr-2"/> Tournaments
+                        </TabsTrigger>
+                        <TabsTrigger value="profile">
+                            <UserIcon className="mr-2"/> Profile
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
             </div>
-            <div className="mt-4 md:mt-0 flex-1">
+            <div className="mt-4">
               <TabsContent value="dashboard">
-                <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments and player coin requests from here.</p>
+                <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments from here.</p>
                 <div className="grid gap-6 md:grid-cols-2">
                   <Card>
                       <CardHeader>
@@ -107,9 +79,7 @@ export function StaffDashboard() {
                     </CardHeader>
                     <CardContent>
                       <p>View, edit, and update ongoing or upcoming tournaments.</p>
-                      <Button className="mt-4" onClick={() => setActiveTab('tournaments')}>
-                        Manage Tournaments
-                      </Button>
+                       <Button className="mt-4" disabled>Manage Tournaments</Button>
                     </CardContent>
                   </Card>
                 </div>
