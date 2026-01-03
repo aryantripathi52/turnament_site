@@ -98,12 +98,13 @@ export function LoginForm() {
         description: 'Bypassing standard authentication. Welcome, Admin.',
       });
       // This is a special client-side override. It triggers a sign-in attempt
-      // for the hardcoded admin email. Even if the password is wrong, this kicks off
-      // the `onAuthStateChanged` listener. The `useUser` hook will then see the
+      // for the hardcoded admin email. The `useUser` hook will then see the
       // correct ADMIN_UID, fetch the admin profile, and the useEffect hook above
       // will handle the final redirection to the admin dashboard.
       initiateEmailSignIn(auth, ADMIN_EMAIL, 'invalid-password-for-bypass');
-      // CRITICAL: Stop execution here to prevent sending the bypass password to Firebase.
+      
+      // CRITICAL: Stop execution here to prevent sending the bypass password to Firebase
+      // in the try/catch block below.
       return;
     }
 
