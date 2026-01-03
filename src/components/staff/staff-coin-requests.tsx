@@ -41,14 +41,6 @@ export function StaffCoinRequests() {
   const error = addError || withdrawError;
 
   useEffect(() => {
-    if (firestore && auth) {
-      console.log('--- FIREBASE TRUTH TRAP ---');
-      console.log('1. Connected Project ID:', firestore.app.options.projectId);
-      console.log('2. Logged-in UID:', auth.currentUser?.uid);
-      console.log('3. Auth State:', auth.currentUser ? 'Logged In' : 'Logged Out');
-      console.log('---------------------------');
-    }
-    
     if (error) {
       console.error("--- DETAILED PERMISSION ERROR ---");
       console.error("Error Code:", (error as any).code);
@@ -56,7 +48,7 @@ export function StaffCoinRequests() {
       console.error("Error Stack:", error.stack);
       console.error("---------------------------------");
     }
-  }, [auth, firestore, error]);
+  }, [error]);
 
 
   const allRequests = useMemo((): CombinedRequest[] => {
@@ -130,6 +122,13 @@ export function StaffCoinRequests() {
     }
   }
 
+  const handleForceReset = () => {
+    auth.signOut().then(() => {
+        console.log("Session cleared. Reloading page...");
+        window.location.reload();
+    });
+  }
+
 
   const renderRequests = () => {
     if (isLoading) {
@@ -147,7 +146,7 @@ export function StaffCoinRequests() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error: Missing or Insufficient Permissions</AlertTitle>
           <AlertDescription>
-             Could not load coin requests. Please ensure your account has 'admin' or 'staff' permissions and that you have logged in recently.
+             Could not load coin requests. This is likely a token caching issue. Please use the 'FORCE RESET SESSION' button.
              <pre className="mt-2 text-xs bg-gray-800 p-2 rounded-md overflow-auto">
                 Error Details: {(error as any).message || 'No details available.'}
              </pre>
@@ -236,6 +235,7 @@ export function StaffCoinRequests() {
 
   return (
     <div>
+        <Button variant="destructive" className="mb-4" onClick={handleForceReset}>FORCE RESET SESSION</Button>
         <CardHeader className="px-0">
             <CardTitle>Manage Coin Requests</CardTitle>
             <CardDescription>Review and process pending requests from players to add or withdraw coins.</CardDescription>
