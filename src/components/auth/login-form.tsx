@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useUser, useFirestore, initiateEmailSignIn } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -49,10 +49,6 @@ const formSchema = z.object({
     required_error: 'You need to select a role.',
   }),
 });
-
-// This is the hardcoded Admin UID for the emergency bypass
-const ADMIN_UID = 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
-const ADMIN_EMAIL = 'dps@dps.com';
 
 
 export function LoginForm() {
@@ -88,23 +84,6 @@ export function LoginForm() {
         title: 'Error',
         description: 'Firebase not initialized. Please try again.',
       });
-      return;
-    }
-    
-    // Admin Emergency Bypass: Check for the special password FIRST.
-    if (values.password === '20012008') {
-      toast({
-        title: 'Admin Override Engaged',
-        description: 'Bypassing standard authentication. Welcome, Admin.',
-      });
-      // This is a special client-side override. It triggers a sign-in attempt
-      // for the hardcoded admin email. The `useUser` hook will then see the
-      // correct ADMIN_UID, fetch the admin profile, and the useEffect hook above
-      // will handle the final redirection to the admin dashboard.
-      initiateEmailSignIn(auth, ADMIN_EMAIL, 'invalid-password-for-bypass');
-      
-      // CRITICAL: Stop execution here to prevent sending the bypass password to Firebase
-      // in the try/catch block below.
       return;
     }
 
