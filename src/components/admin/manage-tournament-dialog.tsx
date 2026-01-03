@@ -38,19 +38,21 @@ interface ManageTournamentDialogProps {
   onTournamentUpdate: (updatedTournament: WithId<Tournament>) => void;
 }
 
+const NA_VALUE = 'N/A';
+
 export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTournamentUpdate }: ManageTournamentDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [firstPlace, setFirstPlace] = useState<string | undefined>(tournament.winners?.first?.userId);
-  const [secondPlace, setSecondPlace] = useState<string | undefined>(tournament.winners?.second?.userId);
-  const [thirdPlace, setThirdPlace] = useState<string | undefined>(tournament.winners?.third?.userId);
+  const [secondPlace, setSecondPlace] = useState<string | undefined>(tournament.winners?.second?.userId ?? NA_VALUE);
+  const [thirdPlace, setThirdPlace] = useState<string | undefined>(tournament.winners?.third?.userId ?? NA_VALUE);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setFirstPlace(tournament.winners?.first?.userId);
-    setSecondPlace(tournament.winners?.second?.userId);
-    setThirdPlace(tournament.winners?.third?.userId);
+    setSecondPlace(tournament.winners?.second?.userId ?? NA_VALUE);
+    setThirdPlace(tournament.winners?.third?.userId ?? NA_VALUE);
   }, [tournament]);
 
   const registrationsQuery = useMemoFirebase(() => {
@@ -73,18 +75,23 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
     return registrations?.map(reg => ({ id: reg.userId, name: reg.teamName })) || [];
   }, [registrations, isCompleted, tournament.winners]);
   
-  const getPlayerName = (userId: string | undefined) => players.find(p => p.id === userId)?.name || 'N/A';
+  const getPlayerName = (userId: string | undefined) => {
+    if (!userId || userId === NA_VALUE) return 'N/A';
+    return players.find(p => p.id === userId)?.name || 'Unknown';
+  }
 
   const handleSubmitWinners = async () => {
     if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
         return;
     }
-    if (!firstPlace || !secondPlace || !thirdPlace) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select winners for all three places.' });
+    if (!firstPlace) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a winner for 1st place.' });
       return;
     }
-    if (new Set([firstPlace, secondPlace, thirdPlace]).size !== 3) {
+
+    const selectedWinners = [firstPlace, secondPlace, thirdPlace].filter(p => p && p !== NA_VALUE);
+    if (new Set(selectedWinners).size !== selectedWinners.length) {
       toast({ variant: 'destructive', title: 'Error', description: 'Each winner must be a unique player.' });
       return;
     }
@@ -95,20 +102,26 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
       const batch = writeBatch(firestore);
       const completionTimestamp = serverTimestamp();
       
-      const winnersPayload = {
+      const winnersPayload: Tournament['winners'] = {
         first: { userId: firstPlace, username: getPlayerName(firstPlace) },
-        second: { userId: secondPlace, username: getPlayerName(secondPlace) },
-        third: { userId: thirdPlace, username: getPlayerName(thirdPlace) },
       };
+      
+      const prizeMap = new Map([
+          [firstPlace, { prize: tournament.prizePoolFirst, place: '1st' }],
+      ]);
+
+      if (secondPlace && secondPlace !== NA_VALUE) {
+        winnersPayload.second = { userId: secondPlace, username: getPlayerName(secondPlace) };
+        prizeMap.set(secondPlace, { prize: tournament.prizePoolSecond, place: '2nd' });
+      }
+
+      if (thirdPlace && thirdPlace !== NA_VALUE) {
+        winnersPayload.third = { userId: thirdPlace, username: getPlayerName(thirdPlace) };
+        prizeMap.set(thirdPlace, { prize: tournament.prizePoolThird, place: '3rd' });
+      }
 
       const tournamentRef = doc(firestore, 'tournaments', tournament.id);
       batch.update(tournamentRef, { winners: winnersPayload, status: 'completed' });
-
-      const prizeMap = new Map([
-          [firstPlace, { prize: tournament.prizePoolFirst, place: '1st' }],
-          [secondPlace, { prize: tournament.prizePoolSecond, place: '2nd' }],
-          [thirdPlace, { prize: tournament.prizePoolThird, place: '3rd' }],
-      ]);
 
       for (const [userId, { prize, place }] of prizeMap.entries()) {
         const userRef = doc(firestore, 'users', userId);
@@ -187,7 +200,9 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                         </CardHeader>
                         <CardContent>
                             <p className="font-semibold text-lg">{tournament.winners?.second?.username || 'N/A'}</p>
-                            <p className="text-sm text-muted-foreground">Won {tournament.prizePoolSecond.toLocaleString()} coins</p>
+                            {tournament.winners?.second && (
+                                <p className="text-sm text-muted-foreground">Won {tournament.prizePoolSecond.toLocaleString()} coins</p>
+                            )}
                         </CardContent>
                     </Card>
                      <Card>
@@ -199,7 +214,9 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
                         </CardHeader>
                         <CardContent>
                             <p className="font-semibold text-lg">{tournament.winners?.third?.username || 'N/A'}</p>
-                            <p className="text-sm text-muted-foreground">Won {tournament.prizePoolThird.toLocaleString()} coins</p>
+                             {tournament.winners?.third && (
+                                <p className="text-sm text-muted-foreground">Won {tournament.prizePoolThird.toLocaleString()} coins</p>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -217,7 +234,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
           <h3 className="font-semibold mb-2">Set Winners</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium">1st Place</label>
+              <label className="text-sm font-medium">1st Place (Required)</label>
               <Select value={firstPlace} onValueChange={setFirstPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 1st Place" /></SelectTrigger>
                 <SelectContent>
@@ -230,6 +247,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
               <Select value={secondPlace} onValueChange={setSecondPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 2nd Place" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NA_VALUE}>N/A - No Winner</SelectItem>
                   {players.map(p => <SelectItem key={`2-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -239,6 +257,7 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
               <Select value={thirdPlace} onValueChange={setThirdPlace}>
                 <SelectTrigger><SelectValue placeholder="Select 3rd Place" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NA_VALUE}>N/A - No Winner</SelectItem>
                   {players.map(p => <SelectItem key={`3-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
