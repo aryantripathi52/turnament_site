@@ -50,6 +50,33 @@ export function StaffCoinRequests() {
     }
   }, [error]);
 
+  const handleEmergencyReset = async () => {
+    try {
+      if (auth) {
+        await auth.signOut();
+      }
+    } catch (e) {
+      console.error("Sign out failed", e);
+    }
+    
+    try {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+
+      // This is a more robust way to handle IndexedDB deletion
+      const dbs = await window.indexedDB.databases();
+      dbs.forEach(db => {
+        if (db.name) window.indexedDB.deleteDatabase(db.name);
+      });
+      console.log("All caches and DBs cleared.");
+
+    } catch(e) {
+        console.error("Error clearing storage:", e);
+    } finally {
+        window.location.href = "/login";
+    }
+  };
+
 
   const allRequests = useMemo((): CombinedRequest[] => {
     const adds: CombinedRequest[] = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
@@ -122,13 +149,6 @@ export function StaffCoinRequests() {
     }
   }
 
-  const handleForceReset = () => {
-    auth.signOut().then(() => {
-        console.log("Session cleared. Reloading page...");
-        window.location.reload();
-    });
-  }
-
 
   const renderRequests = () => {
     if (isLoading) {
@@ -146,7 +166,7 @@ export function StaffCoinRequests() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error: Missing or Insufficient Permissions</AlertTitle>
           <AlertDescription>
-             Could not load coin requests. This is likely a token caching issue. Please use the 'FORCE RESET SESSION' button.
+             Could not load coin requests. Your authentication token might be stale. Please use the 'CLEAR AUTH CACHE' button to force a full reset.
              <pre className="mt-2 text-xs bg-gray-800 p-2 rounded-md overflow-auto">
                 Error Details: {(error as any).message || 'No details available.'}
              </pre>
@@ -235,7 +255,13 @@ export function StaffCoinRequests() {
 
   return (
     <div>
-        <Button variant="destructive" className="mb-4" onClick={handleForceReset}>FORCE RESET SESSION</Button>
+        <div className="mb-6 p-4 border-2 border-destructive rounded-lg">
+             <h3 className="font-bold text-destructive text-lg">Emergency Session Reset</h3>
+             <p className="text-sm text-muted-foreground mb-4">If you are seeing permission errors after updating rules, click this button to clear all local authentication caches and force a fresh login.</p>
+            <Button variant="destructive" size="lg" className="w-full" onClick={handleEmergencyReset}>
+                CLEAR AUTH CACHE & RELOAD
+            </Button>
+        </div>
         <CardHeader className="px-0">
             <CardTitle>Manage Coin Requests</CardTitle>
             <CardDescription>Review and process pending requests from players to add or withdraw coins.</CardDescription>
