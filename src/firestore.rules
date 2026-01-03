@@ -1,63 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Global Admin Override ---
-    // This rule grants the specified UID full read, write, and list access to ALL documents.
-    // This is the "Master Key" to bypass any other specific rule.
-    match /{path=**} {
-      allow read, write, list: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
-    }
-
-    // --- Player-Specific Subcollections ---
-    // Players can read and write to their own subcollections (joined tournaments, request history, etc.)
-    match /users/{userId}/{document=**} {
-      allow read, write, list: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // --- General User Profiles ---
-    // A user can read their own profile. Only the admin can list/write to other profiles.
-     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      // Write rule is covered by the global admin override.
-    }
-
-    // --- Tournament Rules ---
-    match /tournaments/{tournamentId} {
-      allow read: if true; // Tournaments are public to read
-      
-      // Players can update the registeredCount when joining. Admin has write via global override.
-      allow update: if (request.auth != null && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']));
-
-      match /registrations/{registrationId} {
-        allow read, list: if request.auth != null;
-        // Players can only create registrations for themselves.
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      }
-    }
-    
-    // --- Game Category Rules ---
-    // Categories are public to read. Admin has write via global override.
-    match /categories/{categoryId} {
-        allow read: if true;
-    }
-
-    // --- Public, Read-Only Collections ---
-    match /announcements/{announcementId} {
-      allow read: if true;
-    }
-     match /highlights/{highlightId} {
-      allow read: if true;
-    }
-
-    // --- Coin Requests ---
-    // These rules apply to non-admin users. Admin access is handled by the global override.
-    match /addCoinRequests/{requestId} {
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-    }
-     match /withdrawCoinRequests/{requestId} {
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
   }
 }
