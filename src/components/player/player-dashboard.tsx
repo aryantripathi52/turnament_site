@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
-import { RequestHistory } from './request-history';
+import { UserHistory } from './user-history';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -106,7 +106,7 @@ export function PlayerDashboard() {
                 <Wallet />
             </TabsContent>
             <TabsContent value="history" className="mt-0 flex-1">
-              <RequestHistory />
+              <UserHistory />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
                 <Card>
