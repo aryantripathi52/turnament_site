@@ -44,7 +44,7 @@ export function PlayerDashboard() {
         </CardHeader>
         <CardContent>
            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2">
+            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2 flex-shrink-0">
                 <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
@@ -130,7 +130,7 @@ export function PlayerDashboard() {
                               </p>
                               <p className="flex justify-between">
                                   <span className="text-sm font-medium text-muted-foreground">Email</span>
-                                  <span>{user?.email || 'N/A'}</span>
+                                  <span>{user?.email || 'NA'}</span>
                               </p>
                               <p className="flex justify-between">
                                   <span className="text-sm font-medium text-muted-foreground">Joined</span>

@@ -43,7 +43,7 @@ export function StaffDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2">
+            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2 flex-shrink-0">
               <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                 <LayoutDashboard className="h-5 w-5" />
                 Dashboard
