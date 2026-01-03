@@ -21,7 +21,7 @@ type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & 
 export function StaffCoinRequests() {
   const firestore = useFirestore();
   const auth = useAuth();
-  const { user, profile } = useUser();
+  const { profile } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -29,16 +29,14 @@ export function StaffCoinRequests() {
 
   useEffect(() => {
     // --- FIREBASE TRUTH TRAP ---
-    console.log('--- FIREBASE TRUTH TRAP ---');
-    if (firestore) {
-      console.log('1. Connected Project ID:', firestore.app.options.projectId);
-    } else {
-      console.log('1. Connected Project ID: Firestore not initialized');
+    if (profile) {
+        console.log('--- FIREBASE IDENTITY DEBUG ---');
+        console.log('1. Current User Role:', profile.role);
+        console.log('2. Current User Email:', auth.currentUser?.email);
+        console.log('3. Current Logged-in UID:', auth.currentUser?.uid);
+        console.log('-------------------------------');
     }
-    console.log('2. Logged-in UID:', auth.currentUser?.uid || 'Not available');
-    console.log('3. Auth State:', auth.currentUser ? 'Logged In' : 'Logged Out');
-    console.log('---------------------------');
-  }, [auth, firestore, auth.currentUser]);
+  }, [profile, auth.currentUser]);
 
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
@@ -55,22 +53,22 @@ export function StaffCoinRequests() {
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
   const allRequests = useMemo((): CombinedRequest[] => {
-    if (!addRequests && !withdrawRequests) return [];
+    if (!isStaffOrAdmin) return [];
 
     const pendingAdds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const pendingWithdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
 
     const combined = [...pendingAdds, ...pendingWithdraws];
 
+    // Sort in-memory (client-side)
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-
         if (!dateB?.toMillis) return -1;
         if (!dateA?.toMillis) return 1;
         return dateB.toMillis() - dateA.toMillis();
     });
-  }, [addRequests, withdrawRequests]);
+  }, [addRequests, withdrawRequests, isStaffOrAdmin]);
 
 
   const isLoading = loadingAdd || loadingWithdraw;
@@ -115,13 +113,6 @@ export function StaffCoinRequests() {
             }
         });
 
-
-        if (request.collectionName === 'addCoinRequests') {
-            setAddRequests(prev => prev?.filter(r => r.id !== request.id) || null);
-        } else {
-            setWithdrawRequests(prev => prev?.filter(r => r.id !== request.id) || null);
-        }
-
         toast({
             title: `Request ${decision.charAt(0).toUpperCase() + decision.slice(1)}`,
             description: `The request for ${request.amountCoins.toLocaleString()} coins has been processed.`,
@@ -147,7 +138,7 @@ export function StaffCoinRequests() {
           <Ban className="h-4 w-4" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
-            You do not have permission to view this section.
+            You do not have permission to view this section. Ensure your account has the 'admin' or 'staff' role.
           </AlertDescription>
         </Alert>
       );
