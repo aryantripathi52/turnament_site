@@ -4,17 +4,20 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
 import { TournamentList } from '../admin/tournament-list';
-import { StaffCoinRequests } from './staff-coin-requests';
+import { CreateTournamentForm } from '../admin/create-tournament-form';
+
 
 export function StaffDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
+
 
   const handleLogout = () => {
     const auth = getAuth();
@@ -57,6 +60,17 @@ export function StaffDashboard() {
             <TabsContent value="dashboard" className="mt-0 flex-1">
               <p className="mb-6 text-muted-foreground">This is your staff dashboard. You can manage tournaments and player coin requests from here.</p>
                <div className="grid gap-6 md:grid-cols-2">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Create Tournament</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p>Organize a new tournament for players.</p>
+                        <CreateTournamentForm isOpen={isTournamentDialogOpen} setIsOpen={setIsTournamentDialogOpen}>
+                              <Button className="mt-4" onClick={() => setIsTournamentDialogOpen(true)}>Create Tournament</Button>
+                        </CreateTournamentForm>
+                    </CardContent>
+                  </Card>
                 <Card>
                   <CardHeader>
                     <CardTitle>Manage Tournaments</CardTitle>
