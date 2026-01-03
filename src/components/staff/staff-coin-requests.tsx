@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
+import { useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { collection, query, Timestamp, doc, runTransaction, increment, serverTimestamp } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,28 +21,29 @@ type CombinedRequest = (WithId<AddCoinRequest> | WithId<WithdrawCoinRequest>) & 
 export function StaffCoinRequests() {
   const firestore = useFirestore();
   const auth = useAuth();
-  const { profile } = useUser();
   const { toast } = useToast();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
-
   const addCoinRequestsQuery = useMemoFirebase(() => {
-    if (!firestore || !isStaffOrAdmin) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'addCoinRequests'));
-  }, [firestore, isStaffOrAdmin]);
+  }, [firestore]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
-     if (!firestore || !isStaffOrAdmin) return null;
+     if (!firestore) return null;
     return query(collection(firestore, 'withdrawCoinRequests'));
-  }, [firestore, isStaffOrAdmin]);
+  }, [firestore]);
 
   const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<AddCoinRequest>(addCoinRequestsQuery);
   const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
+  const isLoading = loadingAdd || loadingWithdraw;
   const error = addError || withdrawError;
 
   useEffect(() => {
+    if(auth.currentUser) {
+        console.log("DEBUG - My UID:", auth.currentUser?.uid);
+    }
     if (error) {
       console.error("--- DETAILED PERMISSION ERROR ---");
       console.error("Error Code:", (error as any).code);
@@ -50,15 +51,14 @@ export function StaffCoinRequests() {
       console.error("Error Stack:", error.stack);
       console.error("---------------------------------");
     }
-  }, [error]);
+  }, [error, auth.currentUser]);
+
 
   const allRequests = useMemo((): CombinedRequest[] => {
-    if (!isStaffOrAdmin) return [];
+    const adds: CombinedRequest[] = addRequests?.map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
+    const withdraws: CombinedRequest[] = withdrawRequests?.map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
 
-    const pendingAdds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
-    const pendingWithdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
-
-    const combined = [...pendingAdds, ...pendingWithdraws];
+    const combined = [...adds, ...withdraws].filter(r => r.status === 'pending');
 
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
@@ -66,10 +66,8 @@ export function StaffCoinRequests() {
         if (!dateA || !dateB) return 0;
         return dateB.toMillis() - dateA.toMillis();
     });
-  }, [addRequests, withdrawRequests, isStaffOrAdmin]);
+  }, [addRequests, withdrawRequests]);
 
-
-  const isLoading = loadingAdd || loadingWithdraw;
   
   const handleDecision = async (request: CombinedRequest, decision: 'approved' | 'denied') => {
     if (!firestore) {
@@ -129,18 +127,6 @@ export function StaffCoinRequests() {
 
 
   const renderRequests = () => {
-    if (!isStaffOrAdmin && !isLoading) {
-       return (
-        <Alert variant="destructive">
-          <Ban className="h-4 w-4" />
-          <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>
-            You do not have permission to view this section. Ensure your account has the 'admin' or 'staff' role.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-    
     if (isLoading) {
       return (
         <div className="grid md:grid-cols-2 gap-4">
@@ -156,7 +142,9 @@ export function StaffCoinRequests() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
-             Could not load requests. Firestore error: {error.message}
+             {
+              `Could not load requests. Firestore error: ${error.message}`
+             }
           </AlertDescription>
         </Alert>
       );
@@ -194,7 +182,7 @@ export function StaffCoinRequests() {
               <CardContent className="space-y-3">
                  <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>User: <span className="font-semibold">{request.username}</span></span>
+                    <span className="truncate">User ID: <span className="font-mono text-xs">{request.userId}</span></span>
                 </div>
                 <div className="font-semibold text-lg">
                     Amount: {request.amountCoins.toLocaleString()} Coins
