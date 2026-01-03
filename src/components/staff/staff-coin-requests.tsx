@@ -41,9 +41,14 @@ export function StaffCoinRequests() {
   const error = addError || withdrawError;
 
   useEffect(() => {
-    if(auth.currentUser) {
-        console.log("DEBUG - My UID:", auth.currentUser?.uid);
+    if (firestore && auth) {
+      console.log('--- FIREBASE TRUTH TRAP ---');
+      console.log('1. Connected Project ID:', firestore.app.options.projectId);
+      console.log('2. Logged-in UID:', auth.currentUser?.uid);
+      console.log('3. Auth State:', auth.currentUser ? 'Logged In' : 'Logged Out');
+      console.log('---------------------------');
     }
+    
     if (error) {
       console.error("--- DETAILED PERMISSION ERROR ---");
       console.error("Error Code:", (error as any).code);
@@ -51,7 +56,7 @@ export function StaffCoinRequests() {
       console.error("Error Stack:", error.stack);
       console.error("---------------------------------");
     }
-  }, [error, auth.currentUser]);
+  }, [auth, firestore, error]);
 
 
   const allRequests = useMemo((): CombinedRequest[] => {
@@ -140,11 +145,12 @@ export function StaffCoinRequests() {
        return (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Requests</AlertTitle>
+          <AlertTitle>Error: Missing or Insufficient Permissions</AlertTitle>
           <AlertDescription>
-             {
-              `Could not load requests. Firestore error: ${error.message}`
-             }
+             Could not load coin requests. Please ensure your account has 'admin' or 'staff' permissions and that you have logged in recently.
+             <pre className="mt-2 text-xs bg-gray-800 p-2 rounded-md overflow-auto">
+                Error Details: {(error as any).message || 'No details available.'}
+             </pre>
           </AlertDescription>
         </Alert>
       );
