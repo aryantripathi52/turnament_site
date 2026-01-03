@@ -49,10 +49,6 @@ export function StaffDashboard() {
                     <Gamepad2 className="h-5 w-5" />
                     Tournaments
                 </TabsTrigger>
-                 <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
-                    <Coins className="h-5 w-5" />
-                    Coin Requests
-                </TabsTrigger>
               <TabsTrigger value="profile" className="w-full justify-start gap-2">
                 <UserIcon className="h-5 w-5" />
                 Profile
@@ -72,17 +68,6 @@ export function StaffDashboard() {
                     </Button>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Player Coin Requests</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>Review and process player requests to add or withdraw coins.</p>
-                     <Button className="mt-4" onClick={() => setActiveTab('coin-requests')}>
-                      Review Requests
-                    </Button>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
             <TabsContent value="tournaments" className="mt-0 flex-1 space-y-6">
@@ -91,9 +76,6 @@ export function StaffDashboard() {
                     <p className="mb-4 text-muted-foreground">View and manage all active and upcoming tournaments.</p>
                     <TournamentList />
                 </div>
-            </TabsContent>
-            <TabsContent value="coin-requests" className="mt-0 flex-1">
-                <StaffCoinRequests />
             </TabsContent>
             <TabsContent value="profile" className="mt-0 flex-1">
               <Card>
