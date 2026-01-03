@@ -28,21 +28,21 @@ export function StaffCoinRequests() {
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
   useEffect(() => {
-    if (auth.currentUser) {
-      console.log("Current Logged In UID:", auth.currentUser?.uid);
+    if (auth.currentUser && firestore) {
+      console.log("DEBUG - My UID:", auth.currentUser?.uid);
+      // @ts-ignore The options property exists on the app instance
+      console.log("DEBUG - Project ID:", firestore.app.options.projectId);
     }
-  }, [auth.currentUser]);
+  }, [auth, firestore]);
 
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
-    // Simple query, no ordering at the database level to avoid index issues.
     return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
-     // Simple query, no ordering at the database level to avoid index issues.
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
@@ -50,17 +50,17 @@ export function StaffCoinRequests() {
   const { data: withdrawRequests, setData: setWithdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<WithdrawCoinRequest>(withdrawCoinRequestsQuery);
 
   const allRequests = useMemo((): CombinedRequest[] => {
-    // Filter for pending requests client-side
+    if (!addRequests && !withdrawRequests) return [];
+    
     const pendingAdds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const pendingWithdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
     
     const combined = [...pendingAdds, ...pendingWithdraws];
     
-    // Sort in-memory (client-side) to avoid database index dependency
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-        // Handle cases where dates might be null or undefined for robust sorting
+
         if (!dateB?.toMillis) return -1;
         if (!dateA?.toMillis) return 1;
         return dateB.toMillis() - dateA.toMillis();
