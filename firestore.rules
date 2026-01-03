@@ -2,40 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ADMIN GLOBAL OVERRIDE: Grants the specified UID full access to everything.
+    // 1. ADMIN MASTER KEY: Grants the admin full access to the entire database.
+    // This rule is checked first and provides a global override.
     match /{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
+      allow read, write, list: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
 
-    // USER-SPECIFIC RULES:
-    // Allows users to read and write their own profile document.
+    // 2. PLAYER PROFILE GATE: Allows any authenticated user to read and write to their own profile.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow users to read/write to their own subcollections.
-    match /users/{userId}/{collection}/{docId} {
+    // Allows players to read/write to their own subcollections (joinedTournaments, etc.)
+    match /users/{userId}/{subcollection}/{docId} {
       allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // GLOBAL REQUEST COLLECTIONS (FOR ADMINS):
+    // 3. TOURNAMENT JOIN LOGIC:
+    // Allow any authenticated user to read tournaments and categories.
+    match /tournaments/{tournamentId} {
+        allow read: if request.auth != null;
+        // Allow an authenticated user to UPDATE a tournament doc ONLY IF they are incrementing the registered count.
+        // This is required for the "Join Tournament" transaction to succeed.
+        allow update: if request.auth != null 
+                      && request.resource.data.registeredCount == resource.data.registeredCount + 1;
+    }
+
+    // Allow a user to create their own registration document within a tournament.
+    match /tournaments/{tournamentId}/registrations/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public read access for categories
+    match /categories/{categoryId} {
+        allow read: if request.auth != null;
+    }
+
+    // 4. COIN REQUEST LOGIC:
     // Players can create requests, but cannot read or list the global collection.
-    // The admin's global override rule grants them the necessary access.
+    // The admin's global override rule grants them the necessary access to list these.
     match /addCoinRequests/{requestId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
 
     match /withdrawCoinRequests/{requestId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-    }
-    
-    // Public collections (if any) can be defined below.
-    match /tournaments/{tournamentId} {
-        allow read: if request.auth != null;
-    }
-    
-    match /categories/{categoryId} {
-        allow read: if request.auth != null;
     }
   }
 }
