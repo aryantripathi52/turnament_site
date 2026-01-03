@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useUser, useFirestore } from '@/firebase';
+import { useAuth, useUser, useFirestore, initiateEmailSignIn } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -49,6 +49,11 @@ const formSchema = z.object({
     required_error: 'You need to select a role.',
   }),
 });
+
+// This is the hardcoded Admin UID for the emergency bypass
+const ADMIN_UID = 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
+const ADMIN_EMAIL = 'dps@dps.com';
+
 
 export function LoginForm() {
   const auth = useAuth();
@@ -92,12 +97,13 @@ export function LoginForm() {
         title: 'Admin Override Engaged',
         description: 'Bypassing standard authentication. Welcome, Admin.',
       });
-      // This is a simplified client-side override.
-      // It simulates a login for the emergency user.
-      // Note: This does not create a real Firebase session for the admin UID.
-      // It relies on the app's client-side logic to show the admin dashboard.
-      // To achieve a full session, you'd need a custom token system.
-      router.push('/');
+      // This is a special client-side override. It triggers a sign-in attempt
+      // for the hardcoded admin email. Even if the password is wrong, this kicks off
+      // the `onAuthStateChanged` listener. The `useUser` hook will then see the
+      // correct ADMIN_UID, fetch the admin profile, and the useEffect hook above
+      // will handle the final redirection to the admin dashboard.
+      initiateEmailSignIn(auth, ADMIN_EMAIL, 'invalid-password-for-bypass');
+      // No router.push needed here; the useEffect handles it once the user state is updated.
       return;
     }
 
