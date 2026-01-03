@@ -28,12 +28,17 @@ export function StaffCoinRequests() {
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
   useEffect(() => {
-    if (auth.currentUser && firestore) {
-      console.log("DEBUG - My UID:", auth.currentUser?.uid);
-      // @ts-ignore The options property exists on the app instance
-      console.log("DEBUG - Project ID:", firestore.app.options.projectId);
+    // --- FIREBASE TRUTH TRAP ---
+    console.log('--- FIREBASE TRUTH TRAP ---');
+    if (firestore) {
+      console.log('1. Connected Project ID:', firestore.app.options.projectId);
+    } else {
+      console.log('1. Connected Project ID: Firestore not initialized');
     }
-  }, [auth, firestore]);
+    console.log('2. Logged-in UID:', auth.currentUser?.uid || 'Not available');
+    console.log('3. Auth State:', auth.currentUser ? 'Logged In' : 'Logged Out');
+    console.log('---------------------------');
+  }, [auth, firestore, auth.currentUser]);
 
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
@@ -51,12 +56,12 @@ export function StaffCoinRequests() {
 
   const allRequests = useMemo((): CombinedRequest[] => {
     if (!addRequests && !withdrawRequests) return [];
-    
+
     const pendingAdds: CombinedRequest[] = addRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'addCoinRequests' as const })) || [];
     const pendingWithdraws: CombinedRequest[] = withdrawRequests?.filter(r => r.status === 'pending').map(r => ({ ...r, collectionName: 'withdrawCoinRequests' as const })) || [];
-    
+
     const combined = [...pendingAdds, ...pendingWithdraws];
-    
+
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
@@ -163,7 +168,7 @@ export function StaffCoinRequests() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Requests</AlertTitle>
           <AlertDescription>
-            {error.message}
+             Could not load requests. Firestore error: {error.message}
           </AlertDescription>
         </Alert>
       );
