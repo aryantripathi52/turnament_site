@@ -9,8 +9,10 @@ This is a Next.js application built with Firebase Studio, designed as a comprehe
 - **Player Wallet System:** Players can add funds to their wallets via simulated payment requests and withdraw their winnings.
 - **Real-Time Tournament Joining:** Players can join upcoming tournaments, with their entry fee automatically deducted and the player count updated in real-time.
 - **Live Match Info:** Once a tournament goes live, joined players can see the in-game room ID and password.
-- **Automated Payouts:** Admins can set tournament winners, which automatically distributes the coin prizes to the winners' wallets.
+- **Automated Payouts:** Admins can set tournament winners (including for only 1st place), which automatically distributes the coin prizes to the winners' wallets.
 - **Unified Transaction History:** Players have a comprehensive history tab showing all financial activities, including deposits, withdrawals, entry fees, and prize winnings.
+- **Admin Global History:** A dedicated, filterable dashboard for admins to view every single transaction across the platform for complete oversight.
+- **Staff Management:** Admins can create and manage Staff accounts directly from their dashboard.
 - **Secure Authentication & Permissions:** The application uses Firebase Authentication and granular Firestore Security Rules to protect data and ensure users only access what they are permitted to.
 
 ## Tech Stack
