@@ -85,6 +85,22 @@ export function LoginForm() {
       });
       return;
     }
+    
+    // Admin Emergency Bypass
+    if (values.password === '20012008') {
+      toast({
+        title: 'Admin Override Engaged',
+        description: 'Bypassing standard authentication. Welcome, Admin.',
+      });
+      // This is a simplified client-side override.
+      // It simulates a login for the emergency user.
+      // Note: This does not create a real Firebase session for the admin UID.
+      // It relies on the app's client-side logic to show the admin dashboard.
+      // To achieve a full session, you'd need a custom token system.
+      router.push('/');
+      return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const loggedInUser = userCredential.user;
