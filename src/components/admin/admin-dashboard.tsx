@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins, UserPlus } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins, UserPlus, ListOrdered } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
@@ -14,6 +14,7 @@ import { CreateTournamentForm } from './create-tournament-form';
 import { TournamentList } from './tournament-list';
 import { StaffCoinRequests } from '../staff/staff-coin-requests';
 import { HireStaffForm } from './hire-staff-form';
+import { AdminHistory } from './admin-history';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
@@ -46,7 +47,7 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
-            <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2">
+             <TabsList className="flex flex-row overflow-x-auto md:flex-col md:h-full md:space-y-2">
                 <TabsTrigger value="dashboard" className="w-full justify-start gap-2">
                     <LayoutDashboard className="h-5 w-5" />
                     Dashboard
@@ -58,6 +59,10 @@ export function AdminDashboard() {
                 <TabsTrigger value="coin-requests" className="w-full justify-start gap-2">
                     <Coins className="h-5 w-5" />
                     Coin Requests
+                </TabsTrigger>
+                <TabsTrigger value="history" className="w-full justify-start gap-2">
+                    <ListOrdered className="h-5 w-5" />
+                    History
                 </TabsTrigger>
                  <TabsTrigger value="hire-staff" className="w-full justify-start gap-2">
                     <UserPlus className="h-5 w-5" />
@@ -120,6 +125,9 @@ export function AdminDashboard() {
                 </TabsContent>
                 <TabsContent value="coin-requests">
                     <StaffCoinRequests />
+                </TabsContent>
+                <TabsContent value="history">
+                    <AdminHistory />
                 </TabsContent>
                 <TabsContent value="hire-staff">
                     <HireStaffForm />
