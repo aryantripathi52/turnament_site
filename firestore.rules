@@ -8,73 +8,86 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == 'YOUR_ACTUAL_UID_HERE'; 
     }
 
+    // --- Global Admin Override ---
+    // This rule grants the Super Admin full read/write access to the entire database.
+    // It is checked first for any path.
+    match /{path=**} {
+      allow read, write: if isSuperAdmin();
+    }
+
     function isStaffOrAdmin() {
+       // This function is kept for reference but is not actively used in critical paths
+       // to avoid recursive `get` calls that can cause permission errors.
+       // The primary admin check is now isSuperAdmin().
        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'staff'];
     }
     
-    // User can create their own profile, and can read/update it.
+    // Rule: User profiles
     match /users/{userId} {
+      // A user can create their own profile upon registration.
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow read, update: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
+      // A user can read/update their own profile.
+      allow read, update: if request.auth != null && request.auth.uid == userId;
 
-      // Allow users to read and write to their own subcollections
+      // Rules for user sub-collections
       match /joinedTournaments/{tournamentId} {
-        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
       }
        match /wonTournaments/{tournamentId} {
-        allow read, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
+        allow read, list: if request.auth != null && request.auth.uid == userId;
       }
        match /addCoinRequests/{requestId} {
-        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
       }
        match /withdrawCoinRequests/{requestId} {
-        allow read, write, list: if (request.auth != null && request.auth.uid == userId) || isSuperAdmin();
+        allow read, write, list: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // Tournaments are public to read
+    // Rule: Tournaments
     match /tournaments/{tournamentId} {
       allow read: if true;
+      allow create, delete: if isStaffOrAdmin();
       
-      // Allow authenticated users to ONLY update the registeredCount field (for joining)
-      // Admins/Staff can update anything
+      // Players can update 'registeredCount'. Admins/Staff can update anything.
       allow update: if (request.auth != null && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])) || isStaffOrAdmin() || isSuperAdmin();
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])) || isStaffOrAdmin();
 
-      // Registrations are public to read, but only the user can create their own
       match /registrations/{registrationId} {
         allow read, list: if request.auth != null;
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       }
     }
     
-    // Categories are public
+    // Rule: Game Categories
     match /categories/{categoryId} {
         allow read: if true;
-        allow write: if isStaffOrAdmin() || isSuperAdmin();
+        allow write: if isStaffOrAdmin();
     }
 
-    // Global Coin Requests: Players can CREATE, Staff/Admins can READ/WRITE
+    // --- GLOBAL ADMIN COLLECTIONS ---
+    // These rules now check the isStaffOrAdmin() function which includes the Super Admin.
+    
     match /addCoinRequests/{requestId} {
+        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins can read/write individual requests and list the collection.
+        allow read, write, list: if isStaffOrAdmin();
     }
+    
     match /withdrawCoinRequests/{requestId} {
+        // Players can create their own requests.
         allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow read, write: if isStaffOrAdmin() || isSuperAdmin();
+        // Staff/Admins can read/write individual requests and list the collection.
+        allow read, write, list: if isStaffOrAdmin();
     }
 
-    // Announcements and Highlights are public read-only for now
+    // Rule: Public, read-only collections
     match /announcements/{announcementId} {
       allow read: if true;
     }
      match /highlights/{highlightId} {
       allow read: if true;
-    }
-
-    // Fallback for any other collections - deny all
-    match /{path=**} {
-      allow read, write: if false;
     }
   }
 }

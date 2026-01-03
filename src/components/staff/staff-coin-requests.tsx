@@ -27,26 +27,22 @@ export function StaffCoinRequests() {
 
   const isStaffOrAdmin = profile?.role === 'admin' || profile?.role === 'staff';
 
-  // Add robust console logging for debugging
   useEffect(() => {
-    if (user && profile) {
-      console.log("Current User Status:", {
-        role: profile.role,
-        isStaffOrAdmin,
-        UID: user.uid,
-      });
+    if (auth.currentUser) {
+      console.log("Current Logged In UID:", auth.currentUser?.uid);
     }
-  }, [user, profile, isStaffOrAdmin]);
+  }, [auth.currentUser]);
+
 
   const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !isStaffOrAdmin) return null;
-    // Simple query, no ordering at the database level
+    // Simple query, no ordering at the database level to avoid index issues.
     return query(collection(firestore, 'addCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
   const withdrawCoinRequestsQuery = useMemoFirebase(() => {
      if (!firestore || !isStaffOrAdmin) return null;
-     // Simple query, no ordering at the database level
+     // Simple query, no ordering at the database level to avoid index issues.
     return query(collection(firestore, 'withdrawCoinRequests'));
   }, [firestore, isStaffOrAdmin]);
 
@@ -60,13 +56,13 @@ export function StaffCoinRequests() {
     
     const combined = [...pendingAdds, ...pendingWithdraws];
     
-    // Sort in-memory (client-side)
+    // Sort in-memory (client-side) to avoid database index dependency
     return combined.sort((a, b) => {
         const dateA = a.requestDate as Timestamp | undefined;
         const dateB = b.requestDate as Timestamp | undefined;
-        // Handle cases where dates might be null or undefined
-        if (!dateB) return -1;
-        if (!dateA) return 1;
+        // Handle cases where dates might be null or undefined for robust sorting
+        if (!dateB?.toMillis) return -1;
+        if (!dateA?.toMillis) return 1;
         return dateB.toMillis() - dateA.toMillis();
     });
   }, [addRequests, withdrawRequests]);
@@ -74,22 +70,6 @@ export function StaffCoinRequests() {
 
   const isLoading = loadingAdd || loadingWithdraw;
   const error = addError || withdrawError;
-
-  // Added try/catch block for better error diagnostics
-  useEffect(() => {
-    async function fetchData() {
-        if (!isStaffOrAdmin) return;
-        try {
-            // The useCollection hook handles the fetch, this effect is for logging.
-            if(addError) throw addError;
-            if(withdrawError) throw withdrawError;
-        } catch (e: any) {
-            console.error("STAFF_COIN_REQUEST_FETCH_ERROR:", e.message, e.code);
-        }
-    }
-    fetchData();
-  }, [addError, withdrawError, isStaffOrAdmin]);
-
 
   const handleDecision = async (request: CombinedRequest, decision: 'approved' | 'denied') => {
     if (!firestore) {
