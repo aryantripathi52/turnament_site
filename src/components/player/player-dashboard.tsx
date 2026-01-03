@@ -13,7 +13,7 @@ import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
 import { UserHistory } from './user-history';
 import { SupportTab } from './support-tab';
-import { Sheet, SheetTrigger, SheetContent } from '../ui/sheet';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
@@ -73,6 +73,7 @@ export function PlayerDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
            <div className="flex items-center gap-4">
+               {/* This Sheet component is now outside the Tabs component */}
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                   <SheetTrigger asChild>
                       <Button variant="outline" size="icon" className="md:hidden">
@@ -81,13 +82,16 @@ export function PlayerDashboard() {
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-60 p-4">
-                      {/* The TabsList for mobile must be inside a Tabs context */}
-                      <Tabs value={activeTab} onValueChange={handleTabChange} orientation="vertical">
-                        <div className="flex flex-col h-full">
-                            <h3 className="text-lg font-semibold mb-4">Menu</h3>
-                            <NavTabs />
-                        </div>
-                      </Tabs>
+                      <SheetHeader>
+                        <SheetTitle>Menu</SheetTitle>
+                        <SheetDescription className="sr-only">
+                          Select a tab to view its content.
+                        </SheetDescription>
+                      </SheetHeader>
+                      <div className="flex flex-col h-full mt-4">
+                          {/* The NavTabs component is rendered here for mobile */}
+                          <NavTabs />
+                      </div>
                   </SheetContent>
               </Sheet>
               <CardTitle>Welcome, {profile?.username || user?.email || 'Player'}</CardTitle>
@@ -101,8 +105,10 @@ export function PlayerDashboard() {
           </div>
         </CardHeader>
         <CardContent>
+           {/* This single <Tabs> component wraps both the desktop sidebar and the content area */}
            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col md:flex-row md:gap-8">
             <div className="hidden md:flex md:w-auto md:flex-shrink-0">
+                {/* The NavTabs component is rendered here for desktop */}
                 <NavTabs />
             </div>
             <div className="mt-4 md:mt-0 flex-1">
