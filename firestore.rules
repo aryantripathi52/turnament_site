@@ -13,10 +13,9 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allows players to read/list to their own subcollections (joinedTournaments, etc.)
+    // Allows players to read/list their own private subcollections.
     match /users/{userId}/{subcollection}/{docId} {
-      allow create, delete: if request.auth != null && request.auth.uid == userId;
-      allow read, list, write: if request.auth != null && request.auth.uid == userId;
+      allow create, read, list, write, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // 3. TOURNAMENT JOIN LOGIC:
@@ -29,9 +28,11 @@ service cloud.firestore {
                       && request.resource.data.registeredCount == resource.data.registeredCount + 1;
     }
 
-    // Allow a user to create their own registration document within a tournament.
+    // Allow a user to create their own registration document within a tournament's subcollection.
     match /tournaments/{tournamentId}/registrations/{userId} {
       allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow users to read/list their own registrations (needed for history).
+      allow read, list: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
     // Public read access for categories

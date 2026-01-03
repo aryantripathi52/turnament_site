@@ -1,11 +1,11 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy, Timestamp, where } from 'firebase/firestore';
-import { useCollection, WithId } from '@/firebase/firestore/use-collection';
+import { collection, query, orderBy, Timestamp } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trophy, Swords } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle, XCircle, ArrowDown, ArrowUp, Trophy, Swords, History as HistoryIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PlayerAddCoinRequest, PlayerWithdrawCoinRequest, JoinedTournament, WonTournament } from '@/lib/types';
 import { format } from 'date-fns';
@@ -51,10 +51,15 @@ export function UserHistory() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  const baseQuery = (path: string) => useMemoFirebase(() => {
+  const addCoinRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, `users/${user.uid}/${path}`), orderBy('requestDate', 'desc'));
-  }, [firestore, user, path]);
+    return query(collection(firestore, `users/${user.uid}/addCoinRequests`), orderBy('requestDate', 'desc'));
+  }, [firestore, user]);
+  
+  const withdrawCoinRequestsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, `users/${user.uid}/withdrawCoinRequests`), orderBy('requestDate', 'desc'));
+  }, [firestore, user]);
   
   const wonTournamentQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -63,12 +68,12 @@ export function UserHistory() {
 
   const joinedTournamentQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, `users/${user.uid}/joinedTournaments`));
+    return query(collection(firestore, `users/${user.uid}/joinedTournaments`), orderBy('startDate', 'desc'));
   }, [firestore, user]);
 
 
-  const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<PlayerAddCoinRequest>(baseQuery('addCoinRequests'));
-  const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<PlayerWithdrawCoinRequest>(baseQuery('withdrawCoinRequests'));
+  const { data: addRequests, isLoading: loadingAdd, error: addError } = useCollection<PlayerAddCoinRequest>(addCoinRequestsQuery);
+  const { data: withdrawRequests, isLoading: loadingWithdraw, error: withdrawError } = useCollection<PlayerWithdrawCoinRequest>(withdrawCoinRequestsQuery);
   const { data: wonTournaments, isLoading: loadingWon, error: wonError } = useCollection<WonTournament>(wonTournamentQuery);
   const { data: joinedTournaments, isLoading: loadingJoined, error: joinedError } = useCollection<JoinedTournament>(joinedTournamentQuery);
 
@@ -109,7 +114,11 @@ export function UserHistory() {
         title: `${r.name} (${r.place} Place)`
     }));
 
-    return history.sort((a, b) => b.date.toMillis() - a.date.toMillis());
+    return history.sort((a, b) => {
+        const dateA = a.date instanceof Timestamp ? a.date.toMillis() : 0;
+        const dateB = b.date instanceof Timestamp ? b.date.toMillis() : 0;
+        return dateB - dateA;
+    });
 
   }, [addRequests, withdrawRequests, wonTournaments, joinedTournaments]);
 
@@ -143,7 +152,7 @@ export function UserHistory() {
   if (!allHistory || allHistory.length === 0) {
     return (
         <div className="text-center text-muted-foreground p-8 border-2 border-dashed rounded-md">
-          <History className="mx-auto h-12 w-12" />
+          <HistoryIcon className="mx-auto h-12 w-12" />
           <h3 className="mt-4 text-lg font-medium">No Activity Yet</h3>
           <p className="mt-1 text-sm">Your transaction history will appear here once you start.</p>
         </div>

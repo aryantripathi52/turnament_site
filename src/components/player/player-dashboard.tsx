@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History, Gamepad2, Trophy } from 'lucide-react';
+import { Gem, User as UserIcon, LayoutDashboard, Wallet as WalletIcon, History as HistoryIcon, Gamepad2, Trophy } from 'lucide-react';
 import { Wallet } from './wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
@@ -61,7 +61,7 @@ export function PlayerDashboard() {
                     My Wallet
                 </TabsTrigger>
                  <TabsTrigger value="history" className="w-full justify-start gap-2">
-                    <History className="h-5 w-5" />
+                    <HistoryIcon className="h-5 w-5" />
                     History
                 </TabsTrigger>
                 <TabsTrigger value="profile" className="w-full justify-start gap-2">
