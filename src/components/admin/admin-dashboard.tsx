@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser } from '@/firebase/auth/use-user';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { EditProfileForm } from './edit-profile-form';
-import { Coins, LayoutDashboard, User as UserIcon, Gamepad2, UserPlus, ListOrdered } from 'lucide-react';
+import { Gem, LayoutDashboard, User as UserIcon, Gamepad2, Coins, UserPlus, ListOrdered } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateCategoryForm } from './create-category-form';
 import { CategoryList } from './category-list';
@@ -38,7 +39,7 @@ export function AdminDashboard() {
             <CardTitle>Admin Dashboard</CardTitle>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 p-2 rounded-md bg-muted">
-                <Coins className="h-5 w-5 text-yellow-500" />
+                <Gem className="h-5 w-5 text-primary" />
                 <span className="font-semibold">{profile?.coins ?? 0}</span>
               </div>
               <Button variant="outline" onClick={handleLogout}>Logout</Button>
