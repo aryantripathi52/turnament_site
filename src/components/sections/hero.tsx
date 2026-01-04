@@ -15,6 +15,7 @@ export function Hero() {
           fill
           className="object-cover"
           priority
+          quality={100}
           data-ai-hint={heroImage.imageHint}
         />
       )}
