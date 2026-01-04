@@ -20,9 +20,9 @@
     },
     {
       "id": "hero-background",
-      "description": "An epic, wide-angle view of a Free Fire battleground.",
-      "imageUrl": "https://images.unsplash.com/photo-1721072201218-38a7839432f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlcGljJTIwYmF0dGxlZ3JvdW5kfGVufDB8fHx8MTc2NzI5MDc5MHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "epic battleground"
+      "description": "An epic esports gaming arena with players on stage.",
+      "imageUrl": "https://images.unsplash.com/photo-1542751371-7168489a5a8a?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "esports arena"
     },
     {
       "id": "qr-code-placeholder",
