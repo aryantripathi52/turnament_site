@@ -1,8 +1,67 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper function to check for staff or admin roles
+    function isStaffOrAdmin() {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return request.auth != null && (userRole in ['staff', 'admin']);
+    }
+
+    // 1. ADMIN MASTER KEY: Grants the admin full access to the entire database.
     match /{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
+      allow read, write, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // 2. PLAYER PROFILE GATE: Allows any authenticated user to read and write to their own profile.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allows players to read/list their own private subcollections.
+    match /users/{userId}/{subcollection}/{docId} {
+      allow create, read, list, write, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 3. TOURNAMENT JOIN LOGIC:
+    match /tournaments/{tournamentId} {
+        allow read: if true; // Everyone can read tournaments
+        
+        // Staff/Admin can create, update, delete tournaments.
+        // Players can only update the registeredCount when joining.
+        allow write: if isStaffOrAdmin();
+        allow update: if request.auth != null 
+                      && request.resource.data.registeredCount == resource.data.registeredCount + 1;
+        
+        // Staff can see all registrations for management purposes.
+        match /registrations/{registrationId} {
+          allow read, list: if isStaffOrAdmin();
+        }
+    }
+
+    // Allow a user to create their own registration document within a tournament's subcollection.
+    match /tournaments/{tournamentId}/registrations/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow users to read their own registration for history purposes.
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // Public read access for categories
+    match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if isStaffOrAdmin(); // Staff/Admin can manage categories
+    }
+
+    // 4. COIN REQUEST LOGIC (STAFF/ADMIN ONLY):
+    // Staff and Admin can list these collections. Players can only create.
+    match /addCoinRequests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, list, update: if isStaffOrAdmin();
+    }
+
+    match /withdrawCoinRequests/{requestId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, list, update: if isStaffOrAdmin();
     }
   }
 }

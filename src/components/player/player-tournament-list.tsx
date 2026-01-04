@@ -79,27 +79,20 @@ export function PlayerTournamentList() {
   const error = tournamentsError || categoriesError;
 
  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-    const db = firestore;
-    if (!auth.currentUser) {
-        alert("You must be logged in!");
-        return;
-    }
-    const userId = auth.currentUser.uid;
-    const tournamentId = selectedTournament.id;
-    
-    console.log("UserID:", userId, "TournamentID:", tournamentId);
-    if (!userId || !tournamentId) {
-      console.error("Missing userId or tournamentId");
-      toast({ variant: "destructive", title: "Error", description: "User or Tournament ID is missing."});
+    if (!firestore || !user || !profile) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to join."});
       return;
     }
 
+    const userId = user.uid;
+    const tournamentId = selectedTournament.id;
+
     try {
-        await runTransaction(db, async (transaction) => {
-            const userRef = doc(db, "users", userId);
-            const tournamentRef = doc(db, "tournaments", tournamentId);
-            const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
-            const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
+        await runTransaction(firestore, async (transaction) => {
+            const userRef = doc(firestore, "users", userId);
+            const tournamentRef = doc(firestore, "tournaments", tournamentId);
+            const registrationRef = doc(firestore, "tournaments", tournamentId, "registrations", userId);
+            const joinedTournamentRef = doc(firestore, "users", userId, "joinedTournaments", tournamentId);
 
             // 1. Get current state of documents
             const userSnap = await transaction.get(userRef);
@@ -171,7 +164,6 @@ export function PlayerTournamentList() {
 
     } catch (error: any) {
         console.error("CRITICAL TRANSACTION FAIL:", error);
-        console.dir(error);
         toast({
             variant: "destructive",
             title: 'Join Failed',
