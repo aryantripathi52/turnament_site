@@ -28,10 +28,12 @@ service cloud.firestore {
         allow read: if true; // Everyone can read tournaments
         
         // Staff/Admin can create, update, delete tournaments.
-        // Players can only update the registeredCount when joining.
-        allow write: if isStaffOrAdmin();
-        allow update: if request.auth != null 
-                      && request.resource.data.registeredCount == resource.data.registeredCount + 1;
+        // Players can ONLY update to join a tournament, checked by specific fields.
+        allow create, delete: if isStaffOrAdmin();
+        allow update: if isStaffOrAdmin() || 
+                      (request.auth != null && 
+                       request.resource.data.registeredCount == resource.data.registeredCount + 1 &&
+                       request.resource.data.keys().hasOnly(['registeredCount']));
         
         // Staff can see all registrations for management purposes.
         match /registrations/{registrationId} {
@@ -52,14 +54,18 @@ service cloud.firestore {
         allow write: if isStaffOrAdmin(); // Staff/Admin can manage categories
     }
 
-    // 4. COIN REQUEST LOGIC (ADMIN ONLY):
-    // Only the admin can list these collections. Players can only create.
+    // 4. COIN REQUEST LOGIC (ADMIN & STAFF):
+    // Staff/Admin can list all requests. Players can only create their own.
     match /addCoinRequests/{requestId} {
+      allow list, read: if isStaffOrAdmin();
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isStaffOrAdmin();
     }
 
     match /withdrawCoinRequests/{requestId} {
+      allow list, read: if isStaffOrAdmin();
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isStaffOrAdmin();
     }
   }
 }
