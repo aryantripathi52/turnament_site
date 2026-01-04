@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DollarSign, Coins, Info } from 'lucide-react';
+import { DollarSign, Gem, Info } from 'lucide-react';
 import { AddFundsForm } from './add-funds-form';
 import { useState } from 'react';
 import { Button } from '../ui/button';
@@ -60,7 +60,7 @@ export function Wallet() {
           <CardFooter>
             <WithdrawFundsForm isOpen={isWithdrawFundsOpen} setIsOpen={setIsWithdrawFundsOpen}>
               <Button className="w-full" onClick={() => setIsWithdrawFundsOpen(true)}>
-                <Coins className="mr-2 h-4 w-4" /> Withdraw Coins
+                <Gem className="mr-2 h-4 w-4" /> Withdraw Coins
               </Button>
             </WithdrawFundsForm>
           </CardFooter>
