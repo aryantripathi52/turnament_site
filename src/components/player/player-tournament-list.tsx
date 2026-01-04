@@ -104,12 +104,12 @@ export function PlayerTournamentList() {
     try {
         const newSlotNumber = selectedTournament.registeredCount + 1;
 
-        // 1. Update Tournament (Strict: only increment registeredCount)
+        // Call 1 (Tournament): Use updateDoc to increment registeredCount by 1.
         await updateDoc(doc(db, "tournaments", tournamentId), {
             registeredCount: increment(1)
         });
 
-        // 2. Create Registration Document (Strict: setDoc with user UID)
+        // Call 2 (Registration): Use setDoc to create a document at tournaments/{tournamentId}/registrations/{userId}.
         const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
             userId: userId,
             tournamentId: tournamentId,
@@ -117,12 +117,12 @@ export function PlayerTournamentList() {
             playerIds: [userId],
             slotNumber: newSlotNumber,
         };
-         await setDoc(doc(db, "tournaments", tournamentId, "registrations", userId), {
+        await setDoc(doc(db, "tournaments", tournamentId, "registrations", userId), {
             ...registrationData,
             registrationDate: serverTimestamp(),
         });
-
-        // 3. Create user's private record of the joined tournament
+        
+        // This is a denormalized write for the user's private data.
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
@@ -134,7 +134,7 @@ export function PlayerTournamentList() {
         };
         await setDoc(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
 
-        // 4. Update User Coins (Strict: separate update)
+        // Call 3 (User Profile): Use updateDoc on the users/{userId} document to deduct the entry fee.
         await updateDoc(doc(db, "users", userId), {
             coins: increment(-selectedTournament.entryFee)
         });
