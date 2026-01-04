@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users, Info } from 'lucide-react';
+import { AlertCircle, Calendar, ShieldCheck, Trophy, Coins, Users, Info } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category, JoinedTournament, Registration, UserProfile } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -238,7 +238,7 @@ export function PlayerTournamentList() {
                         </span>
                     </div>
                      <div className="flex items-center gap-2">
-                        <Gem className="h-4 w-4 text-muted-foreground" />
+                        <Coins className="h-4 w-4 text-yellow-500" />
                         <span>
                             Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
                         </span>

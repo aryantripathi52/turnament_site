@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Gem, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy } from 'lucide-react';
+import { Trophy, Swords, Calendar, Coins, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -88,7 +88,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
                 </span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Gem className="h-4 w-4" />
+                <Coins className="h-4 w-4 text-yellow-500" />
                 <span>
                   Entry Fee: <span className="font-semibold text-foreground">{tournament.entryFee.toLocaleString()} coins</span>
                 </span>

@@ -5,7 +5,7 @@ import { collection, orderBy, query, doc, deleteDoc, updateDoc } from 'firebase/
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound } from 'lucide-react';
+import { AlertCircle, Calendar, Users, Trophy, Coins, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -192,7 +192,7 @@ export function TournamentList() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Gem className="h-4 w-4 text-muted-foreground" />
+                    <Coins className="h-4 w-4 text-yellow-500" />
                     <span>
                       Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
                     </span>

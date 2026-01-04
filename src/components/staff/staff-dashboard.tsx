@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
-import { Gem, LayoutDashboard, User as UserIcon, Gamepad2 } from 'lucide-react';
+import { Coins, LayoutDashboard, User as UserIcon, Gamepad2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { EditProfileForm } from '../admin/edit-profile-form';
@@ -35,7 +35,7 @@ export function StaffDashboard() {
               <CardTitle>Welcome, {profile?.username || user?.email || 'Staff'}</CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 p-2 rounded-md bg-muted">
-              <Gem className="h-5 w-5 text-primary" />
+              <Coins className="h-5 w-5 text-yellow-500" />
               <span className="font-semibold">{profile?.coins ?? 0}</span>
             </div>
             <Button variant="outline" onClick={handleLogout}>Logout</Button>
