@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc, writeBatch, runTransaction } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -80,16 +80,16 @@ export function PlayerTournamentList() {
 
  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
-    if (!auth.currentUser || !profile) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in to join." });
+    if (!auth?.currentUser || !user || !profile) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
-    const userId = auth.currentUser.uid;
+    const userId = user.uid;
     const tournamentId = selectedTournament.id;
-    
+
     // Preliminary client-side checks
     if (profile.coins < selectedTournament.entryFee) {
-       toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter the tournament." });
+       toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter." });
        return;
     }
      if (selectedTournament.registeredCount >= selectedTournament.maxPlayers) {
@@ -104,12 +104,14 @@ export function PlayerTournamentList() {
     try {
         const newSlotNumber = selectedTournament.registeredCount + 1;
 
-        // Call 1 (Tournament): Use updateDoc to increment registeredCount by 1.
-        await updateDoc(doc(db, "tournaments", tournamentId), {
+        // Step 1 (Update Tournament): Increment ONLY registeredCount.
+        const tournamentRef = doc(db, "tournaments", tournamentId);
+        await updateDoc(tournamentRef, {
             registeredCount: increment(1)
         });
-
-        // Call 2 (Registration): Use setDoc to create a document at tournaments/{tournamentId}/registrations/{userId}.
+        
+        // Step 2 (Create Registration): Create the registration doc for the player.
+        const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
         const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
             userId: userId,
             tournamentId: tournamentId,
@@ -117,12 +119,13 @@ export function PlayerTournamentList() {
             playerIds: [userId],
             slotNumber: newSlotNumber,
         };
-        await setDoc(doc(db, "tournaments", tournamentId, "registrations", userId), {
+        await setDoc(registrationRef, {
             ...registrationData,
             registrationDate: serverTimestamp(),
         });
         
         // This is a denormalized write for the user's private data.
+        const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
@@ -132,15 +135,15 @@ export function PlayerTournamentList() {
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
         };
-        await setDoc(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
+        await setDoc(joinedTournamentRef, joinedTournamentData);
 
-        // Call 3 (User Profile): Use updateDoc on the users/{userId} document to deduct the entry fee.
-        await updateDoc(doc(db, "users", userId), {
+        // Step 3 (Deduct Coins): Update the user's coin balance.
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
             coins: increment(-selectedTournament.entryFee)
         });
 
-
-        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
+        refreshJoinedTournaments(); 
         toast({
             title: 'Success!',
             description: `You have successfully joined "${selectedTournament.name}".`,
@@ -151,7 +154,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: error.message || "An unexpected error occurred. Please check security rules.",
+            description: error.message || "An unexpected error occurred. Check security rules and Firestore logs.",
         });
     }
   };
@@ -210,7 +213,7 @@ export function PlayerTournamentList() {
                     <div className="flex items-center gap-2">
                         <Trophy className="h-4 w-4 text-primary" />
                         <span>
-                            Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span> (1st)
+                            Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()}</span> (1st)
                         </span>
                     </div>
                      <div className="flex items-center gap-2">
