@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
@@ -16,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Calendar, ShieldCheck, Trophy, Coins, Users, Info } from 'lucide-react';
+import { AlertCircle, Calendar, ShieldCheck, Trophy, Gem, Users, Info } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category, JoinedTournament, Registration, UserProfile } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -79,22 +80,29 @@ export function PlayerTournamentList() {
   const error = tournamentsError || categoriesError;
 
  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-    if (!firestore || !user || !profile) {
-      toast({ variant: "destructive", title: "Error", description: "You must be logged in to join."});
+    const db = firestore;
+    if (!auth.currentUser) {
+        alert("You must be logged in!");
+        return;
+    }
+    const userId = auth.currentUser.uid;
+    const tournamentId = selectedTournament.id;
+    
+    console.log("UserID:", userId, "TournamentID:", tournamentId);
+    if (!userId || !tournamentId) {
+      console.error("Missing userId or tournamentId");
+      toast({ variant: "destructive", title: "Error", description: "User or Tournament ID is missing."});
       return;
     }
 
-    const userId = user.uid;
-    const tournamentId = selectedTournament.id;
-
     try {
-        await runTransaction(firestore, async (transaction) => {
-            const userRef = doc(firestore, "users", userId);
-            const tournamentRef = doc(firestore, "tournaments", tournamentId);
-            const registrationRef = doc(firestore, "tournaments", tournamentId, "registrations", userId);
-            const joinedTournamentRef = doc(firestore, "users", userId, "joinedTournaments", tournamentId);
+        await runTransaction(db, async (transaction) => {
+            const userRef = doc(db, "users", userId);
+            const tournamentRef = doc(db, "tournaments", tournamentId);
+            const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
+            const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
 
-            // 1. Get current state of documents within the transaction
+            // 1. Get current state of documents
             const userSnap = await transaction.get(userRef);
             const tournamentSnap = await transaction.get(tournamentRef);
 
@@ -108,7 +116,7 @@ export function PlayerTournamentList() {
             const tournamentData = tournamentSnap.data() as Tournament;
             const userData = userSnap.data() as UserProfile;
 
-            // 2. Validate conditions before writing
+            // 2. Validate conditions
             const entryFee = Number(tournamentData.entryFee) || 0;
             const userCoins = Number(userData.coins) || 0;
 
@@ -124,13 +132,13 @@ export function PlayerTournamentList() {
 
             const newSlotNumber = (tournamentData.registeredCount || 0) + 1;
 
-            // 3. Queue all write operations for the transaction
+            // 3. Perform all writes atomically
             // Update 1: Deduct coins from user
             transaction.update(userRef, { coins: increment(-entryFee) });
-            // Update 2: Increment registeredCount on tournament
+            // Update 2: Increment registered count on tournament
             transaction.update(tournamentRef, { registeredCount: increment(1) });
 
-            // Set 3: Create public registration document for staff/admins
+            // Set 3: Create public registration document
             const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
                 userId: userId,
                 tournamentId: tournamentId,
@@ -143,7 +151,7 @@ export function PlayerTournamentList() {
                 registrationDate: serverTimestamp(),
             });
 
-            // Set 4: Create user's private record of the joined tournament for their dashboard
+            // Set 4: Create user's private record of the joined tournament
             const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
                 name: selectedTournament.name,
                 startDate: selectedTournament.startDate,
@@ -156,7 +164,7 @@ export function PlayerTournamentList() {
             transaction.set(joinedTournamentRef, joinedTournamentData);
         });
 
-        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch and update UI
+        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
         toast({
             title: 'Success!',
             description: `You have successfully joined "${selectedTournament.name}".`,
@@ -164,10 +172,11 @@ export function PlayerTournamentList() {
 
     } catch (error: any) {
         console.error("CRITICAL TRANSACTION FAIL:", error);
+        console.dir(error);
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: error.message || "An unexpected error occurred. Please check your balance and try again.",
+            description: error.message || "An unexpected error occurred.",
         });
     }
   };
@@ -230,7 +239,7 @@ export function PlayerTournamentList() {
                         </span>
                     </div>
                      <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-yellow-500" />
+                        <Gem className="h-4 w-4 text-muted-foreground" />
                         <span>
                             Entry Fee: <span className="font-semibold">{tournament.entryFee.toLocaleString()} coins</span>
                         </span>
