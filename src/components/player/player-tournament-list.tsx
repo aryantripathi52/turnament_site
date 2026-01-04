@@ -94,7 +94,7 @@ export function PlayerTournamentList() {
             const registrationRef = doc(firestore, "tournaments", tournamentId, "registrations", userId);
             const joinedTournamentRef = doc(firestore, "users", userId, "joinedTournaments", tournamentId);
 
-            // 1. Get current state of documents
+            // 1. Get current state of documents within the transaction
             const userSnap = await transaction.get(userRef);
             const tournamentSnap = await transaction.get(tournamentRef);
 
@@ -108,7 +108,7 @@ export function PlayerTournamentList() {
             const tournamentData = tournamentSnap.data() as Tournament;
             const userData = userSnap.data() as UserProfile;
 
-            // 2. Validate conditions
+            // 2. Validate conditions before writing
             const entryFee = Number(tournamentData.entryFee) || 0;
             const userCoins = Number(userData.coins) || 0;
 
@@ -124,13 +124,13 @@ export function PlayerTournamentList() {
 
             const newSlotNumber = (tournamentData.registeredCount || 0) + 1;
 
-            // 3. Perform all writes atomically
+            // 3. Queue all write operations for the transaction
             // Update 1: Deduct coins from user
             transaction.update(userRef, { coins: increment(-entryFee) });
-            // Update 2: Increment registered count on tournament
+            // Update 2: Increment registeredCount on tournament
             transaction.update(tournamentRef, { registeredCount: increment(1) });
 
-            // Set 3: Create public registration document
+            // Set 3: Create public registration document for staff/admins
             const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
                 userId: userId,
                 tournamentId: tournamentId,
@@ -143,7 +143,7 @@ export function PlayerTournamentList() {
                 registrationDate: serverTimestamp(),
             });
 
-            // Set 4: Create user's private record of the joined tournament
+            // Set 4: Create user's private record of the joined tournament for their dashboard
             const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
                 name: selectedTournament.name,
                 startDate: selectedTournament.startDate,
@@ -156,7 +156,7 @@ export function PlayerTournamentList() {
             transaction.set(joinedTournamentRef, joinedTournamentData);
         });
 
-        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
+        refreshJoinedTournaments(); // This will trigger the useUser hook to refetch and update UI
         toast({
             title: 'Success!',
             description: `You have successfully joined "${selectedTournament.name}".`,
@@ -167,7 +167,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: error.message || "An unexpected error occurred.",
+            description: error.message || "An unexpected error occurred. Please check your balance and try again.",
         });
     }
   };
