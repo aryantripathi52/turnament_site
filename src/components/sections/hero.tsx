@@ -1,20 +1,30 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import Image from 'next/image';
 
 export function Hero() {
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-background');
+
   return (
     <section className="relative h-screen w-full flex items-center justify-center text-center overflow-hidden">
-      {/* Neon Gradient Background */}
-      <div
-        className="absolute inset-0 z-0 bg-background"
-        style={{
-          backgroundImage:
-            'radial-gradient(ellipse 50% 50% at 50% 50%, hsl(var(--primary)/0.25), transparent 70%)',
-        }}
-      />
+      {/* Background Image */}
+      {heroImage && (
+        <Image
+          src={heroImage.imageUrl}
+          alt={heroImage.description}
+          fill
+          className="object-cover"
+          priority
+          data-ai-hint={heroImage.imageHint}
+        />
+      )}
+
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black/60 z-10" />
       
       {/* Content */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4">
+      <div className="relative z-20 max-w-4xl mx-auto px-4">
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-headline text-white drop-shadow-lg">
           Welcome to <span className="text-primary">Free Fire Frenzy</span>
         </h1>

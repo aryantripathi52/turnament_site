@@ -20,9 +20,9 @@
     },
     {
       "id": "hero-background",
-      "description": "An epic esports gaming arena with players on stage.",
-      "imageUrl": "https://images.unsplash.com/photo-1542751371-7168489a5a8a?q=80&w=2070&auto=format&fit=crop",
-      "imageHint": "esports arena"
+      "description": "A dark, modern image of a person wearing a VR headset, representing the future of gaming.",
+      "imageUrl": "https://images.unsplash.com/photo-1582804523326-5f38531a7b4f?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "gaming esports"
     },
     {
       "id": "qr-code-placeholder",
