@@ -10,7 +10,7 @@ service cloud.firestore {
 
     // 1. ADMIN MASTER KEY: Grants the admin full access to the entire database.
     match /{document=**} {
-      allow read, write, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read, write, list: if request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
     }
 
     // 2. PLAYER PROFILE GATE: Allows any authenticated user to read and write to their own profile.
@@ -52,16 +52,14 @@ service cloud.firestore {
         allow write: if isStaffOrAdmin(); // Staff/Admin can manage categories
     }
 
-    // 4. COIN REQUEST LOGIC (STAFF/ADMIN ONLY):
-    // Staff and Admin can list these collections. Players can only create.
+    // 4. COIN REQUEST LOGIC (ADMIN ONLY):
+    // Only the admin can list these collections. Players can only create.
     match /addCoinRequests/{requestId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, list, update: if isStaffOrAdmin();
     }
 
     match /withdrawCoinRequests/{requestId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, list, update: if isStaffOrAdmin();
     }
   }
 }
