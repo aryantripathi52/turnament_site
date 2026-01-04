@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, orderBy, query, runTransaction, doc, serverTimestamp, increment, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -81,88 +80,65 @@ export function PlayerTournamentList() {
 
  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
-    if (!auth.currentUser) {
-        alert("You must be logged in!");
-        return;
+    if (!auth.currentUser || !profile) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to join." });
+      return;
     }
     const userId = auth.currentUser.uid;
     const tournamentId = selectedTournament.id;
     
-    console.log("UserID:", userId, "TournamentID:", tournamentId);
-    if (!userId || !tournamentId) {
-      console.error("Missing userId or tournamentId");
-      toast({ variant: "destructive", title: "Error", description: "User or Tournament ID is missing."});
-      return;
+    // Preliminary client-side checks
+    if (profile.coins < selectedTournament.entryFee) {
+       toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter the tournament." });
+       return;
+    }
+     if (selectedTournament.registeredCount >= selectedTournament.maxPlayers) {
+        toast({ variant: "destructive", title: "Join Failed", description: "This tournament is already full." });
+        return;
+    }
+    if (selectedTournament.status !== 'upcoming') {
+        toast({ variant: "destructive", title: "Join Failed", description: "Registrations for this tournament are closed." });
+        return;
     }
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const userRef = doc(db, "users", userId);
-            const tournamentRef = doc(db, "tournaments", tournamentId);
-            const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
-            const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
+        const newSlotNumber = selectedTournament.registeredCount + 1;
 
-            // 1. Get current state of documents
-            const userSnap = await transaction.get(userRef);
-            const tournamentSnap = await transaction.get(tournamentRef);
-
-            if (!userSnap.exists()) {
-                throw new Error("User profile not found. Cannot process transaction.");
-            }
-            if (!tournamentSnap.exists()) {
-                throw new Error("Tournament not found. Cannot process transaction.");
-            }
-
-            const tournamentData = tournamentSnap.data() as Tournament;
-            const userData = userSnap.data() as UserProfile;
-
-            // 2. Validate conditions
-            const entryFee = Number(tournamentData.entryFee) || 0;
-            const userCoins = Number(userData.coins) || 0;
-
-            if (userCoins < entryFee) {
-                throw new Error("Insufficient coins to enter the tournament.");
-            }
-            if (tournamentData.registeredCount >= tournamentData.maxPlayers) {
-                throw new Error('This tournament is already full.');
-            }
-            if (tournamentData.status !== 'upcoming') {
-                throw new Error('Registrations for this tournament are closed.');
-            }
-
-            const newSlotNumber = (tournamentData.registeredCount || 0) + 1;
-
-            // 3. Perform all writes atomically
-            // Update 1: Deduct coins from user
-            transaction.update(userRef, { coins: increment(-entryFee) });
-            // Update 2: Increment registered count on tournament
-            transaction.update(tournamentRef, { registeredCount: increment(1) });
-
-            // Set 3: Create public registration document
-            const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
-                userId: userId,
-                tournamentId: tournamentId,
-                teamName: profile?.username || 'Unknown Player',
-                playerIds: [userId],
-                slotNumber: newSlotNumber,
-            };
-            transaction.set(registrationRef, {
-                ...registrationData,
-                registrationDate: serverTimestamp(),
-            });
-
-            // Set 4: Create user's private record of the joined tournament
-            const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-                name: selectedTournament.name,
-                startDate: selectedTournament.startDate,
-                prizePoolFirst: selectedTournament.prizePoolFirst,
-                entryFee: selectedTournament.entryFee,
-                slotNumber: newSlotNumber,
-                roomId: selectedTournament.roomId || null,
-                roomPassword: selectedTournament.roomPassword || null
-            };
-            transaction.set(joinedTournamentRef, joinedTournamentData);
+        // 1. Update Tournament (Strict: only increment registeredCount)
+        await updateDoc(doc(db, "tournaments", tournamentId), {
+            registeredCount: increment(1)
         });
+
+        // 2. Create Registration Document (Strict: setDoc with user UID)
+        const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
+            userId: userId,
+            tournamentId: tournamentId,
+            teamName: profile.username,
+            playerIds: [userId],
+            slotNumber: newSlotNumber,
+        };
+         await setDoc(doc(db, "tournaments", tournamentId, "registrations", userId), {
+            ...registrationData,
+            registrationDate: serverTimestamp(),
+        });
+
+        // 3. Create user's private record of the joined tournament
+        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+            name: selectedTournament.name,
+            startDate: selectedTournament.startDate,
+            prizePoolFirst: selectedTournament.prizePoolFirst,
+            entryFee: selectedTournament.entryFee,
+            slotNumber: newSlotNumber,
+            roomId: selectedTournament.roomId || null,
+            roomPassword: selectedTournament.roomPassword || null
+        };
+        await setDoc(doc(db, "users", userId, "joinedTournaments", tournamentId), joinedTournamentData);
+
+        // 4. Update User Coins (Strict: separate update)
+        await updateDoc(doc(db, "users", userId), {
+            coins: increment(-selectedTournament.entryFee)
+        });
+
 
         refreshJoinedTournaments(); // This will trigger the useUser hook to refetch
         toast({
@@ -171,12 +147,11 @@ export function PlayerTournamentList() {
         });
 
     } catch (error: any) {
-        console.error("CRITICAL TRANSACTION FAIL:", error);
-        console.dir(error);
+        console.error("CRITICAL JOIN FAIL:", error);
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: error.message || "An unexpected error occurred.",
+            description: error.message || "An unexpected error occurred. Please check security rules.",
         });
     }
   };
