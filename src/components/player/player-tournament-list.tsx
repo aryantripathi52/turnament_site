@@ -80,7 +80,7 @@ export function PlayerTournamentList() {
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
-    if (!auth?.currentUser || !user || !profile) {
+    if (!auth?.currentUser || !user || !profile || !db) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
@@ -94,27 +94,27 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    console.log("Attempting to join tournament:", { uid, tid, fee });
+    // Diagnostic Logging
+    console.log('Current UID:', uid);
+    console.log('Attempting to join tournament:', tid);
 
     try {
-      // Step 1: Create Registration FIRST
-      // This matches rule: /tournaments/{tournamentId}/registrations/{userId} -> allow create: if request.auth.uid == userId;
+      // Call A (Registration): setDoc to tournaments/{id}/registrations/{userId}
       await setDoc(doc(db, 'tournaments', tid, 'registrations', uid), { 
         userId: uid, 
+        status: 'joined',
         teamName: profile.username,
-        registrationDate: serverTimestamp(),
+        registrationDate: serverTimestamp()
       });
       console.log("Step 1/3 PASSED: Registration created.");
 
-      // Step 2: Then Update Tournament
-      // This matches rule: /tournaments/{tournamentId} -> allow update: if ... hasOnly(['registeredCount'])
+      // Call B (Tournament): updateDoc to tournaments/{id} with ONLY { registeredCount: increment(1) }
       await updateDoc(doc(db, 'tournaments', tid), { 
         registeredCount: increment(1) 
       });
       console.log("Step 2/3 PASSED: Tournament count incremented.");
       
-      // Step 3: Then Deduct Coins
-      // This matches rule: /users/{userId} -> allow write: if request.auth.uid == userId;
+      // Call C (User): updateDoc to users/{userId}
       await updateDoc(doc(db, 'users', uid), { 
         coins: increment(-fee) 
       });
@@ -134,7 +134,6 @@ export function PlayerTournamentList() {
         };
       await setDoc(doc(db, "users", uid, "joinedTournaments", tid), joinedTournamentData);
       
-      // Manually trigger a refresh of the user data to reflect the changes
       refreshJoinedTournaments();
       
       toast({
