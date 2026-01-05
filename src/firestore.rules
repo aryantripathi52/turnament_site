@@ -5,6 +5,7 @@ service cloud.firestore {
     // Helper function to check for staff or admin roles
     function isStaffOrAdmin() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      // Use exists() to prevent crashing if the user doc is missing
       return request.auth != null && exists(userPath) && (get(userPath).data.get('role', 'player') in ['staff', 'admin']);
     }
 
@@ -29,6 +30,7 @@ service cloud.firestore {
         
         // Staff/Admin can create, update, delete tournaments.
         allow create, delete: if isStaffOrAdmin();
+        // Crash-proof update rule for joining
         allow update: if isStaffOrAdmin() || (
           request.auth != null && 
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) &&

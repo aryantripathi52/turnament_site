@@ -81,8 +81,8 @@ export function PlayerTournamentList() {
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
     if (!auth?.currentUser || !user || !profile || !db) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
-        return;
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
+      return;
     }
     
     if (profile.coins < selectedTournament.entryFee) {
@@ -94,14 +94,14 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    console.log('--- Starting Join Process ---');
-    console.log('Current UID:', uid);
-    console.log('Tournament ID:', tid);
+    console.log("--- Starting Join Process ---");
+    console.log("Current UID:", uid);
+    console.log("Tournament ID:", tid);
 
     try {
-        // Step 1: Update Tournament registeredCount
-        console.log('Step 1: Attempting to update tournament count...');
+        // Step 1: Update Tournament registeredCount with a "Naked" payload
         const tournamentUpdate = { registeredCount: increment(1) };
+        console.log("Step 1: Attempting to update tournament count...");
         await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
         console.log('Step 1 SUCCESS: Tournament count incremented.');
 
