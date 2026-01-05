@@ -88,8 +88,9 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    console.log("Current User UID:", user.uid);
-    console.log("Target Tournament ID:", tid);
+    console.log("Attempting Join - UID:", user.uid);
+    console.log("Tournament ID:", tid);
+
 
     // Pre-flight check for user coins
     try {
@@ -110,16 +111,18 @@ export function PlayerTournamentList() {
         // --- The 3 Sequential Writes ---
         
         // Step 1: Update Tournament - 'Naked' update with only the count
-        const tournamentUpdate = { registeredCount: increment(1) };
-        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
+        await updateDoc(doc(db, 'tournaments', tid), { 
+            registeredCount: increment(1) 
+        });
         
         // Step 2: Create Registration - Use UID as doc ID
-        const registrationData: Omit<Registration, 'id' | 'tournamentId'> = {
+        const registrationData = {
           userId: user.uid,
           teamName: profile.username,
           playerIds: [user.uid],
           registrationDate: serverTimestamp(),
           slotNumber: (selectedTournament.registeredCount || 0) + 1,
+          status: 'registered'
         };
         await setDoc(doc(db, "tournaments", tid, "registrations", user.uid), registrationData);
 
