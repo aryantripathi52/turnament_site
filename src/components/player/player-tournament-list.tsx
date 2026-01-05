@@ -85,17 +85,15 @@ export function PlayerTournamentList() {
       return;
     }
 
-    const uid = user.uid;
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    // Diagnostic Logging
-    console.log('Current UID:', uid);
-    console.log('Tournament ID:', tid);
+    console.log("Current User UID:", user.uid);
+    console.log("Target Tournament ID:", tid);
 
     // Pre-flight check for user coins
     try {
-        const userDocRef = doc(db, 'users', uid);
+        const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (!userDocSnap.exists()) {
@@ -111,22 +109,22 @@ export function PlayerTournamentList() {
 
         // --- The 3 Sequential Writes ---
         
-        // Step 1 (Tournament): Update count with a "Naked" object
+        // Step 1: Update Tournament - 'Naked' update with only the count
         const tournamentUpdate = { registeredCount: increment(1) };
         await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
         
-        // Step 2 (Registration): Create registration document in subcollection with UID as doc ID
+        // Step 2: Create Registration - Use UID as doc ID
         const registrationData: Omit<Registration, 'id' | 'tournamentId'> = {
-          userId: uid,
+          userId: user.uid,
           teamName: profile.username,
-          playerIds: [uid],
+          playerIds: [user.uid],
           registrationDate: serverTimestamp(),
           slotNumber: (selectedTournament.registeredCount || 0) + 1,
         };
-        await setDoc(doc(db, "tournaments", tid, "registrations", uid), registrationData);
+        await setDoc(doc(db, "tournaments", tid, "registrations", user.uid), registrationData);
 
-        // Step 3 (User): Deduct coins from user
-        await updateDoc(doc(db, "users", uid), {
+        // Step 3: Deduct Coins from user
+        await updateDoc(doc(db, "users", user.uid), {
             coins: increment(-fee)
         });
         
