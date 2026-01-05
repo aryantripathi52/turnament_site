@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc, writeBatch, runTransaction } from 'firebase/firestore';
+import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -94,47 +94,31 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    console.log('--- PRE-FLIGHT CHECK ---');
-    console.log('Current UID:', uid);
-    console.log('Tournament ID:', tid);
-    console.log('------------------------');
-
-    if (!uid || !tid) {
-      toast({ variant: "destructive", title: "Join Failed", description: "User or Tournament ID is missing." });
-      return;
-    }
-    
     try {
+        // Step 1: Update tournament registered count
         const tournamentUpdate = { registeredCount: increment(1) };
+        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
         
-        console.log("Step 1: Updating tournament registered count...");
-        await updateDoc(doc(db, "tournaments", tid), tournamentUpdate);
-        console.log("Step 1 PASSED: Tournament count incremented.");
-
-        console.log("Step 2: Creating registration document...");
+        // Step 2: Create registration document for the user
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
             userId: uid,
             teamName: profile.username,
             registrationDate: serverTimestamp(),
             slotNumber: (selectedTournament.registeredCount || 0) + 1,
         });
-        console.log("Step 2 PASSED: Registration document created.");
-        
-        console.log("Step 3: Deducting coins from user...");
+
+        // Step 3: Deduct coins from user's wallet
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
-        console.log("Step 3 PASSED: Coins deducted.");
 
-        // Post-Success Client-Side Updates
-        const finalTournamentState = await getDoc(doc(db, "tournaments", tid));
-        const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
+        // Post-Success Client-Side Updates to reflect the new state
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
             prizePoolFirst: selectedTournament.prizePoolFirst,
             entryFee: selectedTournament.entryFee,
-            slotNumber: finalSlotNumber,
+            slotNumber: (selectedTournament.registeredCount || 0) + 1,
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
         };
@@ -148,15 +132,11 @@ export function PlayerTournamentList() {
         });
 
     } catch (e: any) {
-        console.error("--- JOIN FAILED ---");
         console.error("CRITICAL JOIN ERROR:", e);
-        console.error("Error Code:", e.code);
-        console.error("Error Message:", e.message);
-        console.error("-------------------");
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: e.message || "An unexpected error occurred. Check the console for details.",
+            description: e.message || "An unexpected error occurred. Please check permissions.",
         });
     }
   };
