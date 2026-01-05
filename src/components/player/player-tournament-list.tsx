@@ -94,16 +94,19 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    try {
-        console.log('Current UID:', uid);
-        console.log('Tournament ID:', tid);
-        console.log('Attempting Step 1: Update Tournament registeredCount');
+    console.log('--- Starting Join Process ---');
+    console.log('Current UID:', uid);
+    console.log('Tournament ID:', tid);
 
+    try {
+        // Step 1: Update Tournament registeredCount
+        console.log('Step 1: Attempting to update tournament count...');
         const tournamentUpdate = { registeredCount: increment(1) };
-        await updateDoc(doc(db, "tournaments", tid), tournamentUpdate);
+        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
         console.log('Step 1 SUCCESS: Tournament count incremented.');
 
-        console.log('Attempting Step 2: Create Registration document');
+        // Step 2: Create Registration document
+        console.log('Step 2: Attempting to create registration document...');
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
             userId: uid,
             teamName: profile.username,
@@ -112,7 +115,8 @@ export function PlayerTournamentList() {
         });
         console.log('Step 2 SUCCESS: Registration document created.');
 
-        console.log('Attempting Step 3: Deduct coins from user');
+        // Step 3: Deduct coins from user
+        console.log('Step 3: Attempting to deduct coins...');
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
@@ -130,7 +134,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed - Permission Denied',
-            description: `There was a security issue joining the tournament. Please contact support. Error: ${e.message}`,
+            description: `There was a security issue joining the tournament. Please check the console for details.`,
         });
     }
   };
