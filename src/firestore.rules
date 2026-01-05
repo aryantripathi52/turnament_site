@@ -5,7 +5,7 @@ service cloud.firestore {
     // Helper function to check for staff or admin roles
     function isStaffOrAdmin() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return request.auth != null && exists(userPath) && (get(userPath).data.role in ['staff', 'admin']);
+      return request.auth != null && exists(userPath) && (get(userPath).data.get('role', 'player') in ['staff', 'admin']);
     }
 
     // 1. ADMIN MASTER KEY: Grants the admin full access to the entire database.
@@ -28,13 +28,12 @@ service cloud.firestore {
         allow read: if true; // Everyone can read tournaments
         
         // Staff/Admin can create, update, delete tournaments.
-        // Players can ONLY update to join a tournament, checked by specific fields.
         allow create, delete: if isStaffOrAdmin();
-        allow update: if isStaffOrAdmin() || 
-                      ( request.auth != null && 
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) && 
-                        request.resource.data.registeredCount == resource.data.registeredCount + 1 
-                      );
+        allow update: if isStaffOrAdmin() || (
+          request.auth != null && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) &&
+          request.resource.data.registeredCount == resource.data.get('registeredCount', 0) + 1
+        );
         
         // Staff can see all registrations for management purposes.
         match /registrations/{registrationId} {

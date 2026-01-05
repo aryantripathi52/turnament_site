@@ -96,16 +96,14 @@ export function PlayerTournamentList() {
     
     try {
         console.log('Current UID:', uid);
+        console.log('Tournament ID:', tid);
         console.log('Attempting Step 1: Update Tournament registeredCount');
 
-        // Step 1: Update tournament registered count
-        await updateDoc(doc(db, "tournaments", tid), { 
-          registeredCount: increment(1) 
-        });
+        const tournamentUpdate = { registeredCount: increment(1) };
+        await updateDoc(doc(db, "tournaments", tid), tournamentUpdate);
         console.log('Step 1 SUCCESS: Tournament count incremented.');
 
         console.log('Attempting Step 2: Create Registration document');
-        // Step 2: Create registration document for the user
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
             userId: uid,
             teamName: profile.username,
@@ -115,7 +113,6 @@ export function PlayerTournamentList() {
         console.log('Step 2 SUCCESS: Registration document created.');
 
         console.log('Attempting Step 3: Deduct coins from user');
-        // Step 3: Deduct coins from user's wallet
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
@@ -133,7 +130,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed - Permission Denied',
-            description: "Could not join tournament. Please check console for details.",
+            description: `There was a security issue joining the tournament. Please contact support. Error: ${e.message}`,
         });
     }
   };
