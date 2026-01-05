@@ -84,7 +84,7 @@ export function PlayerTournamentList() {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
-
+    
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
@@ -92,25 +92,18 @@ export function PlayerTournamentList() {
     console.log("Tournament ID:", tid);
 
     // Pre-flight check for user coins
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists() || (userDocSnap.data().coins || 0) < fee) {
+      toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
+      return;
+    }
+
     try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-             toast({ variant: "destructive", title: "Join Failed", description: "Your user profile could not be found." });
-             return;
-        }
-        
-        const userCoins = userDocSnap.data().coins || 0;
-        if (userCoins < fee) {
-            toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
-            return;
-        }
-        
         // --- The 3 Sequential Writes ---
-        // CRITICAL: These must be separate to comply with different security rules.
-
-        // Call 1 (Tournament): Use "Naked" update with only the count
+        
+        // Call 1 (Tournament): "Naked" update with ONLY the count increment.
         await updateDoc(doc(db, 'tournaments', tid), { 
             registeredCount: increment(1) 
         });
@@ -126,7 +119,7 @@ export function PlayerTournamentList() {
         await setDoc(doc(db, "tournaments", tid, "registrations", user.uid), registrationData);
 
         // Call 3 (User): Deduct Coins from user profile
-        await updateDoc(doc(db, "users", user.uid), {
+        await updateDoc(userDocRef, {
             coins: increment(-fee)
         });
         
