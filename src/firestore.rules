@@ -4,8 +4,8 @@ service cloud.firestore {
 
     // Helper function to check for staff or admin roles
     function isStaffOrAdmin() {
-      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      return request.auth != null && (userRole in ['staff', 'admin']);
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return request.auth != null && userDoc != null && (userDoc.data.role in ['staff', 'admin']);
     }
 
     // 1. ADMIN MASTER KEY: Grants the admin full access to the entire database.

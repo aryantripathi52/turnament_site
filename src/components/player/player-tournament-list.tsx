@@ -84,6 +84,7 @@ export function PlayerTournamentList() {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
+    
     if (profile.coins < selectedTournament.entryFee) {
        toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter." });
        return;
@@ -97,40 +98,42 @@ export function PlayerTournamentList() {
 
     try {
       // Step 1: Create Registration FIRST
+      // This matches rule: /tournaments/{tournamentId}/registrations/{userId} -> allow create: if request.auth.uid == userId;
       await setDoc(doc(db, 'tournaments', tid, 'registrations', uid), { 
         userId: uid, 
-        status: 'active',
         teamName: profile.username,
         registrationDate: serverTimestamp(),
       });
       console.log("Step 1/3 PASSED: Registration created.");
 
       // Step 2: Then Update Tournament
+      // This matches rule: /tournaments/{tournamentId} -> allow update: if ... hasOnly(['registeredCount'])
       await updateDoc(doc(db, 'tournaments', tid), { 
         registeredCount: increment(1) 
       });
       console.log("Step 2/3 PASSED: Tournament count incremented.");
       
       // Step 3: Then Deduct Coins
+      // This matches rule: /users/{userId} -> allow write: if request.auth.uid == userId;
       await updateDoc(doc(db, 'users', uid), { 
         coins: increment(-fee) 
       });
       console.log("Step 3/3 PASSED: Coins deducted.");
 
-      // Step 4: Create local joinedTournaments record
-      const joinedTournamentData: Omit<JoinedTournament, 'id' | 'slotNumber'> = {
+      // Step 4 (Client-side): Create local joinedTournaments record
+      const finalTournamentState = await getDoc(doc(db, 'tournaments', tid));
+      const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
+      const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
             prizePoolFirst: selectedTournament.prizePoolFirst,
             entryFee: selectedTournament.entryFee,
+            slotNumber: finalSlotNumber,
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
         };
-      const finalTournamentState = await getDoc(doc(db, 'tournaments', tid));
-      const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
+      await setDoc(doc(db, "users", uid, "joinedTournaments", tid), joinedTournamentData);
       
-      await setDoc(doc(db, "users", uid, "joinedTournaments", tid), { ...joinedTournamentData, slotNumber: finalSlotNumber });
-
       // Manually trigger a refresh of the user data to reflect the changes
       refreshJoinedTournaments();
       
