@@ -91,7 +91,6 @@ export function PlayerTournamentList() {
     console.log("Attempting Join - UID:", user.uid);
     console.log("Tournament ID:", tid);
 
-
     // Pre-flight check for user coins
     try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -107,30 +106,31 @@ export function PlayerTournamentList() {
             toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
             return;
         }
-
-        // --- The 3 Sequential Writes ---
         
-        // Step 1: Update Tournament - 'Naked' update with only the count
+        // --- The 3 Sequential Writes ---
+        // CRITICAL: These must be separate to comply with different security rules.
+
+        // Call 1 (Tournament): Use "Naked" update with only the count
         await updateDoc(doc(db, 'tournaments', tid), { 
             registeredCount: increment(1) 
         });
         
-        // Step 2: Create Registration - Use UID as doc ID
+        // Call 2 (Registration): Use UID as doc ID to match security rules
         const registrationData = {
           userId: user.uid,
           teamName: profile.username,
           playerIds: [user.uid],
           registrationDate: serverTimestamp(),
-          slotNumber: (selectedTournament.registeredCount || 0) + 1,
-          status: 'registered'
+          slotNumber: (selectedTournament.registeredCount || 0) + 1
         };
         await setDoc(doc(db, "tournaments", tid, "registrations", user.uid), registrationData);
 
-        // Step 3: Deduct Coins from user
+        // Call 3 (User): Deduct Coins from user profile
         await updateDoc(doc(db, "users", user.uid), {
             coins: increment(-fee)
         });
         
+        // This is a local state update, not a DB write, so it's safe.
         refreshJoinedTournaments();
         
         toast({
