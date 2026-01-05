@@ -95,9 +95,8 @@ export function PlayerTournamentList() {
     const fee = selectedTournament.entryFee;
     
     console.log('--- PRE-FLIGHT CHECK ---');
-    console.log('Current UID:', uid);
+    console.log('Current UID:', auth.currentUser?.uid);
     console.log('Tournament ID:', tid);
-    console.log('Entry Fee:', fee);
     console.log('------------------------');
 
     if (!uid || !tid) {
@@ -106,32 +105,31 @@ export function PlayerTournamentList() {
     }
     
     try {
-      // Step 1: Update Tournament Document (Clean Payload)
-      console.log('Attempting Step 1: Update tournament registeredCount...');
-      const tournamentRef = doc(db, "tournaments", tid);
-      const cleanUpdate = { registeredCount: increment(1) };
-      await updateDoc(tournamentRef, cleanUpdate);
-      console.log('Step 1 PASSED: Tournament count incremented.');
-
-      // Step 2: Create Registration Document
-      console.log('Attempting Step 2: Create registration document...');
-      const registrationRef = doc(db, "tournaments", tid, "registrations", uid);
-      await setDoc(registrationRef, { 
+      // Call A: Create Registration
+      console.log('Attempting Step A: Create registration...');
+      await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
         userId: uid,
         teamName: profile.username,
         registrationDate: serverTimestamp(),
         slotNumber: (selectedTournament.registeredCount || 0) + 1,
       });
-      console.log('Step 2 PASSED: Registration document created.');
+      console.log('Step A PASSED: Registration document created.');
 
-      // Step 3: Deduct Coins from User Profile
-      console.log('Attempting Step 3: Deduct coins from user...');
-      const userRef = doc(db, "users", uid);
-      await updateDoc(userRef, { coins: increment(-fee) });
-      console.log('Step 3 PASSED: Coins deducted.');
+      // Call B: Update Tournament (Naked Update)
+      console.log('Attempting Step B: Update tournament registeredCount...');
+      const tournamentUpdate = { registeredCount: increment(1) };
+      await updateDoc(doc(db, "tournaments", tid), tournamentUpdate);
+      console.log('Step B PASSED: Tournament count incremented.');
+
+      // Call C: Deduct Coins
+      console.log('Attempting Step C: Deduct coins from user...');
+      await updateDoc(doc(db, "users", uid), {
+        coins: increment(-fee)
+      });
+      console.log('Step C PASSED: Coins deducted.');
       
-      // Step 4 (Client-side): Create local joinedTournaments record
-      const finalTournamentState = await getDoc(tournamentRef);
+      // Post-Success Client-Side Updates
+      const finalTournamentState = await getDoc(doc(db, "tournaments", tid));
       const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
       const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
@@ -144,7 +142,7 @@ export function PlayerTournamentList() {
         };
       await setDoc(doc(db, "users", uid, "joinedTournaments", tid), joinedTournamentData);
       
-      refreshJoinedTournaments(); // Refresh the user's tournament list
+      refreshJoinedTournaments();
       
       toast({
           title: 'Success!',
