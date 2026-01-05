@@ -81,8 +81,8 @@ export function PlayerTournamentList() {
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
     if (!auth?.currentUser || !user || !profile || !db) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
-      return;
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
+        return;
     }
     
     if (profile.coins < selectedTournament.entryFee) {
@@ -95,33 +95,43 @@ export function PlayerTournamentList() {
     const fee = selectedTournament.entryFee;
     
     // Diagnostic Logging
+    console.log('--- PRE-FLIGHT CHECK ---');
     console.log('Current UID:', uid);
-    console.log('Attempting to join tournament:', tid);
+    console.log('Tournament ID:', tid);
+    console.log('Entry Fee:', fee);
+    console.log('------------------------');
+
+    if (!uid || !tid) {
+      toast({ variant: "destructive", title: "Join Failed", description: "User or Tournament ID is missing." });
+      return;
+    }
 
     try {
-      // Call A (Registration): setDoc to tournaments/{id}/registrations/{userId}
-      await setDoc(doc(db, 'tournaments', tid, 'registrations', uid), { 
-        userId: uid, 
-        status: 'joined',
+      // Step 1: Increment registeredCount
+      console.log('Step 1: Attempting to increment registeredCount...');
+      const tournamentRef = doc(db, "tournaments", tid);
+      await updateDoc(tournamentRef, { registeredCount: increment(1) });
+      console.log('Step 1 PASSED: Tournament count incremented.');
+
+      // Step 2: Create registration document
+      console.log('Step 2: Attempting to create registration document...');
+      const registrationRef = doc(db, "tournaments", tid, "registrations", uid);
+      await setDoc(registrationRef, { 
+        userId: uid,
         teamName: profile.username,
-        registrationDate: serverTimestamp()
+        registrationDate: serverTimestamp(),
+        slotNumber: (selectedTournament.registeredCount || 0) + 1,
       });
-      console.log("Step 1/3 PASSED: Registration created.");
+      console.log('Step 2 PASSED: Registration document created.');
 
-      // Call B (Tournament): updateDoc to tournaments/{id} with ONLY { registeredCount: increment(1) }
-      await updateDoc(doc(db, 'tournaments', tid), { 
-        registeredCount: increment(1) 
-      });
-      console.log("Step 2/3 PASSED: Tournament count incremented.");
+      // Step 3: Deduct coins from user
+      console.log('Step 3: Attempting to deduct coins...');
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, { coins: increment(-fee) });
+      console.log('Step 3 PASSED: Coins deducted.');
       
-      // Call C (User): updateDoc to users/{userId}
-      await updateDoc(doc(db, 'users', uid), { 
-        coins: increment(-fee) 
-      });
-      console.log("Step 3/3 PASSED: Coins deducted.");
-
       // Step 4 (Client-side): Create local joinedTournaments record
-      const finalTournamentState = await getDoc(doc(db, 'tournaments', tid));
+      const finalTournamentState = await getDoc(tournamentRef);
       const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
       const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
@@ -134,7 +144,7 @@ export function PlayerTournamentList() {
         };
       await setDoc(doc(db, "users", uid, "joinedTournaments", tid), joinedTournamentData);
       
-      refreshJoinedTournaments();
+      refreshJoinedTournaments(); // Refresh the user's tournament list
       
       toast({
           title: 'Success!',
@@ -142,11 +152,15 @@ export function PlayerTournamentList() {
       });
 
     } catch (e: any) {
-        console.error("CRITICAL JOIN FAIL:", e);
+        console.error("--- JOIN FAILED ---");
+        console.error("CRITICAL JOIN ERROR:", e);
+        console.error("Error Code:", e.code);
+        console.error("Error Message:", e.message);
+        console.error("-------------------");
         toast({
             variant: "destructive",
             title: 'Join Failed',
-            description: e.message || "An unexpected error occurred during the join process.",
+            description: e.message || "An unexpected error occurred. Check the console for details.",
         });
     }
   };
