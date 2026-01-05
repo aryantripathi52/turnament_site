@@ -95,10 +95,16 @@ export function PlayerTournamentList() {
     const fee = selectedTournament.entryFee;
     
     try {
+        console.log('Current UID:', uid);
+        console.log('Attempting Step 1: Update Tournament registeredCount');
+
         // Step 1: Update tournament registered count
-        const tournamentUpdate = { registeredCount: increment(1) };
-        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
-        
+        await updateDoc(doc(db, "tournaments", tid), { 
+          registeredCount: increment(1) 
+        });
+        console.log('Step 1 SUCCESS: Tournament count incremented.');
+
+        console.log('Attempting Step 2: Create Registration document');
         // Step 2: Create registration document for the user
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
             userId: uid,
@@ -106,23 +112,14 @@ export function PlayerTournamentList() {
             registrationDate: serverTimestamp(),
             slotNumber: (selectedTournament.registeredCount || 0) + 1,
         });
+        console.log('Step 2 SUCCESS: Registration document created.');
 
+        console.log('Attempting Step 3: Deduct coins from user');
         // Step 3: Deduct coins from user's wallet
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
-
-        // Post-Success Client-Side Updates to reflect the new state
-        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
-            name: selectedTournament.name,
-            startDate: selectedTournament.startDate,
-            prizePoolFirst: selectedTournament.prizePoolFirst,
-            entryFee: selectedTournament.entryFee,
-            slotNumber: (selectedTournament.registeredCount || 0) + 1,
-            roomId: selectedTournament.roomId || null,
-            roomPassword: selectedTournament.roomPassword || null
-        };
-        await setDoc(doc(db, "users", uid, "joinedTournaments", tid), joinedTournamentData);
+        console.log('Step 3 SUCCESS: Coins deducted.');
         
         refreshJoinedTournaments();
         
@@ -135,8 +132,8 @@ export function PlayerTournamentList() {
         console.error("CRITICAL JOIN ERROR:", e);
         toast({
             variant: "destructive",
-            title: 'Join Failed',
-            description: e.message || "An unexpected error occurred. Please check permissions.",
+            title: 'Join Failed - Permission Denied',
+            description: "Could not join tournament. Please check console for details.",
         });
     }
   };
