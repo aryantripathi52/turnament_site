@@ -85,7 +85,6 @@ export function PlayerTournamentList() {
       return;
     }
 
-    console.log('Joining as:', auth.currentUser.uid);
     const uid = auth.currentUser.uid;
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
@@ -107,9 +106,12 @@ export function PlayerTournamentList() {
         }
 
         // --- Sequential Writes ---
-
-        // A: Create registration first to confirm intent
-        console.log("Step A: Creating registration...");
+        
+        // 1. Tournament Update: Send ONLY registeredCount
+        const tournamentUpdate = { registeredCount: increment(1) };
+        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
+        
+        // 2. Registration: Create registration document in subcollection
         const registrationData = {
           userId: uid,
           teamName: userDocSnap.data().username || 'Unknown Player',
@@ -117,20 +119,11 @@ export function PlayerTournamentList() {
           slotNumber: (selectedTournament.registeredCount || 0) + 1,
         };
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), registrationData);
-        console.log("Step A SUCCESS: Registration created.");
 
-        // B: Update tournament count
-        console.log("Step B: Updating tournament count...");
-        const tournamentUpdate = { registeredCount: increment(1) };
-        await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
-        console.log("Step B SUCCESS: Tournament count incremented.");
-        
-        // C: Deduct coins from user
-        console.log("Step C: Deducting coins...");
+        // 3. User Update: Deduct coins from user
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
-        console.log("Step C SUCCESS: Coins deducted.");
         
         refreshJoinedTournaments();
         
