@@ -94,7 +94,6 @@ export function PlayerTournamentList() {
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    // Diagnostic Logging
     console.log('--- PRE-FLIGHT CHECK ---');
     console.log('Current UID:', uid);
     console.log('Tournament ID:', tid);
@@ -105,16 +104,17 @@ export function PlayerTournamentList() {
       toast({ variant: "destructive", title: "Join Failed", description: "User or Tournament ID is missing." });
       return;
     }
-
+    
     try {
-      // Step 1: Increment registeredCount
-      console.log('Step 1: Attempting to increment registeredCount...');
+      // Step 1: Update Tournament Document (Clean Payload)
+      console.log('Attempting Step 1: Update tournament registeredCount...');
       const tournamentRef = doc(db, "tournaments", tid);
-      await updateDoc(tournamentRef, { registeredCount: increment(1) });
+      const cleanUpdate = { registeredCount: increment(1) };
+      await updateDoc(tournamentRef, cleanUpdate);
       console.log('Step 1 PASSED: Tournament count incremented.');
 
-      // Step 2: Create registration document
-      console.log('Step 2: Attempting to create registration document...');
+      // Step 2: Create Registration Document
+      console.log('Attempting Step 2: Create registration document...');
       const registrationRef = doc(db, "tournaments", tid, "registrations", uid);
       await setDoc(registrationRef, { 
         userId: uid,
@@ -124,8 +124,8 @@ export function PlayerTournamentList() {
       });
       console.log('Step 2 PASSED: Registration document created.');
 
-      // Step 3: Deduct coins from user
-      console.log('Step 3: Attempting to deduct coins...');
+      // Step 3: Deduct Coins from User Profile
+      console.log('Attempting Step 3: Deduct coins from user...');
       const userRef = doc(db, "users", uid);
       await updateDoc(userRef, { coins: increment(-fee) });
       console.log('Step 3 PASSED: Coins deducted.');
