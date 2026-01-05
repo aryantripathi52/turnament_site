@@ -80,15 +80,19 @@ export function PlayerTournamentList() {
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
-    if (!auth?.currentUser || !db) {
+    if (!auth?.currentUser || !db || !user || !profile) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
 
-    const uid = auth.currentUser.uid;
+    const uid = user.uid;
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
+    // Diagnostic Logging
+    console.log('Current UID:', uid);
+    console.log('Tournament ID:', tid);
+
     // Pre-flight check for user coins
     try {
         const userDocRef = doc(db, 'users', uid);
@@ -105,22 +109,23 @@ export function PlayerTournamentList() {
             return;
         }
 
-        // --- Sequential Writes ---
+        // --- The 3 Sequential Writes ---
         
-        // 1. Tournament Update: Send ONLY registeredCount
+        // Step 1 (Tournament): Update count with a "Naked" object
         const tournamentUpdate = { registeredCount: increment(1) };
         await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
         
-        // 2. Registration: Create registration document in subcollection
-        const registrationData = {
+        // Step 2 (Registration): Create registration document in subcollection with UID as doc ID
+        const registrationData: Omit<Registration, 'id' | 'tournamentId'> = {
           userId: uid,
-          teamName: userDocSnap.data().username || 'Unknown Player',
+          teamName: profile.username,
+          playerIds: [uid],
           registrationDate: serverTimestamp(),
           slotNumber: (selectedTournament.registeredCount || 0) + 1,
         };
         await setDoc(doc(db, "tournaments", tid, "registrations", uid), registrationData);
 
-        // 3. User Update: Deduct coins from user
+        // Step 3 (User): Deduct coins from user
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
@@ -137,7 +142,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed - Permission Denied',
-            description: e.message || `There was a security issue joining the tournament. Please check the console.`,
+            description: e.message || `A security rule was violated. Please check the console for details.`,
         });
     }
   };
