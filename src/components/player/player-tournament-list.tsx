@@ -102,15 +102,16 @@ export function PlayerTournamentList() {
     }
 
     try {
-        const newSlotNumber = selectedTournament.registeredCount + 1;
-
-        // Step 1 (Update Tournament): Increment ONLY registeredCount.
-        const tournamentRef = doc(db, "tournaments", tournamentId);
-        await updateDoc(tournamentRef, {
-            registeredCount: increment(1)
-        });
+        const tournamentDoc = await getDoc(doc(db, "tournaments", tournamentId));
+        if (!tournamentDoc.exists()) {
+          throw new Error("Tournament not found.");
+        }
+        const currentRegisteredCount = tournamentDoc.data()?.registeredCount || 0;
+        const newSlotNumber = currentRegisteredCount + 1;
         
-        // Step 2 (Create Registration): Create the registration doc for the player.
+        const batch = writeBatch(db);
+
+        // 1. Create Registration Document
         const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
         const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
             userId: userId,
@@ -119,12 +120,12 @@ export function PlayerTournamentList() {
             playerIds: [userId],
             slotNumber: newSlotNumber,
         };
-        await setDoc(registrationRef, {
+        batch.set(registrationRef, {
             ...registrationData,
             registrationDate: serverTimestamp(),
         });
         
-        // This is a denormalized write for the user's private data.
+        // 2. Create User's Private Joined Tournament Document
         const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
         const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
             name: selectedTournament.name,
@@ -135,13 +136,22 @@ export function PlayerTournamentList() {
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
         };
-        await setDoc(joinedTournamentRef, joinedTournamentData);
+        batch.set(joinedTournamentRef, joinedTournamentData);
 
-        // Step 3 (Deduct Coins): Update the user's coin balance.
+        // 3. Update Tournament (Increment registeredCount)
+        const tournamentRef = doc(db, "tournaments", tournamentId);
+        batch.update(tournamentRef, {
+            registeredCount: increment(1)
+        });
+        
+        // 4. Update User Profile (Deduct Coins)
         const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, {
+        batch.update(userRef, {
             coins: increment(-selectedTournament.entryFee)
         });
+        
+        // Commit all writes in a single batch
+        await batch.commit();
 
         refreshJoinedTournaments(); 
         toast({
