@@ -80,47 +80,57 @@ export function PlayerTournamentList() {
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
-    if (!auth?.currentUser || !user || !profile || !db) {
+    if (!auth?.currentUser || !db) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
-    
-    if (profile.coins < selectedTournament.entryFee) {
-       toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter." });
-       return;
-    }
-    
+
+    console.log('Joining as:', auth.currentUser.uid);
     const uid = auth.currentUser.uid;
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
     
-    console.log("--- Starting Join Process ---");
-    console.log("Current UID:", uid);
-    console.log("Tournament ID:", tid);
-
+    // Pre-flight check for user coins
     try {
-        // Step 1: Update Tournament registeredCount with a "Naked" payload
+        const userDocRef = doc(db, 'users', uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+             toast({ variant: "destructive", title: "Join Failed", description: "Your user profile could not be found." });
+             return;
+        }
+        
+        const userCoins = userDocSnap.data().coins || 0;
+        if (userCoins < fee) {
+            toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
+            return;
+        }
+
+        // --- Sequential Writes ---
+
+        // A: Create registration first to confirm intent
+        console.log("Step A: Creating registration...");
+        const registrationData = {
+          userId: uid,
+          teamName: userDocSnap.data().username || 'Unknown Player',
+          registrationDate: serverTimestamp(),
+          slotNumber: (selectedTournament.registeredCount || 0) + 1,
+        };
+        await setDoc(doc(db, "tournaments", tid, "registrations", uid), registrationData);
+        console.log("Step A SUCCESS: Registration created.");
+
+        // B: Update tournament count
+        console.log("Step B: Updating tournament count...");
         const tournamentUpdate = { registeredCount: increment(1) };
-        console.log("Step 1: Attempting to update tournament count...");
         await updateDoc(doc(db, 'tournaments', tid), tournamentUpdate);
-        console.log('Step 1 SUCCESS: Tournament count incremented.');
-
-        // Step 2: Create Registration document
-        console.log('Step 2: Attempting to create registration document...');
-        await setDoc(doc(db, "tournaments", tid, "registrations", uid), {
-            userId: uid,
-            teamName: profile.username,
-            registrationDate: serverTimestamp(),
-            slotNumber: (selectedTournament.registeredCount || 0) + 1,
-        });
-        console.log('Step 2 SUCCESS: Registration document created.');
-
-        // Step 3: Deduct coins from user
-        console.log('Step 3: Attempting to deduct coins...');
+        console.log("Step B SUCCESS: Tournament count incremented.");
+        
+        // C: Deduct coins from user
+        console.log("Step C: Deducting coins...");
         await updateDoc(doc(db, "users", uid), {
             coins: increment(-fee)
         });
-        console.log('Step 3 SUCCESS: Coins deducted.');
+        console.log("Step C SUCCESS: Coins deducted.");
         
         refreshJoinedTournaments();
         
@@ -134,7 +144,7 @@ export function PlayerTournamentList() {
         toast({
             variant: "destructive",
             title: 'Join Failed - Permission Denied',
-            description: `There was a security issue joining the tournament. Please check the console for details.`,
+            description: e.message || `There was a security issue joining the tournament. Please check the console.`,
         });
     }
   };
