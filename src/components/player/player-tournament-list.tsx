@@ -78,95 +78,101 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
- const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-    const db = firestore;
-    if (!auth?.currentUser || !user || !profile) {
+  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
+    if (!auth?.currentUser || !user || !profile || !firestore) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
     const userId = user.uid;
     const tournamentId = selectedTournament.id;
+    const db = firestore;
 
-    // Preliminary client-side checks
-    if (profile.coins < selectedTournament.entryFee) {
+    // --- PRE-FLIGHT CHECKS ---
+    console.log(`[JOIN DEBUG] Pre-flight check for user: ${userId} and tournament: ${tournamentId}`);
+    if (!userId || !tournamentId) {
+      console.error("[JOIN DEBUG] CRITICAL: User ID or Tournament ID is undefined.");
+      toast({ variant: "destructive", title: "Error", description: "User or Tournament ID is missing." });
+      return;
+    }
+     if (profile.coins < selectedTournament.entryFee) {
        toast({ variant: "destructive", title: "Join Failed", description: "Insufficient coins to enter." });
        return;
     }
-     if (selectedTournament.registeredCount >= selectedTournament.maxPlayers) {
-        toast({ variant: "destructive", title: "Join Failed", description: "This tournament is already full." });
-        return;
-    }
-    if (selectedTournament.status !== 'upcoming') {
-        toast({ variant: "destructive", title: "Join Failed", description: "Registrations for this tournament are closed." });
-        return;
-    }
 
+    // --- STEP 1: CREATE REGISTRATION ---
     try {
-        const tournamentDoc = await getDoc(doc(db, "tournaments", tournamentId));
-        if (!tournamentDoc.exists()) {
-          throw new Error("Tournament not found.");
-        }
-        const currentRegisteredCount = tournamentDoc.data()?.registeredCount || 0;
-        const newSlotNumber = currentRegisteredCount + 1;
-        
-        const batch = writeBatch(db);
+      console.log(`[JOIN DEBUG] Step 1: Attempting to create registration at /tournaments/${tournamentId}/registrations/${userId}`);
+      const regRef = doc(db, 'tournaments', tournamentId, 'registrations', userId);
+      const registrationData = {
+        userId: userId,
+        tournamentId: tournamentId,
+        teamName: profile.username,
+        playerIds: [userId],
+        registrationDate: serverTimestamp(),
+        // slotNumber will be set transactionally on a backend trigger if needed, or derived from count
+      };
+      await setDoc(regRef, registrationData);
+      console.log("[JOIN DEBUG] Step 1: Registration document created successfully.");
+    } catch (e: any) {
+      console.error("[JOIN DEBUG] FAILED AT STEP 1 (Create Registration):", e);
+      toast({ variant: "destructive", title: "Join Failed (Step 1)", description: e.message });
+      return; // Stop execution if this fails
+    }
 
-        // 1. Create Registration Document
-        const registrationRef = doc(db, "tournaments", tournamentId, "registrations", userId);
-        const registrationData: Omit<Registration, 'id' | 'registrationDate'> = {
-            userId: userId,
-            tournamentId: tournamentId,
-            teamName: profile.username,
-            playerIds: [userId],
-            slotNumber: newSlotNumber,
-        };
-        batch.set(registrationRef, {
-            ...registrationData,
-            registrationDate: serverTimestamp(),
-        });
-        
-        // 2. Create User's Private Joined Tournament Document
-        const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
-        const joinedTournamentData: Omit<JoinedTournament, 'id'> = {
+    // --- STEP 2: UPDATE TOURNAMENT COUNT ---
+    try {
+      console.log(`[JOIN DEBUG] Step 2: Attempting to update registeredCount for /tournaments/${tournamentId}`);
+      const tourRef = doc(db, 'tournaments', tournamentId);
+      const payload = { registeredCount: increment(1) }; // 'Naked' object
+      await updateDoc(tourRef, payload);
+      console.log("[JOIN DEBUG] Step 2: Tournament registeredCount incremented successfully.");
+    } catch (e: any) {
+      console.error("[JOIN DEBUG] FAILED AT STEP 2 (Update Tournament):", e);
+      toast({ variant: "destructive", title: "Join Failed (Step 2)", description: e.message });
+      // NOTE: Consider adding compensating logic to delete the registration document from Step 1
+      return;
+    }
+
+    // --- STEP 3: DEDUCT COINS & CREATE JOINED RECORD ---
+    try {
+      console.log(`[JOIN DEBUG] Step 3: Attempting to deduct coins and create joined record for user ${userId}`);
+      const batch = writeBatch(db);
+
+      const userRef = doc(db, "users", userId);
+      batch.update(userRef, { coins: increment(-selectedTournament.entryFee) });
+      
+      const joinedTournamentRef = doc(db, "users", userId, "joinedTournaments", tournamentId);
+       const joinedTournamentData: Omit<JoinedTournament, 'id' | 'slotNumber'> = {
             name: selectedTournament.name,
             startDate: selectedTournament.startDate,
             prizePoolFirst: selectedTournament.prizePoolFirst,
             entryFee: selectedTournament.entryFee,
-            slotNumber: newSlotNumber,
             roomId: selectedTournament.roomId || null,
             roomPassword: selectedTournament.roomPassword || null
         };
-        batch.set(joinedTournamentRef, joinedTournamentData);
+      // We will set the final slot number here atomically, though it's slightly delayed from the count
+      const finalTournamentState = await getDoc(doc(db, 'tournaments', tournamentId));
+      const finalSlotNumber = finalTournamentState.data()?.registeredCount || 1;
 
-        // 3. Update Tournament (Increment registeredCount)
-        const tournamentRef = doc(db, "tournaments", tournamentId);
-        batch.update(tournamentRef, {
-            registeredCount: increment(1)
-        });
-        
-        // 4. Update User Profile (Deduct Coins)
-        const userRef = doc(db, "users", userId);
-        batch.update(userRef, {
-            coins: increment(-selectedTournament.entryFee)
-        });
-        
-        // Commit all writes in a single batch
-        await batch.commit();
+      batch.set(joinedTournamentRef, { ...joinedTournamentData, slotNumber: finalSlotNumber });
 
-        refreshJoinedTournaments(); 
-        toast({
-            title: 'Success!',
-            description: `You have successfully joined "${selectedTournament.name}".`,
-        });
+      await batch.commit();
+      console.log("[JOIN DEBUG] Step 3: Coins deducted and joined record created successfully.");
 
-    } catch (error: any) {
-        console.error("CRITICAL JOIN FAIL:", error);
-        toast({
-            variant: "destructive",
-            title: 'Join Failed',
-            description: error.message || "An unexpected error occurred. Check security rules and Firestore logs.",
-        });
+    } catch (e: any) {
+      console.error("[JOIN DEBUG] FAILED AT STEP 3 (Deduct Coins / Create Record):", e);
+      toast({ variant: "destructive", title: "Join Failed (Step 3)", description: e.message });
+       // NOTE: Consider compensating logic for steps 1 & 2
+      return;
     }
+    
+    // --- SUCCESS ---
+    console.log("[JOIN DEBUG] All steps completed successfully!");
+    refreshJoinedTournaments();
+    toast({
+        title: 'Success!',
+        description: `You have successfully joined "${selectedTournament.name}".`,
+    });
   };
 
 
