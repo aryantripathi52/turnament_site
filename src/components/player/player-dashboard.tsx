@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser } from '@/firebase';
@@ -13,15 +14,25 @@ import { PlayerTournamentList } from './player-tournament-list';
 import { MyTournaments } from './my-tournaments';
 import { UserHistory } from './user-history';
 import { SupportTab } from './support-tab';
-
+import { useToast } from '@/hooks/use-toast';
 
 export function PlayerDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const auth = getAuth();
-    signOut(auth);
+    try {
+        await signOut(auth); // Sign out from client
+        // Call the API route to clear the server-side session cookie
+        await fetch('/api/session', { method: 'DELETE' });
+        toast({ title: "Logged Out", description: "You have been successfully logged out." });
+        window.location.href = '/login'; // Force a full page reload to clear all state
+    } catch (error) {
+        console.error("Logout failed", error);
+        toast({ variant: 'destructive', title: "Logout Failed", description: "An error occurred during logout." });
+    }
   };
   
   const creationDate = user?.metadata.creationTime

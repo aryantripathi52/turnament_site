@@ -16,16 +16,27 @@ import { TournamentList } from './tournament-list';
 import { StaffCoinRequests } from '../staff/staff-coin-requests';
 import { HireStaffForm } from './hire-staff-form';
 import { AdminHistory } from './admin-history';
+import { useToast } from '@/hooks/use-toast';
 
 export function AdminDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const auth = getAuth();
-    signOut(auth);
+    try {
+        await signOut(auth); // Sign out from client
+        // Call the API route to clear the server-side session cookie
+        await fetch('/api/session', { method: 'DELETE' });
+        toast({ title: "Logged Out", description: "You have been successfully logged out." });
+        window.location.href = '/login'; // Force a full page reload to clear all state
+    } catch (error) {
+        console.error("Logout failed", error);
+        toast({ variant: 'destructive', title: "Logout Failed", description: "An error occurred during logout." });
+    }
   };
 
   const creationDate = user?.metadata.creationTime

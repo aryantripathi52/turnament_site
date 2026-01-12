@@ -73,7 +73,7 @@ export function LoginForm() {
     }
 
     try {
-      // 1. Authenticate with Firebase Auth
+      // 1. Authenticate with Firebase Auth on the client
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
@@ -93,12 +93,24 @@ export function LoginForm() {
         throw new Error('The selected role is incorrect for this account.');
       }
       
+      // 3. Create a server-side session cookie
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create server session.');
+      }
+
       toast({
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
       
-      // 3. Force redirect using window.location
+      // 4. Force redirect using window.location
       if (userProfile.role === 'admin' || userProfile.role === 'staff') {
         window.location.href = '/admin';
       } else {
