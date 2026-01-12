@@ -2,9 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: Admin check
+    // Helper: Admin check by role
     function isAdmin() {
-      return request.auth != null && request.auth.uid == 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper: Staff or Admin check by role
+    function isStaffOrAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['staff', 'admin'];
     }
 
     // 1. GLOBAL ADMIN ACCESS
@@ -12,33 +21,40 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // 2. USER PROFILES
+    // 2. USER PROFILES & SUBCOLLECTIONS
     match /users/{userId} {
-      // Transaction MUST have 'get' to read coin balance
+      // User can manage their own profile and subcollections
       allow get, read, update: if request.auth != null && request.auth.uid == userId;
       
-      // Allow recursive access to joinedTournaments subcollections
       match /{allSubcollections=**} {
         allow read, get, list, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // 3. TOURNAMENT & REGISTRATION LOGIC
+    // 3. TOURNAMENTS & REGISTRATIONS
     match /tournaments/{tournamentId} {
-      allow read, get: if true; 
-      
-      // Allow players to increment registeredCount
-      allow update: if request.auth != null;
+      allow read: if true;
+      allow create, update, delete: if isStaffOrAdmin();
 
       match /registrations/{registrationId} {
-        // Player must be able to 'list' and 'get' their own registration
-        allow create, get, read, list: if request.auth != null && (registrationId == request.auth.uid || isAdmin());
+        allow create, get, read, list: if request.auth != null;
       }
     }
 
     // 4. CATEGORIES
     match /categories/{categoryId} {
-      allow read, get: if true;
+      allow read: if true;
+      allow write: if isStaffOrAdmin();
+    }
+
+    // 5. COIN REQUESTS (for Staff & Admin)
+    match /addCoinRequests/{requestId} {
+        allow create: if request.auth != null;
+        allow read, list, update: if isStaffOrAdmin();
+    }
+    match /withdrawCoinRequests/{requestId} {
+        allow create: if request.auth != null;
+        allow read, list, update: if isStaffOrAdmin();
     }
   }
 }

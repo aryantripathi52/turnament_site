@@ -30,13 +30,10 @@ const formSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
-// IMPORTANT: This admin UID is hardcoded for the security check.
-const ADMIN_UID = 'QNH804sx9uO9KpGQYUfQ9BU6CKF2';
-
 export function HireStaffForm() {
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { profile } = useUser();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,14 +46,14 @@ export function HireStaffForm() {
     },
   });
 
-  // Security Check: Ensure only the designated admin can use this form.
-  if (user?.uid !== ADMIN_UID) {
+  // Security Check: Ensure only an admin can use this form by checking their profile role.
+  if (profile?.role !== 'admin') {
     return (
         <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Access Denied</AlertTitle>
             <AlertDescription>
-                You do not have permission to view this page.
+                You do not have permission to view this page. This action is for administrators only.
             </AlertDescription>
         </Alert>
     );
