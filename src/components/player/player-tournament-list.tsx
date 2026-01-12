@@ -78,83 +78,77 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
+  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
     const db = firestore;
     if (!auth.currentUser || !db) {
-        toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
-        return;
+      toast({ variant: "destructive", title: "Error", description: "Login required." });
+      return;
     }
-
+  
     const userId = auth.currentUser.uid;
     const tid = selectedTournament.id;
-    console.log("UserID:", userId, "TournamentID:", tid);
-
+  
     try {
-        await runTransaction(db, async (transaction) => {
-            const userRef = doc(db, "users", userId);
-            const tournamentRef = doc(db, "tournaments", tid);
-            const registrationRef = doc(db, "tournaments", tid, "registrations", userId);
-            const joinedTourRef = doc(db, "users", userId, "joinedTournaments", tid);
-
-            // 1. Transactional Reads
-            const userSnap = await transaction.get(userRef);
-            const tourneySnap = await transaction.get(tournamentRef);
-
-            if (!userSnap.exists()) throw new Error("User profile missing.");
-            if (!tourneySnap.exists()) throw new Error("Tournament not found.");
-
-            const userData = userSnap.data();
-            const tourneyData = tourneySnap.data();
-
-            // 2. Logic Checks
-            const fee = Number(tourneyData.entryFee) || 0;
-            const currentCoins = Number(userData.coins) || 0;
-
-            if (currentCoins < fee) throw new Error("Insufficient coins.");
-            if (tourneyData.registeredCount >= tourneyData.maxPlayers) throw new Error("Tournament is full.");
-
-            // 3. Atomic Writes
-            // Deduct coins
-            transaction.update(userRef, { coins: increment(-fee) });
-            
-            // Increment tournament count
-            transaction.update(tournamentRef, { registeredCount: increment(1) });
-
-            // Create registration
-            transaction.set(registrationRef, {
-                userId: userId,
-                tournamentId: tid,
-                teamName: profile?.username || 'Player',
-                playerIds: [userId],
-                slotNumber: (tourneyData.registeredCount || 0) + 1,
-                registrationDate: serverTimestamp()
-            });
-
-            // Add to personal joined list
-            transaction.set(joinedTourRef, {
-                id: tid,
-                name: tourneyData.name,
-                startDate: tourneyData.startDate,
-                prizePoolFirst: selectedTournament.prizePoolFirst,
-                entryFee: fee,
-                slotNumber: (tourneyData.registeredCount || 0) + 1,
-                roomId: null,
-                roomPassword: null,
-            });
+      await runTransaction(db, async (transaction) => {
+        const userRef = doc(db, "users", userId);
+        const tournamentRef = doc(db, "tournaments", tid);
+        const registrationRef = doc(db, "tournaments", tid, "registrations", userId);
+        const joinedTourRef = doc(db, "users", userId, "joinedTournaments", tid);
+  
+        // 1. ATOMIC READS
+        const userSnap = await transaction.get(userRef);
+        const tourneySnap = await transaction.get(tournamentRef);
+  
+        if (!userSnap.exists()) throw new Error("Please complete your profile first.");
+        if (!tourneySnap.exists()) throw new Error("Tournament no longer exists.");
+  
+        const userData = userSnap.data();
+        const tourneyData = tourneySnap.data();
+  
+        // 2. VALIDATION
+        const fee = Number(tourneyData.entryFee) || 0;
+        const currentCoins = Number(userData.coins) || 0;
+  
+        if (currentCoins < fee) throw new Error("Insufficient coins.");
+        if (tourneyData.registeredCount >= tourneyData.maxPlayers) throw new Error("Tournament is full.");
+  
+        // 3. ATOMIC WRITES
+        transaction.update(userRef, { coins: increment(-fee) });
+        transaction.update(tournamentRef, { registeredCount: increment(1) });
+  
+        transaction.set(registrationRef, {
+          userId: userId,
+          tournamentId: tid,
+          teamName: profile?.username || 'Unknown',
+          playerIds: [userId],
+          slotNumber: (tourneyData.registeredCount || 0) + 1,
+          registrationDate: serverTimestamp()
         });
-
-        refreshJoinedTournaments();
-        toast({ title: "Success!", description: "Joined successfully!" });
-
+  
+        transaction.set(joinedTourRef, {
+          id: tid,
+          name: tourneyData.name,
+          startDate: tourneyData.startDate,
+          prizePoolFirst: selectedTournament.prizePoolFirst,
+          entryFee: fee,
+          slotNumber: (tourneyData.registeredCount || 0) + 1,
+          roomId: null,
+          roomPassword: null,
+        }, { merge: true });
+      });
+  
+      refreshJoinedTournaments();
+      toast({ title: "Success!", description: "You're in the tournament!" });
+  
     } catch (e: any) {
-        console.error("Transaction failed: ", e);
-        toast({ 
-            variant: "destructive", 
-            title: "Join Failed", 
-            description: e.message.includes("permission") ? "Security Rules blocked the join." : e.message 
-        });
+      console.error("Join Error:", e);
+      toast({ 
+        variant: "destructive", 
+        title: "Join Failed", 
+        description: e.message.includes("permission") ? "Firebase Security blocked this join." : e.message 
+      });
     }
-};
+  };
 
 
   if (isLoading) {
