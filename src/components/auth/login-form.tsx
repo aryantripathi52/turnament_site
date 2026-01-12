@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
