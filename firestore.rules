@@ -30,6 +30,7 @@ service cloud.firestore {
         
         // Staff/Admin can create, update, delete tournaments.
         allow create, delete: if isStaffOrAdmin();
+        
         // Crash-proof update rule for joining
         allow update: if isStaffOrAdmin() || (
           request.auth != null && 
