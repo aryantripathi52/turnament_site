@@ -79,51 +79,62 @@ export function PlayerTournamentList() {
   const error = tournamentsError || categoriesError;
 
   const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-    const db = firestore;
-    if (!auth?.currentUser || !db || !user || !profile) {
+    console.log("Attempting Join - UID:", auth.currentUser?.uid);
+    console.log("Tournament ID:", selectedTournament.id);
+
+    if (!auth?.currentUser || !firestore || !user || !profile) {
       toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
       return;
     }
     
     const tid = selectedTournament.id;
     const fee = selectedTournament.entryFee;
+    const uid = auth.currentUser.uid;
     
-    console.log("Attempting Join - UID:", user.uid);
-    console.log("Tournament ID:", tid);
+    const userDocRef = doc(firestore, 'users', uid);
+    const tournamentRef = doc(firestore, 'tournaments', tid);
+    const registrationRef = doc(firestore, "tournaments", tid, "registrations", uid);
+    const joinedTournamentRef = doc(firestore, `users/${uid}/joinedTournaments`, tid);
 
     // Pre-flight check for user coins
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDocSnap = await getDoc(userDocRef);
-
-    if (!userDocSnap.exists() || (userDocSnap.data().coins || 0) < fee) {
-      toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
-      return;
+    try {
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+            throw new Error("Your user profile does not exist.");
+        }
+        if ((userDocSnap.data().coins || 0) < fee) {
+          toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
+          return;
+        }
+    } catch (e: any) {
+        console.error("Pre-flight check failed:", e);
+        toast({ variant: "destructive", title: "Validation Failed", description: `Could not verify your profile: ${e.message}` });
+        return;
     }
 
-    try {
-      const batch = writeBatch(db);
 
-      // 1. Create the registration document
-      const registrationRef = doc(db, "tournaments", tid, "registrations", user.uid);
+    try {
+      // Use a write batch for atomicity
+      const batch = writeBatch(firestore);
+
+      // 1. Update the tournament's registered count
+      batch.update(tournamentRef, { registeredCount: increment(1) });
+
+      // 2. Create the registration document
       const registrationData: Omit<Registration, 'id'> = {
-        userId: user.uid,
+        userId: uid,
         tournamentId: tid,
         teamName: profile.username,
-        playerIds: [user.uid],
+        playerIds: [uid],
         registrationDate: serverTimestamp(),
         slotNumber: (selectedTournament.registeredCount || 0) + 1
       };
       batch.set(registrationRef, registrationData);
 
-      // 2. Update the tournament's registered count
-      const tournamentRef = doc(db, 'tournaments', tid);
-      batch.update(tournamentRef, { registeredCount: increment(1) });
-
       // 3. Deduct coins from the user's profile
       batch.update(userDocRef, { coins: increment(-fee) });
 
       // 4. Add to the user's private 'joinedTournaments' subcollection
-      const joinedTournamentRef = doc(db, `users/${user.uid}/joinedTournaments`, tid);
       const joinedTournamentData: JoinedTournament = {
         id: tid,
         name: selectedTournament.name,
@@ -150,8 +161,8 @@ export function PlayerTournamentList() {
         console.error("CRITICAL JOIN ERROR:", e);
         toast({
             variant: "destructive",
-            title: 'Join Failed - Permission Denied',
-            description: e.message || `A security rule was violated. Please check the console for details.`,
+            title: 'Join Failed',
+            description: e.message || `An unexpected error occurred. Please check security rules.`,
         });
     }
   };
