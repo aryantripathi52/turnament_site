@@ -28,6 +28,7 @@ import { setDoc, doc } from 'firebase/firestore';
 import { Eye, EyeOff } from 'lucide-react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -64,6 +65,7 @@ export function RegisterForm() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
+  const [showRoleKey, setShowRoleKey] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -222,22 +224,34 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="roleKey"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role Key (optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter admin or staff key if you have one"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <div className="flex items-center space-x-2">
+                <Checkbox id="show-role-key" onCheckedChange={(checked) => setShowRoleKey(!!checked)} />
+                <label
+                    htmlFor="show-role-key"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                    I have a role key
+                </label>
+            </div>
+
+            {showRoleKey && (
+                <FormField
+                control={form.control}
+                name="roleKey"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Role Key</FormLabel>
+                    <FormControl>
+                        <Input
+                        placeholder="Enter admin or staff key"
+                        {...field}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            )}
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                {form.formState.isSubmitting ? 'Registering...' : 'Register'}
             </Button>
