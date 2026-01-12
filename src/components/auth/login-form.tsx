@@ -28,14 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
-
 
 const formSchema = z.object({
   email: z.string().email({
@@ -50,9 +45,6 @@ const formSchema = z.object({
 });
 
 export function LoginForm() {
-  const auth = useAuth();
-  const firestore = useFirestore();
-
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -67,70 +59,38 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firebase not initialized. Please try again.',
-      });
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const authenticatedUser = userCredential.user;
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
 
-      const profileRef = doc(firestore, 'users', authenticatedUser.uid);
-      const profileSnap = await getDoc(profileRef);
+      const result = await response.json();
 
-      if (!profileSnap.exists()) {
-        await auth.signOut();
-        throw new Error("Profile not found. Please contact support.");
+      if (!response.ok) {
+        throw new Error(result.error || 'Login failed.');
       }
 
-      const userProfile = profileSnap.data() as UserProfile;
-
-      if (userProfile.role !== values.role) {
-        await auth.signOut();
-        throw new Error("The selected role is incorrect for this account.");
-      }
-      
       toast({
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
       
-      // FIX: Force redirect to the specific dashboard instead of using Next.js router
-      if (userProfile.role === 'admin' || userProfile.role === 'staff') {
+      if (result.role === 'admin' || result.role === 'staff') {
         window.location.href = '/admin';
       } else {
         window.location.href = '/player';
       }
 
     } catch (error: any) {
-      let description = 'An unexpected error occurred. Please try again.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          description = 'The email or password you entered is incorrect.';
-          break;
-        case 'auth/invalid-email':
-          description = 'The email address is not valid.';
-          break;
-        case 'auth/too-many-requests':
-          description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can try again later.';
-          break;
-        default:
-          console.error("Login Error:", error)
-          description = error.message || 'An unexpected error occurred. Please try again.';
-      }
        toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: description,
+        description: error.message || 'An unexpected error occurred. Please try again.',
       });
     } finally {
       setIsSubmitting(false);

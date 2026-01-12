@@ -26,7 +26,7 @@ async function getUserSession() {
 
     return { user: decodedClaims, profile: null };
   } catch (error) {
-    console.error("Session verification failed:", error);
+    // If cookie is invalid, it will throw, and we treat it as no session.
     return { user: null, profile: null };
   }
 }
