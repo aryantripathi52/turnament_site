@@ -31,6 +31,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -48,6 +52,8 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,37 +66,66 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    if (!auth || !firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firebase not available.' });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
+      // 1. Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
 
-      const result = await response.json();
+      // 2. Verify role from Firestore
+      const profileRef = doc(firestore, 'users', user.uid);
+      const profileSnap = await getDoc(profileRef);
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Login failed.');
+      if (!profileSnap.exists()) {
+        await auth.signOut(); // Sign out if profile doesn't exist
+        throw new Error('Profile not found for this user.');
       }
+      
+      const userProfile = profileSnap.data() as UserProfile;
 
+      if (userProfile.role !== values.role) {
+        await auth.signOut(); // Sign out if role doesn't match
+        throw new Error('The selected role is incorrect for this account.');
+      }
+      
       toast({
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
       
-      if (result.role === 'admin' || result.role === 'staff') {
+      // 3. Force redirect using window.location
+      if (userProfile.role === 'admin' || userProfile.role === 'staff') {
         window.location.href = '/admin';
       } else {
         window.location.href = '/player';
       }
 
     } catch (error: any) {
+       let errorMessage = 'An unexpected error occurred. Please try again.';
+       if (error.code) {
+         switch (error.code) {
+           case 'auth/user-not-found':
+           case 'auth/wrong-password':
+           case 'auth/invalid-credential':
+             errorMessage = 'The email or password you entered is incorrect.';
+             break;
+           case 'auth/invalid-email':
+             errorMessage = 'Please enter a valid email address.';
+             break;
+         }
+       } else if (error.message) {
+         errorMessage = error.message;
+       }
+
        toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
