@@ -1,7 +1,8 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Coins, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy, ListOrdered } from 'lucide-react';
+import { Trophy, Swords, Calendar, Coins, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -9,20 +10,11 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { JoinedTournament, WonTournament, Tournament } from '@/lib/types';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { PointsTable } from '../tournaments/points-table';
 
 
 const formatDate = (date: any) => {
@@ -43,7 +35,7 @@ const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, 
   cancelled: { icon: XCircle, label: 'Cancelled', color: 'text-red-500', description: 'Cancelled. Your entry fee has been refunded.' },
 };
 
-function JoinedTournamentCard({ tournament, userId, onPointsTableClick }: { tournament: JoinedTournament, userId: string, onPointsTableClick: (tournamentId: string) => void }) {
+function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [liveTournamentData, setLiveTournamentData] = useState<Tournament | null>(null);
   const firestore = useFirestore();
@@ -182,11 +174,8 @@ function JoinedTournamentCard({ tournament, userId, onPointsTableClick }: { tour
                         )}
                     </div>
                 )}
-                 <Button onClick={() => onPointsTableClick(tournament.id)}>
-                    <ListOrdered className="mr-2 h-4 w-4" /> Points Table
-                 </Button>
              </CardContent>
-             <CardFooter className='flex-col gap-2'>
+             <CardFooter>
                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back
@@ -202,20 +191,6 @@ function JoinedTournamentCard({ tournament, userId, onPointsTableClick }: { tour
 
 export function MyTournaments() {
   const { user, joinedTournaments, wonTournaments, isTournamentsLoading, tournamentsError } = useUser();
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
-
-  const handlePointsTableClick = (tournamentId: string) => {
-    setSelectedTournamentId(tournamentId);
-  };
-
-  const handleDialogClose = () => {
-    setSelectedTournamentId(null);
-  };
-
-  const selectedTournament = useMemo(() => {
-    if (!selectedTournamentId) return null;
-    return joinedTournaments?.find(t => t.id === selectedTournamentId) ?? null;
-  }, [selectedTournamentId, joinedTournaments]);
 
   const renderJoinedTournaments = () => {
     if (isTournamentsLoading) {
@@ -253,7 +228,6 @@ export function MyTournaments() {
                   key={tournament.id} 
                   tournament={tournament} 
                   userId={user.uid}
-                  onPointsTableClick={handlePointsTableClick}
                 />
             ))}
         </div>
@@ -310,7 +284,6 @@ export function MyTournaments() {
 
 
   return (
-    <>
     <div className="space-y-8">
       <Card>
         <CardHeader>
@@ -336,20 +309,7 @@ export function MyTournaments() {
         </CardContent>
       </Card>
     </div>
-    
-    <Dialog open={!!selectedTournamentId} onOpenChange={(open) => !open && handleDialogClose()}>
-        <DialogContent className="max-w-2xl">
-            <DialogHeader>
-            <DialogTitle>Points Table: {selectedTournament?.name}</DialogTitle>
-            <DialogDescription>
-                Live standings for the tournament. Ranks are updated in real-time.
-            </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-                {selectedTournamentId && <PointsTable tournamentId={selectedTournamentId} />}
-            </div>
-        </DialogContent>
-    </Dialog>
-    </>
   );
 }
+
+    

@@ -1,20 +1,6 @@
 
 {
   "entities": {
-    "PointsTableEntry": {
-      "title": "Points Table Entry",
-      "type": "object",
-      "description": "Represents a single player's entry in a tournament points table.",
-      "properties": {
-        "id": { "type": "string" },
-        "rank": { "type": "number", "description": "Player's rank in the tournament." },
-        "playerName": { "type": "string", "description": "Name of the player." },
-        "wins": { "type": "number", "description": "Number of wins (#1 finishes) the player achieved." },
-        "kills": { "type": "number", "description": "Number of kills the player achieved." },
-        "totalPoints": { "type": "number", "description": "Total points accumulated by the player." }
-      },
-      "required": ["rank", "playerName", "wins", "kills", "totalPoints"]
-    },
     "Category": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Category",
@@ -141,11 +127,6 @@
                     }
                 }
             }
-        },
-        "pointsTable": {
-          "type": "array",
-          "description": "An array of points table entries for the tournament.",
-          "items": { "$ref": "#/backend/entities/PointsTableEntry" }
         },
         "categoryId": {
             "type": "string"
@@ -439,14 +420,6 @@
             "$ref": "#/backend/entities/Registration"
           },
           "description": "Stores registration information for each tournament."
-        }
-      },
-      {
-        "path": "/tournaments/{tournamentId}/pointsTable/{pointsTableEntryId}",
-        "definition": {
-            "entityName": "PointsTableEntry",
-            "schema": { "$ref": "#/backend/entities/PointsTableEntry" },
-            "description": "Stores the points table entries for a specific tournament."
         }
       },
       {

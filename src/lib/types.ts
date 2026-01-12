@@ -1,13 +1,5 @@
-import { Timestamp } from 'firebase/firestore';
 
-export type PointsTableEntry = {
-  id: string;
-  rank: number;
-  playerName: string;
-  wins: number;
-  kills: number;
-  totalPoints: number;
-};
+import { Timestamp } from 'firebase/firestore';
 
 export type Tournament = {
   id: string;
@@ -33,7 +25,6 @@ export type Tournament = {
     second?: { userId: string; username: string };
     third?: { userId: string; username: string };
   };
-  pointsTable?: PointsTableEntry[];
 };
 
 export type Registration = {

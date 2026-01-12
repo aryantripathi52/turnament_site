@@ -9,8 +9,6 @@ import { getSdks } from '@/firebase/server';
 import type { Tournament } from '@/lib/types';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { PointsTable } from '@/components/tournaments/points-table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 // Helper to format dates safely
@@ -64,12 +62,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="points">Points Table</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="space-y-6">
               <p className="text-muted-foreground">{tournament.description}</p>
               
               <div className="grid grid-cols-2 gap-4 text-lg">
@@ -107,11 +100,7 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
                 <h3 className="text-xl font-semibold mb-2">Rules & Regulations</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{tournament.rules || 'Standard tournament rules apply.'}</p>
               </div>
-            </TabsContent>
-            <TabsContent value="points" className="mt-6">
-                <PointsTable tournamentId={tournament.id} />
-            </TabsContent>
-          </Tabs>
+            </div>
         </CardContent>
         <CardFooter>
             {isFull ? (
@@ -133,3 +122,5 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
     </div>
   );
 }
+
+    
