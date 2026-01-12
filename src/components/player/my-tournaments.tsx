@@ -14,6 +14,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { PointsTable } from '../tournaments/points-table';
 
 
 const formatDate = (date: any) => {
@@ -34,7 +43,7 @@ const statusConfig: { [key in Tournament['status']]: { icon: React.ElementType, 
   cancelled: { icon: XCircle, label: 'Cancelled', color: 'text-red-500', description: 'Cancelled. Your entry fee has been refunded.' },
 };
 
-function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTournament, userId: string }) {
+function JoinedTournamentCard({ tournament, userId, onPointsTableClick }: { tournament: JoinedTournament, userId: string, onPointsTableClick: (tournamentId: string) => void }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [liveTournamentData, setLiveTournamentData] = useState<Tournament | null>(null);
   const firestore = useFirestore();
@@ -173,7 +182,9 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
                         )}
                     </div>
                 )}
-                 <Button disabled><ListOrdered className="mr-2 h-4 w-4" /> Points Table</Button>
+                 <Button onClick={() => onPointsTableClick(tournament.id)}>
+                    <ListOrdered className="mr-2 h-4 w-4" /> Points Table
+                 </Button>
              </CardContent>
              <CardFooter className='flex-col gap-2'>
                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
@@ -191,6 +202,20 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
 
 export function MyTournaments() {
   const { user, joinedTournaments, wonTournaments, isTournamentsLoading, tournamentsError } = useUser();
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+
+  const handlePointsTableClick = (tournamentId: string) => {
+    setSelectedTournamentId(tournamentId);
+  };
+
+  const handleDialogClose = () => {
+    setSelectedTournamentId(null);
+  };
+
+  const selectedTournament = useMemo(() => {
+    if (!selectedTournamentId) return null;
+    return joinedTournaments?.find(t => t.id === selectedTournamentId) ?? null;
+  }, [selectedTournamentId, joinedTournaments]);
 
   const renderJoinedTournaments = () => {
     if (isTournamentsLoading) {
@@ -224,7 +249,12 @@ export function MyTournaments() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {joinedTournaments.map((tournament) => (
-                <JoinedTournamentCard key={tournament.id} tournament={tournament} userId={user.uid} />
+                <JoinedTournamentCard 
+                  key={tournament.id} 
+                  tournament={tournament} 
+                  userId={user.uid}
+                  onPointsTableClick={handlePointsTableClick}
+                />
             ))}
         </div>
     )
@@ -280,6 +310,7 @@ export function MyTournaments() {
 
 
   return (
+    <>
     <div className="space-y-8">
       <Card>
         <CardHeader>
@@ -305,5 +336,20 @@ export function MyTournaments() {
         </CardContent>
       </Card>
     </div>
+    
+    <Dialog open={!!selectedTournamentId} onOpenChange={(open) => !open && handleDialogClose()}>
+        <DialogContent className="max-w-2xl">
+            <DialogHeader>
+            <DialogTitle>Points Table: {selectedTournament?.name}</DialogTitle>
+            <DialogDescription>
+                Live standings for the tournament. Ranks are updated in real-time.
+            </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                {selectedTournamentId && <PointsTable tournamentId={selectedTournamentId} />}
+            </div>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
