@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, orderBy, query, updateDoc, doc, serverTimestamp, increment, getDoc, Timestamp, setDoc, writeBatch, runTransaction } from 'firebase/firestore';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -78,94 +78,83 @@ export function PlayerTournamentList() {
   const isLoading = isLoadingTournaments || isLoadingCategories;
   const error = tournamentsError || categoriesError;
 
-  const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
-    console.log("Attempting Join - UID:", auth.currentUser?.uid);
-    console.log("Tournament ID:", selectedTournament.id);
-
-    if (!auth?.currentUser || !firestore || !user || !profile) {
-      toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to join." });
-      return;
-    }
-    
-    const tid = selectedTournament.id;
-    const fee = selectedTournament.entryFee;
-    const uid = auth.currentUser.uid;
-    
-    const userDocRef = doc(firestore, 'users', uid);
-    const tournamentRef = doc(firestore, 'tournaments', tid);
-    const registrationRef = doc(firestore, "tournaments", tid, "registrations", uid);
-    const joinedTournamentRef = doc(firestore, `users/${uid}/joinedTournaments`, tid);
-
-    // Pre-flight check for user coins
-    try {
-        const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
-            throw new Error("Your user profile does not exist.");
-        }
-        if ((userDocSnap.data().coins || 0) < fee) {
-          toast({ variant: "destructive", title: "Insufficient Coins", description: "You do not have enough coins to join this tournament." });
-          return;
-        }
-    } catch (e: any) {
-        console.error("Pre-flight check failed:", e);
-        toast({ variant: "destructive", title: "Validation Failed", description: `Could not verify your profile: ${e.message}` });
+const handleConfirmEntry = async (selectedTournament: WithId<Tournament>) => {
+    const db = firestore;
+    if (!auth.currentUser || !db) {
+        toast({ variant: "destructive", title: "Error", description: "You must be logged in." });
         return;
     }
 
+    const userId = auth.currentUser.uid;
+    const tid = selectedTournament.id;
+    console.log("UserID:", userId, "TournamentID:", tid);
 
     try {
-      // Use a write batch for atomicity
-      const batch = writeBatch(firestore);
+        await runTransaction(db, async (transaction) => {
+            const userRef = doc(db, "users", userId);
+            const tournamentRef = doc(db, "tournaments", tid);
+            const registrationRef = doc(db, "tournaments", tid, "registrations", userId);
+            const joinedTourRef = doc(db, "users", userId, "joinedTournaments", tid);
 
-      // 1. Update the tournament's registered count
-      batch.update(tournamentRef, { registeredCount: increment(1) });
+            // 1. Transactional Reads
+            const userSnap = await transaction.get(userRef);
+            const tourneySnap = await transaction.get(tournamentRef);
 
-      // 2. Create the registration document
-      const registrationData: Omit<Registration, 'id'> = {
-        userId: uid,
-        tournamentId: tid,
-        teamName: profile.username,
-        playerIds: [uid],
-        registrationDate: serverTimestamp(),
-        slotNumber: (selectedTournament.registeredCount || 0) + 1
-      };
-      batch.set(registrationRef, registrationData);
+            if (!userSnap.exists()) throw new Error("User profile missing.");
+            if (!tourneySnap.exists()) throw new Error("Tournament not found.");
 
-      // 3. Deduct coins from the user's profile
-      batch.update(userDocRef, { coins: increment(-fee) });
+            const userData = userSnap.data();
+            const tourneyData = tourneySnap.data();
 
-      // 4. Add to the user's private 'joinedTournaments' subcollection
-      const joinedTournamentData: JoinedTournament = {
-        id: tid,
-        name: selectedTournament.name,
-        startDate: selectedTournament.startDate,
-        prizePoolFirst: selectedTournament.prizePoolFirst,
-        entryFee: fee,
-        slotNumber: (selectedTournament.registeredCount || 0) + 1,
-        roomId: null,
-        roomPassword: null,
-      };
-      batch.set(joinedTournamentRef, joinedTournamentData);
-      
-      await batch.commit();
-      
-      // Manually refresh local state after successful write
-      refreshJoinedTournaments();
-      
-      toast({
-          title: 'Success!',
-          description: `You have successfully joined "${selectedTournament.name}".`,
-      });
+            // 2. Logic Checks
+            const fee = Number(tourneyData.entryFee) || 0;
+            const currentCoins = Number(userData.coins) || 0;
+
+            if (currentCoins < fee) throw new Error("Insufficient coins.");
+            if (tourneyData.registeredCount >= tourneyData.maxPlayers) throw new Error("Tournament is full.");
+
+            // 3. Atomic Writes
+            // Deduct coins
+            transaction.update(userRef, { coins: increment(-fee) });
+            
+            // Increment tournament count
+            transaction.update(tournamentRef, { registeredCount: increment(1) });
+
+            // Create registration
+            transaction.set(registrationRef, {
+                userId: userId,
+                tournamentId: tid,
+                teamName: profile?.username || 'Player',
+                playerIds: [userId],
+                slotNumber: (tourneyData.registeredCount || 0) + 1,
+                registrationDate: serverTimestamp()
+            });
+
+            // Add to personal joined list
+            transaction.set(joinedTourRef, {
+                id: tid,
+                name: tourneyData.name,
+                startDate: tourneyData.startDate,
+                prizePoolFirst: selectedTournament.prizePoolFirst,
+                entryFee: fee,
+                slotNumber: (tourneyData.registeredCount || 0) + 1,
+                roomId: null,
+                roomPassword: null,
+            });
+        });
+
+        refreshJoinedTournaments();
+        toast({ title: "Success!", description: "Joined successfully!" });
 
     } catch (e: any) {
-        console.error("CRITICAL JOIN ERROR:", e);
-        toast({
-            variant: "destructive",
-            title: 'Join Failed',
-            description: e.message || `An unexpected error occurred. Please check security rules.`,
+        console.error("Transaction failed: ", e);
+        toast({ 
+            variant: "destructive", 
+            title: "Join Failed", 
+            description: e.message.includes("permission") ? "Security Rules blocked the join." : e.message 
         });
     }
-  };
+};
 
 
   if (isLoading) {
