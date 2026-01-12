@@ -17,9 +17,11 @@ export async function POST(request: NextRequest) {
   const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
   try {
+    // Verify the ID token first to ensure it's valid.
     const decodedIdToken = await getAuth().verifyIdToken(idToken);
     
-    // Once verified, create a session cookie
+    // Once verified, create a session cookie.
+    // This is the correct flow: verify, then create cookie.
     const sessionCookie = await getAuth().createSessionCookie(idToken, { expiresIn });
     
     const options = {
