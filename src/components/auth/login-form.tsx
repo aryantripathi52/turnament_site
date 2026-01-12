@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,9 +29,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -50,12 +51,15 @@ const formSchema = z.object({
   }),
 });
 
-export function LoginForm() {
+function LoginFormComponent() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+  
+  const redirectTo = searchParams.get('redirectTo') || '/';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -80,19 +84,17 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // After successful authentication, check the user's role
       const profileRef = doc(firestore, 'users', user.uid);
       const profileSnap = await getDoc(profileRef);
 
       if (!profileSnap.exists()) {
+        await auth.signOut();
         throw new Error("Profile not found. Please contact support.");
       }
 
       const profile = profileSnap.data() as UserProfile;
 
-      // Verify if the selected role matches the profile role
       if (profile.role !== values.role) {
-        // Log the user out to prevent a stuck session
         await auth.signOut();
         throw new Error("The selected role is incorrect for this account.");
       }
@@ -102,7 +104,7 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      router.push('/');
+      router.push(redirectTo);
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -230,4 +232,12 @@ export function LoginForm() {
       </CardContent>
     </Card>
   );
+}
+
+export function LoginForm() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginFormComponent />
+    </Suspense>
+  )
 }
