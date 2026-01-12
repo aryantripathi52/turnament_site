@@ -101,35 +101,50 @@ export function PlayerTournamentList() {
     }
 
     try {
-        // --- The 3 Sequential Writes ---
-        
-        // Call 1 (Tournament): "Naked" update with ONLY the count increment.
-        await updateDoc(doc(db, 'tournaments', tid), { 
-            registeredCount: increment(1) 
-        });
-        
-        // Call 2 (Registration): Use UID as doc ID to match security rules
-        const registrationData = {
-          userId: user.uid,
-          teamName: profile.username,
-          playerIds: [user.uid],
-          registrationDate: serverTimestamp(),
-          slotNumber: (selectedTournament.registeredCount || 0) + 1
-        };
-        await setDoc(doc(db, "tournaments", tid, "registrations", user.uid), registrationData);
+      const batch = writeBatch(db);
 
-        // Call 3 (User): Deduct Coins from user profile
-        await updateDoc(userDocRef, {
-            coins: increment(-fee)
-        });
-        
-        // This is a local state update, not a DB write, so it's safe.
-        refreshJoinedTournaments();
-        
-        toast({
-            title: 'Success!',
-            description: `You have successfully joined "${selectedTournament.name}".`,
-        });
+      // 1. Create the registration document
+      const registrationRef = doc(db, "tournaments", tid, "registrations", user.uid);
+      const registrationData: Omit<Registration, 'id'> = {
+        userId: user.uid,
+        tournamentId: tid,
+        teamName: profile.username,
+        playerIds: [user.uid],
+        registrationDate: serverTimestamp(),
+        slotNumber: (selectedTournament.registeredCount || 0) + 1
+      };
+      batch.set(registrationRef, registrationData);
+
+      // 2. Update the tournament's registered count
+      const tournamentRef = doc(db, 'tournaments', tid);
+      batch.update(tournamentRef, { registeredCount: increment(1) });
+
+      // 3. Deduct coins from the user's profile
+      batch.update(userDocRef, { coins: increment(-fee) });
+
+      // 4. Add to the user's private 'joinedTournaments' subcollection
+      const joinedTournamentRef = doc(db, `users/${user.uid}/joinedTournaments`, tid);
+      const joinedTournamentData: JoinedTournament = {
+        id: tid,
+        name: selectedTournament.name,
+        startDate: selectedTournament.startDate,
+        prizePoolFirst: selectedTournament.prizePoolFirst,
+        entryFee: fee,
+        slotNumber: (selectedTournament.registeredCount || 0) + 1,
+        roomId: null,
+        roomPassword: null,
+      };
+      batch.set(joinedTournamentRef, joinedTournamentData);
+      
+      await batch.commit();
+      
+      // Manually refresh local state after successful write
+      refreshJoinedTournaments();
+      
+      toast({
+          title: 'Success!',
+          description: `You have successfully joined "${selectedTournament.name}".`,
+      });
 
     } catch (e: any) {
         console.error("CRITICAL JOIN ERROR:", e);

@@ -34,8 +34,7 @@ service cloud.firestore {
         // Crash-proof update rule for joining
         allow update: if isStaffOrAdmin() || (
           request.auth != null && 
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount']) &&
-          request.resource.data.registeredCount == resource.data.get('registeredCount', 0) + 1
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount', 'roomId', 'roomPassword', 'status', 'winners'])
         );
         
         // Staff can see all registrations for management purposes.
