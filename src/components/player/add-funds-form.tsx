@@ -35,6 +35,9 @@ const formSchema = z.object({
   amountCoins: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
   amountPaid: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
   transactionId: z.string().min(1, { message: 'UPI ID is required.' }),
+}).refine((data) => data.amountCoins === data.amountPaid, {
+  message: "Coins to add must be equal to the amount paid (1 Coin = ₹1).",
+  path: ["amountPaid"],
 });
 
 interface AddFundsFormProps {
