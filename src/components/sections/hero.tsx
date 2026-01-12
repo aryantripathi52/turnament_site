@@ -10,7 +10,7 @@ export function Hero() {
     <section className="relative h-screen w-full flex items-center justify-center text-center">
       {heroImage && (
         <Image
-          src="https://picsum.photos/seed/hero/1920/1080"
+          src={heroImage.imageUrl}
           alt={heroImage.description}
           fill
           className="object-cover"
