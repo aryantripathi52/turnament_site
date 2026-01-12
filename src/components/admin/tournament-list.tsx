@@ -92,7 +92,6 @@ export function TournamentList() {
     if (!firestore || !tournamentToDelete) return;
     try {
       await deleteDoc(doc(firestore, 'tournaments', tournamentToDelete.id));
-      setTournaments(prev => prev?.filter(t => t.id !== tournamentToDelete.id) || null);
       toast({ title: 'Success', description: 'Tournament has been deleted.' });
     } catch (e) {
       console.error("Error deleting tournament: ", e);
@@ -102,17 +101,12 @@ export function TournamentList() {
       setTournamentToDelete(null);
     }
   };
-  
-  const handleUpdate = (updatedTournament: WithId<Tournament>) => {
-    setTournaments(prev => prev?.map(t => t.id === updatedTournament.id ? updatedTournament : t) || null);
-  };
 
   const handleUpdateStatus = async (tournamentId: string, status: Tournament['status']) => {
     if (!firestore) return;
     try {
       const tournamentRef = doc(firestore, 'tournaments', tournamentId);
       await updateDoc(tournamentRef, { status });
-      handleUpdate({ ...tournaments!.find(t => t.id === tournamentId)!, status });
       toast({ title: 'Success', description: 'Tournament status has been updated.' });
     } catch (e) {
       console.error("Error updating status: ", e);
@@ -125,7 +119,6 @@ export function TournamentList() {
     try {
       const tournamentRef = doc(firestore, 'tournaments', tournamentId);
       await updateDoc(tournamentRef, { roomId: null, roomPassword: null });
-      handleUpdate({ ...tournaments!.find(t => t.id === tournamentId)!, roomId: undefined, roomPassword: undefined });
       toast({ title: 'Success', description: 'Room info has been cleared.' });
     } catch (e) {
       console.error("Error clearing room info: ", e);
@@ -289,7 +282,6 @@ export function TournamentList() {
           tournament={manageTournament} 
           isOpen={!!manageTournament} 
           setIsOpen={(isOpen) => !isOpen && setManageTournament(null)}
-          onTournamentUpdate={handleUpdate}
         />
       )}
       
@@ -298,12 +290,9 @@ export function TournamentList() {
           tournament={roomInfoTournament}
           isOpen={!!roomInfoTournament}
           setIsOpen={(isOpen) => !isOpen && setRoomInfoTournament(null)}
-          onTournamentUpdate={handleUpdate}
         />
        )}
 
     </>
   );
 }
-
-    

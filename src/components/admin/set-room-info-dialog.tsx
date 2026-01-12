@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,10 +38,9 @@ interface SetRoomInfoDialogProps {
   tournament: WithId<Tournament>;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onTournamentUpdate: (updatedTournament: WithId<Tournament>) => void;
 }
 
-export function SetRoomInfoDialog({ tournament, isOpen, setIsOpen, onTournamentUpdate }: SetRoomInfoDialogProps) {
+export function SetRoomInfoDialog({ tournament, isOpen, setIsOpen }: SetRoomInfoDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -67,8 +67,6 @@ export function SetRoomInfoDialog({ tournament, isOpen, setIsOpen, onTournamentU
       };
 
       await updateDoc(tournamentRef, updatedData);
-
-      onTournamentUpdate({ ...tournament, ...updatedData });
 
       toast({
         title: 'Room Info Set!',

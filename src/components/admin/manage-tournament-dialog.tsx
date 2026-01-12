@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -35,12 +36,11 @@ interface ManageTournamentDialogProps {
   tournament: WithId<Tournament>;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onTournamentUpdate: (updatedTournament: WithId<Tournament>) => void;
 }
 
 const NA_VALUE = 'N/A';
 
-export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTournamentUpdate }: ManageTournamentDialogProps) {
+export function ManageTournamentDialog({ tournament, isOpen, setIsOpen }: ManageTournamentDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -143,7 +143,6 @@ export function ManageTournamentDialog({ tournament, isOpen, setIsOpen, onTourna
       await batch.commit();
 
       toast({ title: 'Success!', description: 'Winners have been set and prizes have been paid out.' });
-      onTournamentUpdate({ ...tournament, status: 'completed', winners: winnersPayload });
       setIsOpen(false);
 
     } catch (e) {
