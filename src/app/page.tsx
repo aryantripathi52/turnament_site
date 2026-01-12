@@ -1,24 +1,22 @@
-
 import { Hero } from '@/components/sections/hero';
-import { PlayerDashboard } from '@/components/player/player-dashboard';
-import { AdminDashboard } from '@/components/admin/admin-dashboard';
-import { StaffDashboard } from '@/components/staff/staff-dashboard';
 import { cookies } from 'next/headers';
-import { getAuth } from 'firebase-admin/auth';
 import { getSdks } from '@/firebase/server';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
+import Dashboard from '@/components/dashboard-loader';
 
 async function getUserSession() {
   const sessionCookie = cookies().get('__session')?.value;
   if (!sessionCookie) {
     return { user: null, profile: null };
   }
-  
+
   try {
+    // Use server-side SDKs to verify the session cookie
     const { auth, firestore } = getSdks();
     const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
     
+    // Fetch the user's profile from Firestore
     const profileRef = doc(firestore, 'users', decodedClaims.uid);
     const profileSnap = await getDoc(profileRef);
     
@@ -27,9 +25,11 @@ async function getUserSession() {
       return { user: decodedClaims, profile };
     }
 
+    // User is authenticated but has no profile document
     return { user: decodedClaims, profile: null };
   } catch (error) {
     console.error("Session verification failed:", error);
+    // Invalid cookie or other error
     return { user: null, profile: null };
   }
 }
@@ -37,19 +37,15 @@ async function getUserSession() {
 export default async function Home() {
   const { user, profile } = await getUserSession();
 
+  // If no user is authenticated, show the public landing page.
   if (!user) {
     return <Hero />;
   }
 
-  if (profile?.role === 'admin') {
-    return <AdminDashboard />;
-  }
+  // If the user is authenticated, pass their role to the client-side
+  // Dashboard component, which will handle rendering the correct UI.
+  // We default to 'player' if the profile or role is missing for an authenticated user.
+  const initialRole = profile?.role || 'player';
 
-  if (profile?.role === 'staff') {
-    return <StaffDashboard />;
-  }
-  
-  // Default to player dashboard if user is logged in but has no specific role found
-  // or role is 'player'
-  return <PlayerDashboard />;
+  return <Dashboard initialRole={initialRole} />;
 }
