@@ -84,7 +84,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
               <div className="flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-primary" />
                 <span>
-                  1st Prize: <span className="font-semibold">{tournament.prizePoolFirst.toLocaleString()} Coins</span>
+                  1st Prize: <span className="font-semibold">{tournament.prizePoolFirst?.toLocaleString() || '0'} Coins</span>
                 </span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
