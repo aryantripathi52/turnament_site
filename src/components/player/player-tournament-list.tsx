@@ -95,12 +95,12 @@ export function PlayerTournamentList() {
         const registrationRef = doc(db, "tournaments", tid, "registrations", userId);
         const joinedTourRef = doc(db, "users", userId, "joinedTournaments", tid);
   
-        // 1. ATOMIC READS
+        // 1. ATOMIC READS (Rules must allow 'get')
         const userSnap = await transaction.get(userRef);
         const tourneySnap = await transaction.get(tournamentRef);
   
-        if (!userSnap.exists()) throw new Error("Please complete your profile first.");
-        if (!tourneySnap.exists()) throw new Error("Tournament no longer exists.");
+        if (!userSnap.exists()) throw new Error("User document missing in database.");
+        if (!tourneySnap.exists()) throw new Error("Tournament not found.");
   
         const userData = userSnap.data();
         const tourneyData = tourneySnap.data();
@@ -110,7 +110,6 @@ export function PlayerTournamentList() {
         const currentCoins = Number(userData.coins) || 0;
   
         if (currentCoins < fee) throw new Error("Insufficient coins.");
-        if (tourneyData.registeredCount >= tourneyData.maxPlayers) throw new Error("Tournament is full.");
   
         // 3. ATOMIC WRITES
         transaction.update(userRef, { coins: increment(-fee) });
@@ -129,23 +128,20 @@ export function PlayerTournamentList() {
           id: tid,
           name: tourneyData.name,
           startDate: tourneyData.startDate,
-          prizePoolFirst: selectedTournament.prizePoolFirst,
           entryFee: fee,
           slotNumber: (tourneyData.registeredCount || 0) + 1,
-          roomId: null,
-          roomPassword: null,
         }, { merge: true });
       });
   
       refreshJoinedTournaments();
-      toast({ title: "Success!", description: "You're in the tournament!" });
+      toast({ title: "Success!", description: "You're in!" });
   
     } catch (e: any) {
-      console.error("Join Error:", e);
+      console.error("Transaction Error:", e);
       toast({ 
         variant: "destructive", 
         title: "Join Failed", 
-        description: e.message.includes("permission") ? "Firebase Security blocked this join." : e.message 
+        description: e.message 
       });
     }
   };

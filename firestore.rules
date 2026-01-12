@@ -12,12 +12,12 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // 2. USER PROFILES (Critical for Transaction 'get' and 'update')
+    // 2. USER PROFILES
     match /users/{userId} {
       // Transaction MUST have 'get' to read coin balance
       allow get, read, update: if request.auth != null && request.auth.uid == userId;
       
-      // Allow recursive access to joinedTournaments or other user data
+      // Allow recursive access to joinedTournaments subcollections
       match /{allSubcollections=**} {
         allow read, get, list, write: if request.auth != null && request.auth.uid == userId;
       }
