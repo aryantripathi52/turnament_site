@@ -94,11 +94,11 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      // 4. Force redirect using window.location
+      // 4. Force a full-page reload to the correct dashboard.
       if (userProfile.role === 'admin' || userProfile.role === 'staff') {
-        window.location.href = '/admin';
+        window.location.assign('/admin');
       } else {
-        window.location.href = '/player';
+        window.location.assign('/player');
       }
 
     } catch (error: any) {
