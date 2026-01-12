@@ -73,6 +73,7 @@ export function PointsTable({ tournamentId }: PointsTableProps) {
         <TableRow>
           <TableHead className="w-[80px]">Rank</TableHead>
           <TableHead>Player</TableHead>
+          <TableHead className="text-center">#1</TableHead>
           <TableHead className="text-center">Kills</TableHead>
           <TableHead className="text-right">Total Points</TableHead>
         </TableRow>
@@ -86,6 +87,7 @@ export function PointsTable({ tournamentId }: PointsTableProps) {
               </div>
             </TableCell>
             <TableCell>{entry.playerName}</TableCell>
+            <TableCell className="text-center font-semibold">{entry.wins}</TableCell>
             <TableCell className="text-center">{entry.kills}</TableCell>
             <TableCell className="text-right font-bold">{entry.totalPoints}</TableCell>
           </TableRow>
@@ -94,3 +96,5 @@ export function PointsTable({ tournamentId }: PointsTableProps) {
     </Table>
   );
 }
+
+    

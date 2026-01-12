@@ -4,6 +4,7 @@ export type PointsTableEntry = {
   id: string;
   rank: number;
   playerName: string;
+  wins: number;
   kills: number;
   totalPoints: number;
 };
@@ -117,3 +118,5 @@ export type Category = {
   name: string;
   imageUrl: string;
 };
+
+    
