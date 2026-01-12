@@ -34,7 +34,7 @@ import type { AddCoinRequest, PlayerAddCoinRequest } from '@/lib/types';
 const formSchema = z.object({
   amountCoins: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
   amountPaid: z.coerce.number().positive({ message: 'Please enter a valid amount.' }),
-  transactionId: z.string().min(1, { message: 'Transaction ID is required.' }),
+  transactionId: z.string().min(1, { message: 'UPI ID is required.' }),
 });
 
 interface AddFundsFormProps {
@@ -173,7 +173,7 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
               name="transactionId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Transaction ID</FormLabel>
+                  <FormLabel>UPI ID</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter the ID from your payment receipt" {...field} />
                   </FormControl>
