@@ -9,6 +9,9 @@ import { getSdks } from '@/firebase/server';
 import type { Tournament } from '@/lib/types';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
+import { PointsTable } from '@/components/tournaments/points-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 // Helper to format dates safely
 const formatDate = (date: any) => {
@@ -60,44 +63,55 @@ export default async function TournamentDetailPage({ params }: { params: { id: s
             Starts: {formatDate(tournament.startDate)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-muted-foreground">{tournament.description}</p>
-          
-          <div className="grid grid-cols-2 gap-4 text-lg">
-            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-              <Trophy className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">1st Prize</p>
-                <p className="font-bold">{tournament.prizePoolFirst.toLocaleString()} Coins</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-              <Gem className="h-8 w-8 text-yellow-400" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Entry Fee</p>
-                <p className="font-bold">{tournament.entryFee.toLocaleString()} Coins</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <Users className="h-8 w-8 text-blue-400" />
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">Player Slots</p>
-                    <p className="font-bold">{tournament.registeredCount} / {tournament.maxPlayers}</p>
+        <CardContent>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="points">Points Table</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-6 space-y-6">
+              <p className="text-muted-foreground">{tournament.description}</p>
+              
+              <div className="grid grid-cols-2 gap-4 text-lg">
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                  <Trophy className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">1st Prize</p>
+                    <p className="font-bold">{tournament.prizePoolFirst.toLocaleString()} Coins</p>
+                  </div>
                 </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <Calendar className="h-8 w-8 text-red-400" />
-                 <div>
-                    <p className="text-sm font-medium text-muted-foreground">Ends On</p>
-                    <p className="font-bold">{formatDate(tournament.endDate)}</p>
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                  <Gem className="h-8 w-8 text-yellow-400" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Entry Fee</p>
+                    <p className="font-bold">{tournament.entryFee.toLocaleString()} Coins</p>
+                  </div>
                 </div>
-            </div>
-          </div>
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                    <Users className="h-8 w-8 text-blue-400" />
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Player Slots</p>
+                        <p className="font-bold">{tournament.registeredCount} / {tournament.maxPlayers}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                    <Calendar className="h-8 w-8 text-red-400" />
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Ends On</p>
+                        <p className="font-bold">{formatDate(tournament.endDate)}</p>
+                    </div>
+                </div>
+              </div>
 
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Rules & Regulations</h3>
-            <p className="text-muted-foreground whitespace-pre-wrap">{tournament.rules || 'Standard tournament rules apply.'}</p>
-          </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Rules & Regulations</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap">{tournament.rules || 'Standard tournament rules apply.'}</p>
+              </div>
+            </TabsContent>
+            <TabsContent value="points" className="mt-6">
+                <PointsTable tournamentId={tournament.id} />
+            </TabsContent>
+          </Tabs>
         </CardContent>
         <CardFooter>
             {isFull ? (

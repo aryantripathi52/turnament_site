@@ -6,7 +6,7 @@ import { collection, orderBy, query, doc, deleteDoc, updateDoc } from 'firebase/
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound, Upload } from 'lucide-react';
+import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound, Edit } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -38,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ManageTournamentDialog } from './manage-tournament-dialog';
 import { SetRoomInfoDialog } from './set-room-info-dialog';
+import { UpdatePointsTableDialog } from './update-points-table-dialog';
 
 
 const formatDate = (date: any) => {
@@ -66,6 +67,7 @@ export function TournamentList() {
   const [tournamentToDelete, setTournamentToDelete] = useState<WithId<Tournament> | null>(null);
   const [manageTournament, setManageTournament] = useState<WithId<Tournament> | null>(null);
   const [roomInfoTournament, setRoomInfoTournament] = useState<WithId<Tournament> | null>(null);
+  const [pointsTableTournament, setPointsTableTournament] = useState<WithId<Tournament> | null>(null);
 
   const tournamentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -227,9 +229,9 @@ export function TournamentList() {
                       <KeyRound className="mr-2 h-4 w-4" />
                       <span>Set Room ID & Pass</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Upload className="mr-2 h-4 w-4" />
-                      <span>Upload Points Table</span>
+                    <DropdownMenuItem onClick={() => setPointsTableTournament(tournament)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      <span>Update Points Table</span>
                     </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
@@ -299,6 +301,15 @@ export function TournamentList() {
           tournament={roomInfoTournament}
           isOpen={!!roomInfoTournament}
           setIsOpen={(isOpen) => !isOpen && setRoomInfoTournament(null)}
+          onTournamentUpdate={handleUpdate}
+        />
+       )}
+
+       {pointsTableTournament && (
+        <UpdatePointsTableDialog
+          tournament={pointsTableTournament}
+          isOpen={!!pointsTableTournament}
+          setIsOpen={(isOpen) => !isOpen && setPointsTableTournament(null)}
           onTournamentUpdate={handleUpdate}
         />
        )}
