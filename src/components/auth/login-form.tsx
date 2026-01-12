@@ -12,6 +12,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from '@/components/ui/input';
 import {
   Card,
@@ -21,12 +28,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
+
 
 const formSchema = z.object({
   email: z.string().email({
@@ -35,10 +45,14 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
+  role: z.enum(['player', 'staff', 'admin'], {
+    required_error: "You must select a role."
+  }),
 });
 
 export function LoginForm() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +67,7 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth) {
+    if (!auth || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -63,7 +77,25 @@ export function LoginForm() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // After successful authentication, check the user's role
+      const profileRef = doc(firestore, 'users', user.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
+        throw new Error("Profile not found. Please contact support.");
+      }
+
+      const profile = profileSnap.data() as UserProfile;
+
+      // Verify if the selected role matches the profile role
+      if (profile.role !== values.role) {
+        // Log the user out to prevent a stuck session
+        await auth.signOut();
+        throw new Error("The selected role is incorrect for this account.");
+      }
       
       toast({
         title: 'Login Successful',
@@ -89,7 +121,7 @@ export function LoginForm() {
           break;
         default:
           console.error("Login Error:", error)
-          description = 'An unexpected error occurred. Please try again.';
+          description = error.message || 'An unexpected error occurred. Please try again.';
       }
        toast({
         variant: 'destructive',
@@ -155,6 +187,28 @@ export function LoginForm() {
                       </span>
                     </Button>
                   </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="player">Player</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
