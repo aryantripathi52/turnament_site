@@ -28,9 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -54,8 +54,20 @@ export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
+  const { user, profile, isUserLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
+
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/';
+
+  useEffect(() => {
+    // Only redirect if loading is finished and both user + profile are available.
+    if (!isUserLoading && user && profile) {
+      router.replace(redirectTo);
+    }
+  }, [user, profile, isUserLoading, router, redirectTo]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,7 +114,7 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      router.replace('/');
+      // The useEffect will now handle the redirect once the profile is loaded.
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -128,6 +140,11 @@ export function LoginForm() {
         description: description,
       });
     }
+  }
+
+  // Prevent rendering the form if the user is already logged in and being redirected.
+  if (isUserLoading || (user && profile)) {
+    return <div>Loading...</div>;
   }
 
   return (
