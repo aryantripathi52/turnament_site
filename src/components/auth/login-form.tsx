@@ -12,13 +12,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Input } from '@/components/ui/input';
 import {
   Card,
@@ -43,9 +36,6 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
-  role: z.enum(['player', 'staff', 'admin'], {
-    required_error: "You must select a role."
-  }),
 });
 
 export function LoginForm() {
@@ -60,7 +50,6 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
-      role: 'player',
     },
   });
 
@@ -87,11 +76,6 @@ export function LoginForm() {
       }
       
       const userProfile = profileSnap.data() as UserProfile;
-
-      if (userProfile.role !== values.role) {
-        await auth.signOut(); // Sign out if role doesn't match
-        throw new Error('The selected role is incorrect for this account.');
-      }
       
       // 3. Create a server-side session cookie
       const idToken = await user.getIdToken();
@@ -200,28 +184,6 @@ export function LoginForm() {
                       </span>
                     </Button>
                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="player">Player</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
