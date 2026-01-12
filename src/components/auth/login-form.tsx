@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -54,7 +54,6 @@ export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,8 +104,12 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      // Redirect to the homepage. The homepage will handle displaying the correct dashboard.
-      router.replace('/');
+      // FIX: Force redirect to the specific dashboard instead of '/'
+      if (userProfile.role === 'admin' || userProfile.role === 'staff') {
+        router.push('/admin');
+      } else {
+        router.push('/player');
+      }
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';

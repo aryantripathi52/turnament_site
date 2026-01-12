@@ -1,10 +1,10 @@
-
-import { Hero } from '@/components/sections/hero';
+import { AdminDashboard } from '@/components/admin/admin-dashboard';
+import { StaffDashboard } from '@/components/staff/staff-dashboard';
+import Dashboard from '@/components/dashboard-loader';
 import { cookies } from 'next/headers';
 import { getSdks } from '@/firebase/server';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import Dashboard from '@/components/dashboard-loader';
 import { redirect } from 'next/navigation';
 
 async function getUserSession() {
@@ -22,6 +22,10 @@ async function getUserSession() {
     
     if (profileSnap.exists()) {
       const profile = profileSnap.data() as UserProfile;
+      // Security check: ensure only admin/staff can access this page
+      if (profile.role !== 'admin' && profile.role !== 'staff') {
+        return { user: decodedClaims, profile: null }; // Treat as unauthorized
+      }
       return { user: decodedClaims, profile };
     }
 
@@ -32,18 +36,14 @@ async function getUserSession() {
   }
 }
 
-export default async function Home() {
+export default async function AdminPage() {
   const { user, profile } = await getUserSession();
 
-  // If no user is authenticated, show the public landing page.
   if (!user || !profile) {
-    return <Hero />;
+    redirect('/login');
   }
 
-  // If user is authenticated, redirect them to their respective dashboard.
-  if (profile.role === 'admin' || profile.role === 'staff') {
-      redirect('/admin');
-  } else {
-      redirect('/player');
-  }
+  const initialRole = profile?.role || 'staff';
+
+  return <Dashboard initialRole={initialRole} />;
 }

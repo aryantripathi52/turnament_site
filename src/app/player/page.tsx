@@ -1,10 +1,8 @@
-
-import { Hero } from '@/components/sections/hero';
+import Dashboard from '@/components/dashboard-loader';
 import { cookies } from 'next/headers';
 import { getSdks } from '@/firebase/server';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import Dashboard from '@/components/dashboard-loader';
 import { redirect } from 'next/navigation';
 
 async function getUserSession() {
@@ -22,6 +20,9 @@ async function getUserSession() {
     
     if (profileSnap.exists()) {
       const profile = profileSnap.data() as UserProfile;
+       if (profile.role !== 'player') {
+        return { user: decodedClaims, profile: null };
+      }
       return { user: decodedClaims, profile };
     }
 
@@ -32,18 +33,12 @@ async function getUserSession() {
   }
 }
 
-export default async function Home() {
+export default async function PlayerPage() {
   const { user, profile } = await getUserSession();
 
-  // If no user is authenticated, show the public landing page.
   if (!user || !profile) {
-    return <Hero />;
+    redirect('/login');
   }
 
-  // If user is authenticated, redirect them to their respective dashboard.
-  if (profile.role === 'admin' || profile.role === 'staff') {
-      redirect('/admin');
-  } else {
-      redirect('/player');
-  }
+  return <Dashboard initialRole="player" />;
 }
