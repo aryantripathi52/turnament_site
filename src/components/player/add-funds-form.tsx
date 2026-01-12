@@ -175,7 +175,7 @@ export function AddFundsForm({ children, isOpen, setIsOpen }: AddFundsFormProps)
                 <FormItem>
                   <FormLabel>UPI ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter the ID from your payment receipt" {...field} />
+                    <Input placeholder="enter the upi id here" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
