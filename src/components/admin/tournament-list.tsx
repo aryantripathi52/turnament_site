@@ -6,7 +6,7 @@ import { collection, orderBy, query, doc, deleteDoc, updateDoc } from 'firebase/
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound } from 'lucide-react';
+import { AlertCircle, Calendar, Users, Trophy, Gem, MoreVertical, Trash2, CheckCircle, PlayCircle, XCircle, Clock, KeyRound, Upload } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Tournament, Category } from '@/lib/types';
 import { Button } from '../ui/button';
@@ -227,6 +227,10 @@ export function TournamentList() {
                       <KeyRound className="mr-2 h-4 w-4" />
                       <span>Set Room ID & Pass</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem disabled>
+                      <Upload className="mr-2 h-4 w-4" />
+                      <span>Upload Points Table</span>
+                    </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
@@ -301,5 +305,3 @@ export function TournamentList() {
     </>
   );
 }
-
-    
