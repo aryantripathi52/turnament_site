@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -53,7 +52,6 @@ const formSchema = z.object({
 export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
-  const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,11 +102,11 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      // FIX: Force redirect to the specific dashboard instead of '/'
+      // FIX: Force redirect to the specific dashboard instead of using Next.js router
       if (userProfile.role === 'admin' || userProfile.role === 'staff') {
-        router.push('/admin');
+        window.location.href = '/admin';
       } else {
-        router.push('/player');
+        window.location.href = '/player';
       }
 
     } catch (error: any) {
