@@ -29,9 +29,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useFirestore } from '@/firebase';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -55,12 +55,23 @@ function LoginFormComponent() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [showPassword, setShowPassword] = useState(false);
-  const { toast } = useToast();
-  
-  const redirectTo = searchParams.get('redirectTo') || '/';
+  const { user, profile, isUserLoading } = useUser();
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // This effect handles redirection AFTER a successful login and profile load.
+    // 1. Wait until loading is finished.
+    if (isUserLoading) return;
+
+    // 2. If loading is done AND we have a user and their profile, redirect.
+    if (user && profile) {
+      router.replace('/');
+    }
+  }, [user, profile, isUserLoading, router]);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,11 +91,13 @@ function LoginFormComponent() {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+      const authenticatedUser = userCredential.user;
 
-      const profileRef = doc(firestore, 'users', user.uid);
+      const profileRef = doc(firestore, 'users', authenticatedUser.uid);
       const profileSnap = await getDoc(profileRef);
 
       if (!profileSnap.exists()) {
@@ -92,9 +105,9 @@ function LoginFormComponent() {
         throw new Error("Profile not found. Please contact support.");
       }
 
-      const profile = profileSnap.data() as UserProfile;
+      const userProfile = profileSnap.data() as UserProfile;
 
-      if (profile.role !== values.role) {
+      if (userProfile.role !== values.role) {
         await auth.signOut();
         throw new Error("The selected role is incorrect for this account.");
       }
@@ -103,8 +116,7 @@ function LoginFormComponent() {
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
-      
-      router.push(redirectTo);
+      // The useEffect will now handle the redirect once the profile is loaded.
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -118,7 +130,7 @@ function LoginFormComponent() {
           description = 'The email address is not valid.';
           break;
         case 'auth/too-many-requests':
-          description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
+          description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can try again later.';
           break;
         default:
           console.error("Login Error:", error)
@@ -129,7 +141,22 @@ function LoginFormComponent() {
         title: 'Login Failed',
         description: description,
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  }
+
+  // If the user is already logged in and their profile is loaded, show a loading state
+  // while the useEffect handles the redirect.
+  if (user && profile) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-lg text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -217,9 +244,9 @@ function LoginFormComponent() {
             <Button
               type="submit"
               className="w-full"
-              disabled={form.formState.isSubmitting}
+              disabled={isSubmitting || isUserLoading}
             >
-              {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
+              {isSubmitting || isUserLoading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Form>
