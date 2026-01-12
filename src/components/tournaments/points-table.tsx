@@ -28,7 +28,18 @@ export function PointsTable({ tournamentId }: PointsTableProps) {
   const sortedAndRankedData = useMemo(() => {
     if (!data) return [];
     return data
-      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .sort((a, b) => {
+        // 1. Primary sort: Total Points (descending)
+        if (b.totalPoints !== a.totalPoints) {
+          return b.totalPoints - a.totalPoints;
+        }
+        // 2. Tie-breaker 1: Wins (descending)
+        if (b.wins !== a.wins) {
+          return b.wins - a.wins;
+        }
+        // 3. Tie-breaker 2: Kills (descending)
+        return b.kills - a.kills;
+      })
       .map((entry, index) => ({ ...entry, rank: index + 1 }));
   }, [data]);
 
@@ -96,5 +107,3 @@ export function PointsTable({ tournamentId }: PointsTableProps) {
     </Table>
   );
 }
-
-    
