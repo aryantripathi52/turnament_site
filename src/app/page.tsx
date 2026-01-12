@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 import { getSdks } from '@/firebase/server';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import Dashboard from '@/components/dashboard-loader';
 import { redirect } from 'next/navigation';
 
 async function getUserSession() {
