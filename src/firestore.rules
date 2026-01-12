@@ -30,6 +30,7 @@ service cloud.firestore {
         
         // Staff/Admin can create, update, delete tournaments.
         allow create, delete: if isStaffOrAdmin();
+        
         // Crash-proof update rule for joining
         allow update: if isStaffOrAdmin() || (
           request.auth != null && 
@@ -43,11 +44,9 @@ service cloud.firestore {
         }
     }
 
-    // Allow a user to create their own registration document within a tournament's subcollection.
+    // Allow a user to create/read their own registration document within a tournament's subcollection.
     match /tournaments/{tournamentId}/registrations/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // Allow users to read their own registration for history purposes.
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create, read: if request.auth != null && request.auth.uid == userId;
     }
     
     // Public read access for categories
