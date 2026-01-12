@@ -24,13 +24,6 @@ import Link from 'next/link';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -44,9 +37,6 @@ const formSchema = z.object({
   }),
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
-  }),
-  role: z.enum(['admin', 'staff', 'player'], {
-    required_error: 'You need to select a role.',
   }),
 });
 
@@ -88,31 +78,25 @@ export function LoginForm() {
     }
 
     try {
+      // Step 1: Sign in with email and password
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const loggedInUser = userCredential.user;
 
+      // Step 2: Fetch the user's profile to verify existence.
+      // The useUser hook will then handle role detection and redirection.
       const userDocRef = doc(firestore, 'users', loggedInUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
-        const userProfile = userDocSnap.data() as UserProfile;
-        if (userProfile.role === values.role) {
-          // Success! The useEffect will handle the redirect.
-           toast({
-            title: 'Login Successful',
-            description: "Welcome back! Redirecting...",
-          });
-          // Note: No manual redirect here, let the useEffect handle it
-          // to ensure all data is loaded first.
-        } else {
-          await signOut(auth);
-          toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description: 'The role you selected does not match your account.',
-          });
-        }
+        // Success! The useEffect will handle the redirect.
+         toast({
+          title: 'Login Successful',
+          description: "Welcome back! Redirecting...",
+        });
+        // Note: No manual redirect here, let the useEffect handle it
+        // to ensure all data is loaded first.
       } else {
+        // This case is unlikely if registration is enforced, but good to have.
         await signOut(auth);
         toast({
           variant: 'destructive',
@@ -214,31 +198,6 @@ export function LoginForm() {
                       </span>
                     </Button>
                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="player">Player</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
