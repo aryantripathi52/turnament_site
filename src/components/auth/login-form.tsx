@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,9 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
-import { Suspense, useState, useEffect } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -51,26 +50,16 @@ const formSchema = z.object({
   }),
 });
 
-function LoginFormComponent() {
+export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const { user, profile, isUserLoading } = useUser();
+  const searchParams = useSearchParams();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // 1. Wait until loading is finished
-    if (isUserLoading) return;
-
-    // 2. If loading is done AND we have a user and their profile, redirect.
-    if (user && profile) {
-      router.replace('/');
-    }
-  }, [user, profile, isUserLoading, router]);
-  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -115,7 +104,9 @@ function LoginFormComponent() {
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
-      // The useEffect will now handle the redirect once the profile is loaded.
+      
+      // Redirect to the homepage. The homepage will handle displaying the correct dashboard.
+      router.replace('/');
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -143,19 +134,6 @@ function LoginFormComponent() {
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  // If the user is already logged in and their profile is loaded, show a loading state
-  // while the useEffect handles the redirect.
-  if (user && profile) {
-     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-lg text-muted-foreground">Redirecting...</p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -243,9 +221,9 @@ function LoginFormComponent() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isSubmitting || isUserLoading}
+              disabled={isSubmitting}
             >
-              {isSubmitting || isUserLoading ? 'Logging in...' : 'Login'}
+              {isSubmitting ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Form>
@@ -258,12 +236,4 @@ function LoginFormComponent() {
       </CardContent>
     </Card>
   );
-}
-
-export function LoginForm() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginFormComponent />
-    </Suspense>
-  )
 }
