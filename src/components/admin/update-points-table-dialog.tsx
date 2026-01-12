@@ -137,7 +137,7 @@ export function UpdatePointsTableDialog({ tournament, isOpen, setIsOpen, onTourn
         <div className="space-y-4">
             <div className="grid grid-cols-[1fr,80px,100px] gap-4 px-4 font-semibold text-sm text-muted-foreground">
                 <div className="flex items-center gap-2"><User className="h-4 w-4" /> Player Name</div>
-                <div className="flex items-center gap-2 justify-center"><Flame className="h-4 w-4" /> Kills</div>
+                <div className="flex items-center gap-2 justify-center"><Flame className="h-4 w-4" /> # Kills</div>
                 <div className="flex items-center gap-2 justify-center"><Star className="h-4 w-4" /> Total Points</div>
             </div>
             <ScrollArea className="h-96">
