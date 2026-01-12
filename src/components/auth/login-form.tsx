@@ -54,7 +54,6 @@ export function LoginForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
@@ -63,6 +62,7 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
+      role: 'player',
     },
   });
 
@@ -102,8 +102,7 @@ export function LoginForm() {
         description: "Welcome back! Redirecting...",
       });
       
-      const redirectTo = searchParams.get('redirectTo') || '/';
-      router.replace(redirectTo);
+      router.replace('/');
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
