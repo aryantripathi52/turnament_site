@@ -23,7 +23,7 @@ service cloud.firestore {
 
     // 2. USER PROFILES & SUBCOLLECTIONS
     match /users/{userId} {
-      // A user can manage their own profile. A staff/admin can also update it.
+      // A user can manage their own profile. A staff/admin can also update it for payouts.
       allow get, read: if request.auth != null && request.auth.uid == userId;
       allow update: if (request.auth != null && request.auth.uid == userId) || isStaffOrAdmin();
       
@@ -44,6 +44,12 @@ service cloud.firestore {
 
       match /registrations/{registrationId} {
         allow create, get, read, list: if request.auth != null;
+      }
+      
+      // Allow staff/admin to manage points tables
+      match /pointsTable/{pointsTableEntryId} {
+        allow read: if true;
+        allow write: if isStaffOrAdmin();
       }
     }
 

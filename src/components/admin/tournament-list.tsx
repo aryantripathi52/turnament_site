@@ -227,7 +227,7 @@ export function TournamentList() {
                       <KeyRound className="mr-2 h-4 w-4" />
                       <span>Set Room ID & Pass</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled>
+                    <DropdownMenuItem>
                       <Upload className="mr-2 h-4 w-4" />
                       <span>Upload Points Table</span>
                     </DropdownMenuItem>
