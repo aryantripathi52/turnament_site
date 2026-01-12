@@ -24,10 +24,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -43,7 +42,7 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
-  const firestore = useFirestore();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,51 +54,22 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    if (!auth || !firestore) {
+    if (!auth) {
       toast({ variant: 'destructive', title: 'Error', description: 'Firebase not available.' });
       setIsSubmitting(false);
       return;
     }
 
     try {
-      // 1. Authenticate with Firebase Auth on the client
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
-
-      // 2. Verify role from Firestore
-      const profileRef = doc(firestore, 'users', user.uid);
-      const profileSnap = await getDoc(profileRef);
-
-      if (!profileSnap.exists()) {
-        await auth.signOut(); // Sign out if profile doesn't exist
-        throw new Error('Profile not found for this user.');
-      }
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       
-      const userProfile = profileSnap.data() as UserProfile;
-      
-      // 3. Create a server-side session cookie
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create server session.');
-      }
-
       toast({
         title: 'Login Successful',
         description: "Welcome back! Redirecting...",
       });
       
-      // 4. Force a full-page reload to the correct dashboard.
-      if (userProfile.role === 'admin' || userProfile.role === 'staff') {
-        window.location.assign('/admin');
-      } else {
-        window.location.assign('/player');
-      }
+      // Let the Firebase auth state listener handle the redirect from the root page.
+      router.push('/');
 
     } catch (error: any) {
        let errorMessage = 'An unexpected error occurred. Please try again.';

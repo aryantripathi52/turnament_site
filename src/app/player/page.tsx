@@ -1,45 +1,39 @@
+'use client';
+import { PlayerDashboard } from '@/components/player/player-dashboard';
+import { useUser } from '@/firebase/auth/use-user';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import Dashboard from '@/components/dashboard-loader';
-import { cookies } from 'next/headers';
-import { getSdks } from '@/firebase/server';
-import { doc, getDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
-import { redirect } from 'next/navigation';
+export default function PlayerPage() {
+  const { user, profile, isUserLoading } = useUser();
+  const router = useRouter();
 
-async function getUserSession() {
-  const sessionCookie = cookies().get('__session')?.value;
-  if (!sessionCookie) {
-    return { user: null, profile: null };
-  }
+  useEffect(() => {
+    if (isUserLoading) return; // Wait until user state is determined
 
-  try {
-    const { auth, firestore } = getSdks();
-    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
-    
-    const profileRef = doc(firestore, 'users', decodedClaims.uid);
-    const profileSnap = await getDoc(profileRef);
-    
-    if (profileSnap.exists()) {
-      const profile = profileSnap.data() as UserProfile;
-       if (profile.role !== 'player') {
-        return { user: decodedClaims, profile: null };
-      }
-      return { user: decodedClaims, profile };
+    if (!user) {
+      // If not logged in, redirect to login page
+      router.replace('/login');
+      return;
     }
 
-    return { user: decodedClaims, profile: null };
-  } catch (error) {
-    console.error("Session verification failed:", error);
-    return { user: null, profile: null };
+    if (profile && (profile.role === 'admin' || profile.role === 'staff')) {
+        // If user is admin/staff, they don't belong here. Redirect them.
+        router.replace('/admin');
+    }
+  }, [user, profile, isUserLoading, router]);
+
+  // Show a loading skeleton while user/profile is loading or if the role is not 'player' yet
+  if (isUserLoading || !profile || profile.role !== 'player') {
+    return (
+        <div className="container mx-auto py-8">
+            <Skeleton className="h-24 w-full mb-6" />
+            <Skeleton className="h-64 w-full" />
+        </div>
+    );
   }
-}
 
-export default async function PlayerPage() {
-  const { user, profile } = await getUserSession();
-
-  if (!user || !profile) {
-    redirect('/login');
-  }
-
-  return <Dashboard initialRole="player" />;
+  // Once everything is loaded and role is correct, render the dashboard
+  return <PlayerDashboard />;
 }

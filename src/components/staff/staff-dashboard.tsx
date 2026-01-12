@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser } from '@/firebase';
@@ -12,21 +11,21 @@ import { EditProfileForm } from '../admin/edit-profile-form';
 import { TournamentList } from '../admin/tournament-list';
 import { CreateTournamentForm } from '../admin/create-tournament-form';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export function StaffDashboard() {
   const { user, profile } = useUser();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTournamentDialogOpen, setIsTournamentDialogOpen] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogout = async () => {
     const auth = getAuth();
     try {
-        await signOut(auth); // Sign out from client
-        // Call the API route to clear the server-side session cookie
-        await fetch('/api/session', { method: 'DELETE' });
+        await signOut(auth);
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
-        window.location.href = '/login'; // Force a full page reload to clear all state
+        router.push('/login');
     } catch (error) {
         console.error("Logout failed", error);
         toast({ variant: 'destructive', title: "Logout Failed", description: "An error occurred during logout." });

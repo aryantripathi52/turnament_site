@@ -56,15 +56,24 @@ export const useUser = (): UserHookResult => {
 
 
   useEffect(() => {
-    // If there's no user or firestore, or if the user is not a player,
-    // we don't need to fetch tournament data.
-    if (!user || !firestore || profile?.role !== 'player') {
+    if (!user || !firestore) {
+      setIsTournamentsLoading(false);
+      return;
+    }
+    
+    // Only fetch tournaments if the profile is loaded and the user is a player
+    if (!isProfileLoading && profile && profile.role !== 'player') {
       setIsTournamentsLoading(false);
       setJoinedTournaments([]);
       setWonTournaments([]);
       return;
     }
-    
+
+    // Don't start fetching until the profile is available
+    if (isProfileLoading || !profile) {
+        return;
+    }
+
     // Start loading and clear previous errors
     setIsTournamentsLoading(true);
     setTournamentsError(null);
@@ -117,14 +126,14 @@ export const useUser = (): UserHookResult => {
       if (wonUnsubscribe) wonUnsubscribe();
     };
 
-  }, [user, firestore, profile, refreshKey]);
+  }, [user, firestore, profile, isProfileLoading, refreshKey]);
 
 
   const refreshJoinedTournaments = useCallback(() => {
     setRefreshKey(oldKey => oldKey + 1);
   }, []);
 
-  const isOverallLoading = isAuthLoading || isProfileLoading;
+  const isOverallLoading = isAuthLoading || (!!user && isProfileLoading);
   const overallError = authError || profileError;
 
   return {

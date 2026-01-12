@@ -1,50 +1,54 @@
-
+'use client';
+import { PlayerDashboard } from '@/components/player/player-dashboard';
+import { useUser } from '@/firebase/auth/use-user';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
 import { StaffDashboard } from '@/components/staff/staff-dashboard';
-import Dashboard from '@/components/dashboard-loader';
-import { cookies } from 'next/headers';
-import { getSdks } from '@/firebase/server';
-import { doc, getDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
-import { redirect } from 'next/navigation';
 
-async function getUserSession() {
-  const sessionCookie = cookies().get('__session')?.value;
-  if (!sessionCookie) {
-    return { user: null, profile: null };
-  }
+export default function AdminPage() {
+  const { user, profile, isUserLoading } = useUser();
+  const router = useRouter();
 
-  try {
-    const { auth, firestore } = getSdks();
-    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
-    
-    const profileRef = doc(firestore, 'users', decodedClaims.uid);
-    const profileSnap = await getDoc(profileRef);
-    
-    if (profileSnap.exists()) {
-      const profile = profileSnap.data() as UserProfile;
-      // Security check: ensure only admin/staff can access this page
-      if (profile.role !== 'admin' && profile.role !== 'staff') {
-        return { user: decodedClaims, profile: null }; // Treat as unauthorized
-      }
-      return { user: decodedClaims, profile };
+  useEffect(() => {
+    if (isUserLoading) return; // Wait until user state is determined
+
+    if (!user) {
+      // If not logged in, redirect to login page
+      router.replace('/login');
+      return;
     }
 
-    return { user: decodedClaims, profile: null };
-  } catch (error) {
-    console.error("Session verification failed:", error);
-    return { user: null, profile: null };
+    if (profile && profile.role === 'player') {
+      // If user is a player, they don't belong here. Redirect them.
+      router.replace('/player');
+    }
+    
+  }, [user, profile, isUserLoading, router]);
+
+  if (isUserLoading || !profile) {
+    return (
+      <div className="container mx-auto py-8">
+        <Skeleton className="h-24 w-full mb-6" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
-}
 
-export default async function AdminPage() {
-  const { user, profile } = await getUserSession();
-
-  if (!user || !profile) {
-    redirect('/login');
+  if (profile.role === 'admin') {
+    return <AdminDashboard />;
   }
 
-  const initialRole = profile?.role || 'staff';
+  if (profile.role === 'staff') {
+    return <StaffDashboard />;
+  }
 
-  return <Dashboard initialRole={initialRole} />;
+  // Fallback for the brief moment before redirect happens
+  return (
+    <div className="container mx-auto py-8">
+      <Skeleton className="h-24 w-full mb-6" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
 }
