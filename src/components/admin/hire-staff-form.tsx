@@ -14,15 +14,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { useState } from 'react';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
-
+import { initializeApp, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 
 const formSchema = z.object({
   username: z.string().min(3, { message: 'Full name must be at least 3 characters.' }),
@@ -31,7 +32,6 @@ const formSchema = z.object({
 });
 
 export function HireStaffForm() {
-  const auth = useAuth();
   const firestore = useFirestore();
   const { profile } = useUser();
   const { toast } = useToast();
@@ -46,7 +46,6 @@ export function HireStaffForm() {
     },
   });
 
-  // Security Check: Ensure only an admin can use this form by checking their profile role.
   if (profile?.role !== 'admin') {
     return (
         <Alert variant="destructive">
@@ -60,7 +59,7 @@ export function HireStaffForm() {
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth || !firestore) {
+    if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -69,10 +68,12 @@ export function HireStaffForm() {
       return;
     }
 
+    const tempAppName = `staff-creation-${Date.now()}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
+
     try {
-      // We can't use the existing `useUser` hook here since we are creating a *new* user.
-      // We'll create a temporary auth instance for this operation.
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newStaffUser = userCredential.user;
 
       const userProfile = {
@@ -80,10 +81,9 @@ export function HireStaffForm() {
         username: values.username,
         email: newStaffUser.email,
         role: 'staff',
-        coins: 0, // Staff members start with 0 coins.
+        coins: 0,
       };
 
-      // Create the user document in Firestore with the 'staff' role.
       await setDoc(doc(firestore, 'users', newStaffUser.uid), userProfile);
 
       toast({
@@ -91,16 +91,21 @@ export function HireStaffForm() {
         description: `${values.username} has been successfully created with the role 'staff'.`,
       });
 
-      // Clear the form for security so password isn't left on screen
       form.reset();
 
     } catch (error: any) {
       console.error('Error creating staff account:', error);
+      let errorMessage = 'An unexpected error occurred.';
+       if (error.code === 'auth/email-already-in-use') {
+           errorMessage = 'This email address is already registered. Please use a different email.';
+       }
       toast({
         variant: 'destructive',
         title: 'Creation Failed',
-        description: error.message || 'An unexpected error occurred.',
+        description: errorMessage,
       });
+    } finally {
+        await deleteApp(tempApp);
     }
   }
 
