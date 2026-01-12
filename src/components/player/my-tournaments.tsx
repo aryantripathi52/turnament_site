@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Trophy, Swords, Calendar, Coins, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy } from 'lucide-react';
+import { Trophy, Swords, Calendar, Coins, Info, Ticket, KeyRound, Hash, ArrowLeft, Clock, PlayCircle, CheckCircle, XCircle, Copy, ListOrdered } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -120,7 +120,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
                     </div>
                 </div>
              </CardHeader>
-             <CardContent className="flex-grow space-y-4">
+             <CardContent className="flex-grow flex flex-col justify-center space-y-4">
                 {isLive ? (
                     <div className='space-y-3'>
                         <div className="flex items-center gap-3 bg-muted p-3 rounded-md justify-between">
@@ -173,6 +173,7 @@ function JoinedTournamentCard({ tournament, userId }: { tournament: JoinedTourna
                         )}
                     </div>
                 )}
+                 <Button disabled><ListOrdered className="mr-2 h-4 w-4" /> Points Table</Button>
              </CardContent>
              <CardFooter className='flex-col gap-2'>
                 <Button variant="secondary" className="w-full" onClick={() => setIsFlipped(false)}>
