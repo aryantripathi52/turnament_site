@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import type { JoinedTournament, WonTournament, Tournament } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
