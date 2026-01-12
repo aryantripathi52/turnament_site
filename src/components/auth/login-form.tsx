@@ -21,15 +21,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { useAuth, useUser, useFirestore } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/firebase/auth/use-user';
-import { Skeleton } from '../ui/skeleton';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -40,13 +37,10 @@ const formSchema = z.object({
   }),
 });
 
-
 export function LoginForm() {
   const auth = useAuth();
-  const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
@@ -58,17 +52,8 @@ export function LoginForm() {
     },
   });
 
-  useEffect(() => {
-    // This effect runs when the user state changes.
-    // If the user is successfully logged in and profile is loaded, redirect.
-    if (!isUserLoading && !isProfileLoading && user && profile) {
-      const redirectTo = searchParams.get('redirectTo') || '/';
-      router.replace(redirectTo);
-    }
-  }, [user, profile, isUserLoading, isProfileLoading, router, searchParams]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth || !firestore) {
+    if (!auth) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -78,32 +63,15 @@ export function LoginForm() {
     }
 
     try {
-      // Step 1: Sign in with email and password
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const loggedInUser = userCredential.user;
-
-      // Step 2: Fetch the user's profile to verify existence.
-      // The useUser hook will then handle role detection and redirection.
-      const userDocRef = doc(firestore, 'users', loggedInUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        // Success! The useEffect will handle the redirect.
-         toast({
-          title: 'Login Successful',
-          description: "Welcome back! Redirecting...",
-        });
-        // Note: No manual redirect here, let the useEffect handle it
-        // to ensure all data is loaded first.
-      } else {
-        // This case is unlikely if registration is enforced, but good to have.
-        await signOut(auth);
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'User profile not found. Please register first.',
-        });
-      }
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      
+      toast({
+        title: 'Login Successful',
+        description: "Welcome back! Redirecting...",
+      });
+      
+      const redirectTo = searchParams.get('redirectTo') || '/';
+      router.replace(redirectTo);
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
@@ -129,17 +97,6 @@ export function LoginForm() {
         description: description,
       });
     }
-  }
-
-  // Show a loading state while Firebase is determining auth state,
-  // profile is loading, or if the user is logged in and we are about to redirect.
-  if (isUserLoading || isProfileLoading || (user && profile)) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-        <p>Loading Dashboard...</p>
-        <Skeleton className="h-96 w-96" />
-      </div>
-    );
   }
 
   return (
